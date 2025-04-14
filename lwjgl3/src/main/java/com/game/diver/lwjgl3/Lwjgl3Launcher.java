@@ -1,8 +1,8 @@
-package com.diver.lwjgl3;
+package com.game.diver.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.diver.DeepDiveDrift;
+import com.game.DeepDiveDrift;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
