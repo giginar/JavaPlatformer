@@ -19,7 +19,6 @@ public class Background {
         x1 -= scrollSpeed * delta;
         x2 -= scrollSpeed * delta;
 
-        // Ekrandan tamamen çıkarsa sıfırla
         if (x1 + texture.getWidth() <= 0) {
             x1 = x2 + texture.getWidth();
         }

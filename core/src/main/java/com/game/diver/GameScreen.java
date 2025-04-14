@@ -79,22 +79,19 @@ public class GameScreen implements Screen {
 
         batch.begin();
 
-        // Draw background and all game entities
         background.render(batch);
         diver.render(batch);
         for (EnemyFish f : enemies) f.render(batch);
         for (Harpoon h : harpoons) h.render(batch);
         for (OxygenTank tank : oxygenTanks) tank.render(batch);
 
-        // HUD text (top-left corner)
         float hudTop = Gdx.graphics.getHeight();
         font.draw(batch, "Score: " + (int) score, 10, hudTop - 10);
         font.draw(batch, "Max Score: " + maxScore, 10, hudTop - 30);
         font.draw(batch, "Level: " + currentLevel, 10, hudTop - 50);
 
-        // Bar position and size
         float barX = 10;
-        float barY = hudTop - 75 - 30; // Add spacing below "Level"
+        float barY = hudTop - 75;
         float barWidth = 160;
         float barHeight = 16;
 
@@ -111,17 +108,15 @@ public class GameScreen implements Screen {
             font.draw(batch, layout, x, y);
         }
 
-        // Draw "OXYGEN" text inside the bar (centered)
         layout.setText(font, "OXYGEN");
         float textX = barX + (barWidth - layout.width) / 2;
-        float textY = barY + (barHeight + layout.height) / 2 - 2; // Adjust for vertical centering
-        font.setColor(0, 0, 0, 1); // Black color for visibility
+        float textY = barY + (barHeight + layout.height) / 2 - 2;
+        font.setColor(0, 0, 0, 1);
         font.draw(batch, layout, textX, textY);
-        font.setColor(1, 1, 1, 1); // Reset to white
+        font.setColor(1, 1, 1, 1);
 
         batch.end();
 
-        // Draw oxygen bar using ShapeRenderer
         float oxygenRatio = oxygen / maxOxygen;
         float currentWidth = oxygenRatio * barWidth;
         float r = Math.min(1f, (1f - oxygenRatio) * 2);
@@ -129,17 +124,14 @@ public class GameScreen implements Screen {
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        // Bar background (gray)
         shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1);
         shapeRenderer.rect(barX, barY, barWidth, barHeight);
 
-        // Bar foreground (dynamic color)
         shapeRenderer.setColor(r, g, 0, 1);
         shapeRenderer.rect(barX, barY, currentWidth, barHeight);
 
         shapeRenderer.end();
 
-        // Optional: white border around the bar
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.setColor(1, 1, 1, 1);
         shapeRenderer.rect(barX, barY, barWidth, barHeight);

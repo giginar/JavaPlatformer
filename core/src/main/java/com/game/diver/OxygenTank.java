@@ -14,7 +14,7 @@ public class OxygenTank {
     private Rectangle bounds;
 
     public OxygenTank(float x, float y) {
-        this.texture = new Texture("oxygen_tank.png"); // place this in assets
+        this.texture = new Texture("oxygen_tank.png");
         this.x = x;
         this.y = y;
         this.bounds = new Rectangle(x, y, width, height);

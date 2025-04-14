@@ -14,8 +14,8 @@ public class SmallFish implements EnemyFish {
     private float height = 32f;
 
     public SmallFish(float y) {
-        this.texture = new Texture("enemy_small.png"); // Görselin adını bu şekilde kaydedin
-        this.position = new Vector2(800, y); // ekranın sağından başla
+        this.texture = new Texture("enemy_small.png");
+        this.position = new Vector2(800, y);
     }
 
     @Override

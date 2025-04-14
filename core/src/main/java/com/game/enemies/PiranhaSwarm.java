@@ -21,10 +21,9 @@ public class PiranhaSwarm implements EnemyFish {
         this.positions = new ArrayList<>();
         Random random = new Random();
 
-        // Generate a small group of 3–5 piranhas
         int count = 3 + random.nextInt(3);
         for (int i = 0; i < count; i++) {
-            float yOffset = random.nextFloat() * 40 - 20; // slight vertical variation
+            float yOffset = random.nextFloat() * 40 - 20;
             positions.add(new Vector2(800 + i * 10, baseY + yOffset));
         }
     }
@@ -53,7 +52,6 @@ public class PiranhaSwarm implements EnemyFish {
 
     @Override
     public Rectangle getBounds() {
-        // Return one bounding box for simplicity (can be expanded later)
         if (positions.isEmpty()) return new Rectangle(0, 0, 0, 0);
         Vector2 first = positions.get(0);
         return new Rectangle(first.x, first.y, width, height);
