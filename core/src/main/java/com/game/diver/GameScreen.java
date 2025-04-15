@@ -3,6 +3,8 @@ package com.game.diver;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -40,10 +42,20 @@ public class GameScreen implements Screen {
 
     private float oxygen = 100f;
     private final float maxOxygen = 100f;
-    private final float oxygenDecreaseRate = 10f;
+    private final float oxygenDecreaseRate = 5f;
     private ArrayList<OxygenTank> oxygenTanks = new ArrayList<>();
     private float oxygenTankSpawnTimer = 0f;
     private final float oxygenTankSpawnInterval = 8f;
+
+    private Sound shootSound;
+    private Sound hitSound;
+    private Sound oxygenSound;
+    private Sound gameoverSound;
+    private Music backgroundMusic;
+
+    private Sound breathSound;
+    private float breathTimer = 0f;
+    private final float breathInterval = 10f;
 
     @Override
     public void show() {
@@ -62,6 +74,18 @@ public class GameScreen implements Screen {
         score = 0;
         oxygen = maxOxygen;
         gameOver = false;
+
+        shootSound = Gdx.audio.newSound(Gdx.files.internal("shoot.wav"));
+        hitSound = Gdx.audio.newSound(Gdx.files.internal("hit.wav"));
+        oxygenSound = Gdx.audio.newSound(Gdx.files.internal("oxygen.wav"));
+        gameoverSound = Gdx.audio.newSound(Gdx.files.internal("gameover.wav"));
+
+        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("underwater.mp3"));
+        backgroundMusic.setLooping(true);
+        backgroundMusic.setVolume(0.5f);
+        backgroundMusic.play();
+
+        breathSound = Gdx.audio.newSound(Gdx.files.internal("breath.mp3"));
     }
 
     @Override
@@ -91,7 +115,7 @@ public class GameScreen implements Screen {
         font.draw(batch, "Level: " + currentLevel, 10, hudTop - 50);
 
         float barX = 10;
-        float barY = hudTop - 75;
+        float barY = hudTop - 85;
         float barWidth = 160;
         float barHeight = 16;
 
@@ -145,6 +169,12 @@ public class GameScreen implements Screen {
             gameOver = true;
         }
 
+        breathTimer += delta;
+        if (breathTimer >= breathInterval) {
+            breathTimer = 0f;
+            breathSound.play();
+        }
+
         score += delta * 100;
         if (score > maxScore) maxScore = (int) score;
 
@@ -163,8 +193,9 @@ public class GameScreen implements Screen {
             oxygenTanks.add(new OxygenTank(Gdx.graphics.getWidth(), y));
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.Z)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.C)) {
             harpoons.add(new Harpoon(diver.getPosition().x + 48, diver.getPosition().y + 20));
+            shootSound.play();
         }
 
         Iterator<Harpoon> hIter = harpoons.iterator();
@@ -180,6 +211,7 @@ public class GameScreen implements Screen {
             while (fIter.hasNext()) {
                 EnemyFish f = fIter.next();
                 if (h.getBounds().overlaps(f.getBounds())) {
+                    hitSound.play();
                     fIter.remove();
                     hIter.remove();
                     score += getEnemyScore(f);
@@ -207,6 +239,7 @@ public class GameScreen implements Screen {
 
             if (tank.getBounds().overlaps(diver.getBounds())) {
                 oxygen = Math.min(maxOxygen, oxygen + 30);
+                oxygenSound.play();
                 tIter.remove();
             }
         }
@@ -214,6 +247,7 @@ public class GameScreen implements Screen {
         for (EnemyFish f : enemies) {
             if (f.getBounds().overlaps(diver.getBounds())) {
                 gameOver = true;
+                gameoverSound.play();
                 break;
             }
         }
@@ -262,6 +296,12 @@ public class GameScreen implements Screen {
         diver.dispose();
         background.dispose();
         font.dispose();
+        shootSound.dispose();
+        hitSound.dispose();
+        oxygenSound.dispose();
+        gameoverSound.dispose();
+        backgroundMusic.dispose();
+        breathSound.dispose();
         for (EnemyFish f : enemies) f.dispose();
         for (Harpoon h : harpoons) h.dispose();
     }
