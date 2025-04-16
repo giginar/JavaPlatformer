@@ -1,23 +1,20 @@
 package com.game.screen;
 
 import com.badlogic.gdx.*;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.*;
 import com.game.DeepDiveDrift;
+import com.game.manager.AudioManager;
 
 public class MainMenuScreen implements Screen {
+
     private final DeepDiveDrift game;
     private SpriteBatch batch;
     private BitmapFont font;
     private GlyphLayout layout;
 
-    private Rectangle playBounds;
-    private Rectangle optionsBounds;
-    private Rectangle exitBounds;
+    private final String[] menuItems = {"Play Game", "Options", "Exit"};
+    private int selectedIndex = 0;
 
     public MainMenuScreen(DeepDiveDrift game) {
         this.game = game;
@@ -30,63 +27,44 @@ public class MainMenuScreen implements Screen {
         font.getData().setScale(1.2f);
         layout = new GlyphLayout();
 
-        layout.setText(font, "[P] Play Game");
-        playBounds = new Rectangle(centerX(layout), 280, layout.width, layout.height);
-
-        layout.setText(font, "[O] Options");
-        optionsBounds = new Rectangle(centerX(layout), 230, layout.width, layout.height);
-
-        layout.setText(font, "[ESC] Exit");
-        exitBounds = new Rectangle(centerX(layout), 180, layout.width, layout.height);
-
-        Gdx.input.setInputProcessor(new InputAdapter() {
-            @Override
-            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                screenY = Gdx.graphics.getHeight() - screenY;
-                if (playBounds.contains(screenX, screenY)) {
-                    game.setScreen(new GameScreen());
-                } else if (optionsBounds.contains(screenX, screenY)) {
-                    game.setScreen(new OptionsScreen(game));
-                } else if (exitBounds.contains(screenX, screenY)) {
-                    Gdx.app.exit();
-                }
-                return true;
-            }
-        });
+        AudioManager.playBackgroundMusic();
     }
 
     @Override
     public void render(float delta) {
+        handleInput();
+
         Gdx.gl.glClearColor(0, 0.1f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.begin();
 
+        font.setColor(Color.WHITE);
         layout.setText(font, "Deep Dive Drift");
-        font.setColor(Color.CYAN);
-        font.draw(batch, layout, centerX(layout), 400);
+        font.draw(batch, layout, centerX(layout), Gdx.graphics.getHeight() - 100);
 
-        drawButton("[P] Play Game", 300, playBounds);
-        drawButton("[O] Options", 250, optionsBounds);
-        drawButton("[ESC] Exit", 200, exitBounds);
+        float startY = Gdx.graphics.getHeight() / 2f;
+        for (int i = 0; i < menuItems.length; i++) {
+            font.setColor(i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY);
+            layout.setText(font, menuItems[i]);
+            font.draw(batch, layout, centerX(layout), startY - i * 40);
+        }
 
         batch.end();
     }
 
-    private void drawButton(String text, float y, Rectangle bounds) {
-        layout.setText(font, text);
-        float x = centerX(layout);
-
-        int mouseX = Gdx.input.getX();
-        int mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
-
-        if (bounds.contains(mouseX, mouseY)) {
-            font.setColor(Color.YELLOW);
-        } else {
-            font.setColor(Color.WHITE);
+    private void handleInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            selectedIndex = (selectedIndex - 1 + menuItems.length) % menuItems.length;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            selectedIndex = (selectedIndex + 1) % menuItems.length;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            switch (selectedIndex) {
+                case 0 -> game.setScreen(new GameScreen());
+                case 1 -> game.setScreen(new OptionsScreen(game));
+                case 2 -> Gdx.app.exit();
+            }
         }
-
-        font.draw(batch, layout, x, y);
     }
 
     private float centerX(GlyphLayout layout) {

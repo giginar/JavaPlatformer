@@ -1,27 +1,20 @@
 package com.game.screen;
 
 import com.badlogic.gdx.*;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.*;
 import com.game.DeepDiveDrift;
+import com.game.manager.AudioManager;
 
 public class OptionsScreen implements Screen {
+
     private final DeepDiveDrift game;
     private SpriteBatch batch;
     private BitmapFont font;
     private GlyphLayout layout;
 
-    private Rectangle musicToggleBounds;
-    private Rectangle sfxToggleBounds;
-    private Rectangle backBounds;
-
-    private boolean musicOn;
-    private boolean sfxOn;
-    private Preferences prefs;
+    private final String[] options = {"Toggle Music", "Toggle SFX", "Back"};
+    private int selectedIndex = 0;
 
     public OptionsScreen(DeepDiveDrift game) {
         this.game = game;
@@ -33,73 +26,52 @@ public class OptionsScreen implements Screen {
         font = new BitmapFont();
         font.getData().setScale(1.2f);
         layout = new GlyphLayout();
-
-        prefs = Gdx.app.getPreferences("DeepDiveDriftPrefs");
-        musicOn = prefs.getBoolean("musicOn", true);
-        sfxOn = prefs.getBoolean("sfxOn", true);
-
-        layout.setText(font, "Toggle Music: " + (musicOn ? "ON" : "OFF"));
-        musicToggleBounds = new Rectangle(centerX(layout), 300, layout.width, layout.height);
-
-        layout.setText(font, "Toggle SFX: " + (sfxOn ? "ON" : "OFF"));
-        sfxToggleBounds = new Rectangle(centerX(layout), 250, layout.width, layout.height);
-
-        layout.setText(font, "[BACK]");
-        backBounds = new Rectangle(centerX(layout), 180, layout.width, layout.height);
-
-        Gdx.input.setInputProcessor(new InputAdapter() {
-            @Override
-            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                screenY = Gdx.graphics.getHeight() - screenY;
-
-                if (musicToggleBounds.contains(screenX, screenY)) {
-                    musicOn = !musicOn;
-                    prefs.putBoolean("musicOn", musicOn);
-                    prefs.flush();
-                } else if (sfxToggleBounds.contains(screenX, screenY)) {
-                    sfxOn = !sfxOn;
-                    prefs.putBoolean("sfxOn", sfxOn);
-                    prefs.flush();
-                } else if (backBounds.contains(screenX, screenY)) {
-                    game.setScreen(new MainMenuScreen(game));
-                }
-                return true;
-            }
-        });
     }
 
     @Override
     public void render(float delta) {
+        handleInput();
+
         Gdx.gl.glClearColor(0, 0.1f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.begin();
 
+        font.setColor(Color.WHITE);
         layout.setText(font, "Options");
-        font.setColor(Color.CYAN);
-        font.draw(batch, layout, centerX(layout), 400);
+        font.draw(batch, layout, centerX(layout), Gdx.graphics.getHeight() - 100);
 
-        drawButton("Toggle Music: " + (musicOn ? "ON" : "OFF"), 300, musicToggleBounds);
-        drawButton("Toggle SFX: " + (sfxOn ? "ON" : "OFF"), 250, sfxToggleBounds);
-        drawButton("[BACK]", 180, backBounds);
+        float startY = Gdx.graphics.getHeight() / 2f;
+        for (int i = 0; i < options.length; i++) {
+            boolean selected = i == selectedIndex;
+            font.setColor(selected ? Color.YELLOW : Color.LIGHT_GRAY);
+            String label = options[i];
+
+            if (label.equals("Toggle Music")) {
+                label += " [" + (AudioManager.isMusicEnabled() ? "ON" : "OFF") + "]";
+            } else if (label.equals("Toggle SFX")) {
+                label += " [" + (AudioManager.isSfxEnabled() ? "ON" : "OFF") + "]";
+            }
+
+            layout.setText(font, label);
+            font.draw(batch, layout, centerX(layout), startY - i * 40);
+        }
 
         batch.end();
     }
 
-    private void drawButton(String text, float y, Rectangle bounds) {
-        layout.setText(font, text);
-        float x = centerX(layout);
-
-        int mouseX = Gdx.input.getX();
-        int mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
-
-        if (bounds.contains(mouseX, mouseY)) {
-            font.setColor(Color.YELLOW);
-        } else {
-            font.setColor(Color.WHITE);
+    private void handleInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            selectedIndex = (selectedIndex + 1) % options.length;
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            switch (selectedIndex) {
+                case 0 -> AudioManager.toggleMusic();
+                case 1 -> AudioManager.toggleSfx();
+                case 2 -> game.setScreen(new MainMenuScreen(game));
+            }
         }
-
-        font.draw(batch, layout, x, y);
     }
 
     private float centerX(GlyphLayout layout) {
