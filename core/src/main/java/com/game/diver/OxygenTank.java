@@ -37,7 +37,7 @@ public class OxygenTank {
         float wobble = MathUtils.sin(time * 3f) * 3f;
         batch.setColor(1f, 1f, 1f, 0.85f + 0.15f * MathUtils.sin(time * 4f));
         batch.draw(texture, x, baseY + wobble, width, height);
-        batch.setColor(1f, 1f, 1f, 1f); // renk resetle
+        batch.setColor(1f, 1f, 1f, 1f);
     }
 
     public Rectangle getBounds() {
