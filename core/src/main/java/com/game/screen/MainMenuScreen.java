@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.game.DeepDiveDrift;
 import com.game.manager.AudioManager;
+import com.game.manager.FontManager;
 
 public class MainMenuScreen implements Screen {
 
@@ -23,8 +24,7 @@ public class MainMenuScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        font = new BitmapFont();
-        font.getData().setScale(1.2f);
+        font = FontManager.getMediumFont();
         layout = new GlyphLayout();
 
         AudioManager.playBackgroundMusic();
@@ -39,7 +39,6 @@ public class MainMenuScreen implements Screen {
 
         batch.begin();
 
-        font.setColor(Color.WHITE);
         layout.setText(font, "Deep Dive Drift");
         font.draw(batch, layout, centerX(layout), Gdx.graphics.getHeight() - 100);
 
@@ -56,9 +55,12 @@ public class MainMenuScreen implements Screen {
     private void handleInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
             selectedIndex = (selectedIndex - 1 + menuItems.length) % menuItems.length;
+            AudioManager.playSelect();
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
             selectedIndex = (selectedIndex + 1) % menuItems.length;
+            AudioManager.playSelect();
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            AudioManager.playConfirm();
             switch (selectedIndex) {
                 case 0 -> game.setScreen(new GameScreen());
                 case 1 -> game.setScreen(new OptionsScreen(game));

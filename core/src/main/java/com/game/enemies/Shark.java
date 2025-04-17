@@ -1,5 +1,6 @@
 package com.game.enemies;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
@@ -9,18 +10,21 @@ public class Shark implements EnemyFish {
 
     private Texture texture;
     private Vector2 position;
-    private float speed = 80f;
-    private float width = 96f;
-    private float height = 48f;
+    private Rectangle bounds;
+    private float speed = 120f;
+    private float width = 80f;
+    private float height = 40f;
 
     public Shark(float y) {
-        this.texture = new Texture("enemy_shark.png");
-        this.position = new Vector2(800, y);
+        texture = new Texture("enemy_shark.png");
+        position = new Vector2(Gdx.graphics.getWidth(), y); // ekranın sağı
+        bounds = new Rectangle(position.x, position.y, width, height);
     }
 
     @Override
     public void update(float delta) {
         position.x -= speed * delta;
+        bounds.setPosition(position.x, position.y);
     }
 
     @Override
@@ -35,7 +39,7 @@ public class Shark implements EnemyFish {
 
     @Override
     public Rectangle getBounds() {
-        return new Rectangle(position.x, position.y, width, height);
+        return bounds;
     }
 
     @Override

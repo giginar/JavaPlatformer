@@ -1,5 +1,6 @@
 package com.game.enemies;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
@@ -19,12 +20,15 @@ public class PiranhaSwarm implements EnemyFish {
     public PiranhaSwarm(float baseY) {
         this.texture = new Texture("enemy_piranha.png");
         this.positions = new ArrayList<>();
-        Random random = new Random();
 
-        int count = 3 + random.nextInt(3);
+        Random random = new Random();
+        int count = 3 + random.nextInt(3); // 3 to 5 fish
+
         for (int i = 0; i < count; i++) {
-            float yOffset = random.nextFloat() * 40 - 20;
-            positions.add(new Vector2(800 + i * 10, baseY + yOffset));
+            float yOffset = random.nextFloat() * 40 - 20; // vary Y
+            float x = Gdx.graphics.getWidth() + i * 10;
+            float y = baseY + yOffset;
+            positions.add(new Vector2(x, y));
         }
     }
 

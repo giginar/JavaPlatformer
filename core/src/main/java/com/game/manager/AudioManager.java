@@ -8,7 +8,7 @@ import com.badlogic.gdx.audio.Sound;
 public class AudioManager {
 
     private static Music backgroundMusic;
-    private static Sound shootSound, hitSound, oxygenSound, gameoverSound, breathSound;
+    private static Sound shootSound, hitSound, oxygenSound, gameoverSound, breathSound, selectSound, confirmSound;
 
     private static boolean musicOn = true;
     private static boolean sfxOn = true;
@@ -34,6 +34,8 @@ public class AudioManager {
         oxygenSound = Gdx.audio.newSound(Gdx.files.internal("oxygen.wav"));
         gameoverSound = Gdx.audio.newSound(Gdx.files.internal("gameover.wav"));
         breathSound = Gdx.audio.newSound(Gdx.files.internal("breath.mp3"));
+        selectSound = Gdx.audio.newSound(Gdx.files.internal("select.wav"));
+        confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirm.wav"));
 
         if (musicOn) backgroundMusic.play();
     }
@@ -78,6 +80,14 @@ public class AudioManager {
 
     public static void playBreath() {
         if (sfxOn) breathSound.play();
+    }
+
+    public static void playSelect() {
+        if (sfxOn) selectSound.play();
+    }
+
+    public static void playConfirm() {
+        if (sfxOn) confirmSound.play();
     }
 
     public static void toggleMusic() {

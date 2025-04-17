@@ -4,10 +4,12 @@ import com.badlogic.gdx.*;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.*;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.game.diver.*;
 import com.game.enemies.*;
 import com.game.manager.AudioManager;
+import com.game.manager.FontManager;
 
 import java.util.*;
 
@@ -15,8 +17,8 @@ public class GameScreen implements Screen {
 
     private SpriteBatch batch;
     private ShapeRenderer shapeRenderer;
-    private BitmapFont font;
     private GlyphLayout layout;
+    private BitmapFont customFont;
 
     private Background background;
     private Diver diver;
@@ -45,14 +47,14 @@ public class GameScreen implements Screen {
     private final float tutorialDuration = 4f;
 
     private final Random random = new Random();
+    private boolean paused = false;
 
     @Override
     public void show() {
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
-        font = new BitmapFont();
-        font.getData().setScale(0.8f);
         layout = new GlyphLayout();
+        customFont = FontManager.getMediumFont();
 
         background = new Background();
         diver = new Diver();
@@ -72,10 +74,14 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(0, 0.1f, 0.3f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        if (!gameOver) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.P)) {
+            paused = !paused;
+        }
+
+        if (!paused && !gameOver) {
             updateGame(delta);
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-            show(); // restart game
+            show();
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
@@ -101,14 +107,22 @@ public class GameScreen implements Screen {
         }
 
         if (gameOver) {
-            layout.setText(font, "GAME OVER");
-            font.setColor(Color.WHITE);
-            font.draw(batch, layout, centerX(layout), 260);
-            layout.setText(font, "Press R to play again");
-            font.draw(batch, layout, centerX(layout), 230);
+            layout.setText(customFont, "GAME OVER");
+            customFont.setColor(Color.WHITE);
+            customFont.draw(batch, layout, centerX(layout), 260);
+            layout.setText(customFont, "Press R to play again");
+            customFont.draw(batch, layout, centerX(layout), 230);
         }
 
         batch.end();
+
+        if (paused) {
+            layout.setText(customFont, "PAUSED");
+            customFont.setColor(Color.YELLOW);
+            batch.begin();
+            customFont.draw(batch, layout, centerX(layout), 220);
+            batch.end();
+        }
 
         drawOxygenBar();
     }
@@ -210,29 +224,45 @@ public class GameScreen implements Screen {
 
     private void spawnEnemy() {
         float y = randomY();
+
         switch (currentLevel) {
             case 1 -> enemies.add(new SmallFish(y));
-            case 2 -> enemies.add(random.nextBoolean() ? new SmallFish(y) : new FastFish(y));
+            case 2 -> {
+                if (random.nextBoolean()) {
+                    enemies.add(new SmallFish(y));
+                } else {
+                    enemies.add(new FastFish(y));
+                }
+            }
             case 3 -> {
                 int r = random.nextInt(4);
-                enemies.add(switch (r) {
-                    case 0 -> new Shark(y);
-                    case 1 -> new PiranhaSwarm(y);
-                    default -> random.nextBoolean() ? new SmallFish(y) : new FastFish(y);
-                });
+                switch (r) {
+                    case 0 -> enemies.add(new Shark(y));
+                    case 1 -> enemies.add(new PiranhaSwarm(y));
+                    default -> {
+                        if (random.nextBoolean()) {
+                            enemies.add(new SmallFish(y));
+                        } else {
+                            enemies.add(new FastFish(y));
+                        }
+                    }
+                }
             }
         }
     }
 
+
+
     private float randomY() {
-        return random.nextFloat() * (Gdx.graphics.getHeight() - 64);
+        float margin = 64f;
+        return margin + random.nextFloat() * (Gdx.graphics.getHeight() - 2 * margin);
     }
 
     private void drawHUD() {
-        font.setColor(Color.WHITE);
-        font.draw(batch, "Score: " + (int) score, 10, Gdx.graphics.getHeight() - 10);
-        font.draw(batch, "Max Score: " + (int) maxScore, 10, Gdx.graphics.getHeight() - 30);
-        font.draw(batch, "Level: " + currentLevel, 10, Gdx.graphics.getHeight() - 50);
+        customFont.setColor(Color.WHITE);
+        customFont.draw(batch, "Score: " + (int) score, 10, Gdx.graphics.getHeight() - 10);
+        customFont.draw(batch, "Max Score: " + (int) maxScore, 10, Gdx.graphics.getHeight() - 30);
+        customFont.draw(batch, "Level: " + currentLevel, 10, Gdx.graphics.getHeight() - 50);
     }
 
     private void drawOxygenBar() {
@@ -257,10 +287,10 @@ public class GameScreen implements Screen {
         shapeRenderer.rect(x, y, width, height);
         shapeRenderer.end();
 
-        layout.setText(font, "OXYGEN");
-        font.setColor(Color.WHITE);
+        layout.setText(customFont, "OXYGEN");
+        customFont.setColor(Color.WHITE);
         batch.begin();
-        font.draw(batch, layout, x + (width - layout.width) / 2, y + height - 2);
+        customFont.draw(batch, layout, x + (width - layout.width) / 2, y + height - 2);
         batch.end();
     }
 
@@ -278,14 +308,14 @@ public class GameScreen implements Screen {
         batch.begin(); // ← Tekrar başlat
 
         // Draw tutorial text with batch
-        font.setColor(Color.WHITE);
-        layout.setText(font, "Z: Harpoon | R: Restart | ESC: Exit | T: Tutorial");
-        font.draw(batch, layout, centerX(layout), boxY + boxHeight / 2 + layout.height / 2);
+        customFont.setColor(Color.WHITE);
+        layout.setText(customFont, "Z: Harpoon | R: Restart | ESC: Exit | T: Tutorial");
+        customFont.draw(batch, layout, centerX(layout), boxY + boxHeight / 2 + layout.height / 2);
     }
 
 
     private float centerX(GlyphLayout layout) {
-        return (Gdx.graphics.getWidth() - layout.width) / 2;
+        return (Gdx.graphics.getWidth() - layout.width) / 2f;
     }
 
     @Override public void resize(int width, int height) {}
@@ -297,12 +327,13 @@ public class GameScreen implements Screen {
     public void dispose() {
         batch.dispose();
         shapeRenderer.dispose();
-        font.dispose();
+        customFont.dispose();
         background.dispose();
         diver.dispose();
         enemies.forEach(EnemyFish::dispose);
         harpoons.forEach(Harpoon::dispose);
         oxygenTanks.forEach(OxygenTank::dispose);
         AudioManager.dispose();
+        FontManager.dispose();
     }
 }

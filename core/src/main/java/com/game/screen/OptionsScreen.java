@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.game.DeepDiveDrift;
 import com.game.manager.AudioManager;
+import com.game.manager.FontManager;
 
 public class OptionsScreen implements Screen {
 
@@ -23,8 +24,7 @@ public class OptionsScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        font = new BitmapFont();
-        font.getData().setScale(1.2f);
+        font = FontManager.getMediumFont();
         layout = new GlyphLayout();
     }
 
@@ -63,9 +63,12 @@ public class OptionsScreen implements Screen {
     private void handleInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
             selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+            AudioManager.playSelect();
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
             selectedIndex = (selectedIndex + 1) % options.length;
+            AudioManager.playSelect();
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            AudioManager.playConfirm();
             switch (selectedIndex) {
                 case 0 -> AudioManager.toggleMusic();
                 case 1 -> AudioManager.toggleSfx();
