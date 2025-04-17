@@ -49,6 +49,16 @@ public class FastFish implements EnemyFish {
     }
 
     @Override
+    public void hit() {
+
+    }
+
+    @Override
+    public boolean isDead() {
+        return false;
+    }
+
+    @Override
     public void dispose() {
         texture.dispose();
     }

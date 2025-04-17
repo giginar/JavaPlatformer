@@ -1,8 +1,10 @@
 package com.game.screen;
 
 import com.badlogic.gdx.*;
-import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.*;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.game.DeepDiveDrift;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
@@ -10,53 +12,46 @@ import com.game.manager.FontManager;
 public class OptionsScreen implements Screen {
 
     private final DeepDiveDrift game;
-    private SpriteBatch batch;
-    private BitmapFont font;
-    private GlyphLayout layout;
+    private final SpriteBatch batch;
+    private final BitmapFont font;
+    private final GlyphLayout layout;
+    private final ShapeRenderer shapeRenderer;
 
-    private final String[] options = {"Toggle Music", "Toggle SFX", "Back"};
+    private final String[] options = {"Music: ", "Sound Effects: ", "Back"};
     private int selectedIndex = 0;
+    private boolean musicOn = true;
+    private boolean sfxOn = true;
+
+    private final Screen previousScreen;
 
     public OptionsScreen(DeepDiveDrift game) {
+        this(game, null);
+    }
+
+    public OptionsScreen(DeepDiveDrift game, Screen previousScreen) {
         this.game = game;
+        this.previousScreen = previousScreen;
+        this.batch = new SpriteBatch();
+        this.font = FontManager.getMediumFont();
+        this.layout = new GlyphLayout();
+        this.shapeRenderer = new ShapeRenderer();
+
+        this.musicOn = AudioManager.isMusicEnabled();
+        this.sfxOn = AudioManager.isSfxEnabled();
     }
 
     @Override
-    public void show() {
-        batch = new SpriteBatch();
-        font = FontManager.getMediumFont();
-        layout = new GlyphLayout();
-    }
+    public void show() {}
 
     @Override
     public void render(float delta) {
-        handleInput();
-
-        Gdx.gl.glClearColor(0, 0.1f, 0.3f, 1);
+        Gdx.gl.glClearColor(0.05f, 0.05f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        handleInput();
+
         batch.begin();
-
-        font.setColor(Color.WHITE);
-        layout.setText(font, "Options");
-        font.draw(batch, layout, centerX(layout), Gdx.graphics.getHeight() - 100);
-
-        float startY = Gdx.graphics.getHeight() / 2f;
-        for (int i = 0; i < options.length; i++) {
-            boolean selected = i == selectedIndex;
-            font.setColor(selected ? Color.YELLOW : Color.LIGHT_GRAY);
-            String label = options[i];
-
-            if (label.equals("Toggle Music")) {
-                label += " [" + (AudioManager.isMusicEnabled() ? "ON" : "OFF") + "]";
-            } else if (label.equals("Toggle SFX")) {
-                label += " [" + (AudioManager.isSfxEnabled() ? "ON" : "OFF") + "]";
-            }
-
-            layout.setText(font, label);
-            font.draw(batch, layout, centerX(layout), startY - i * 40);
-        }
-
+        drawOptions();
         batch.end();
     }
 
@@ -69,16 +64,48 @@ public class OptionsScreen implements Screen {
             AudioManager.playSelect();
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             AudioManager.playConfirm();
-            switch (selectedIndex) {
-                case 0 -> AudioManager.toggleMusic();
-                case 1 -> AudioManager.toggleSfx();
-                case 2 -> game.setScreen(new MainMenuScreen(game));
+            switch ((selectedIndex + 1) % options.length) {
+                case 0 -> {
+                    musicOn = !musicOn;
+                    AudioManager.updateMusicState(musicOn);
+                }
+                case 1 -> {
+                    sfxOn = !sfxOn;
+                    AudioManager.updateSfxState(sfxOn);
+                }
+                case 2 -> {
+                    if (previousScreen != null) {
+                        game.setScreen(previousScreen);
+                    } else {
+                        game.setScreen(new MainMenuScreen(game));
+                    }
+                }
+            }
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            AudioManager.playSelect();
+            if (previousScreen != null) {
+                game.setScreen(previousScreen);
+            } else {
+                game.setScreen(new MainMenuScreen(game));
             }
         }
     }
 
-    private float centerX(GlyphLayout layout) {
-        return (Gdx.graphics.getWidth() - layout.width) / 2f;
+    private void drawOptions() {
+        float startY = Gdx.graphics.getHeight() / 2f + 40;
+
+        for (int i = 0; i < options.length; i++) {
+            String label = options[i];
+            if (i == 0) label += (musicOn ? "ON" : "OFF");
+            if (i == 1) label += (sfxOn ? "ON" : "OFF");
+
+            layout.setText(font, label);
+            float x = (Gdx.graphics.getWidth() - layout.width) / 2f;
+            float y = startY - i * 40;
+
+            font.setColor(i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY);
+            font.draw(batch, layout, x, y);
+        }
     }
 
     @Override public void resize(int width, int height) {}
@@ -90,5 +117,6 @@ public class OptionsScreen implements Screen {
     public void dispose() {
         batch.dispose();
         font.dispose();
+        shapeRenderer.dispose();
     }
 }

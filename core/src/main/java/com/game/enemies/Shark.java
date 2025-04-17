@@ -3,44 +3,54 @@ package com.game.enemies;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class Shark implements EnemyFish {
 
-    private Texture texture;
-    private Vector2 position;
-    private Rectangle bounds;
-    private float speed = 250f;
-    private float width = 80f;
-    private float height = 40f;
-    private float animationTime = 0f;
-    private float baseY;
+    private final Texture texture;
+    private final Sprite sprite;
+    private final Vector2 position;
+    private final Rectangle bounds;
+    private final float speed = 100f;
+
+    private int hp = 2;
+    private float hitEffectTimer = 0f;
+
+    private final float WIDTH = 96f;
+    private final float HEIGHT = 48f;
 
     public Shark(float y) {
         this.texture = new Texture("enemy_shark.png");
+        this.sprite = new Sprite(texture);
+        this.sprite.setSize(WIDTH, HEIGHT);
         this.position = new Vector2(Gdx.graphics.getWidth(), y);
-        this.baseY = y;
-        this.bounds = new Rectangle(position.x, position.y, width, height);
+        this.bounds = new Rectangle(position.x, position.y, WIDTH, HEIGHT);
+        this.sprite.setPosition(position.x, position.y);
     }
 
     @Override
     public void update(float delta) {
-        animationTime += delta;
         position.x -= speed * delta;
-        position.y = baseY + (float)Math.sin(animationTime * 2.5f) * 3f;
+
+        if (hitEffectTimer > 0) {
+            hitEffectTimer -= delta;
+        }
+
+        sprite.setPosition(position.x, position.y);
         bounds.setPosition(position.x, position.y);
     }
 
     @Override
     public void render(SpriteBatch batch) {
-        batch.draw(texture, position.x, position.y, width, height);
-    }
-
-    @Override
-    public boolean isOutOfScreen() {
-        return position.x + width < 0;
+        if (hitEffectTimer > 0) {
+            sprite.setColor(Color.RED);
+        } else {
+            sprite.setColor(Color.WHITE);
+        }
+        sprite.draw(batch);
     }
 
     @Override
@@ -49,7 +59,22 @@ public class Shark implements EnemyFish {
     }
 
     @Override
+    public boolean isOutOfScreen() {
+        return position.x + sprite.getWidth() < 0;
+    }
+
+    @Override
     public void dispose() {
         texture.dispose();
+    }
+
+    @Override
+    public void hit() {
+        hp--;
+        hitEffectTimer = 0.2f; // flash red for 0.2s
+    }
+
+    public boolean isDead() {
+        return hp <= 0;
     }
 }

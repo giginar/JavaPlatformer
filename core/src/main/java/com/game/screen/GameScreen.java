@@ -51,9 +51,22 @@ public class GameScreen implements Screen {
 
     private final String[] pauseOptions = {"Continue", "Options", "Main Menu"};
     private int selectedPauseIndex = 0;
+    private final boolean shouldReset;
+
+    public GameScreen() {
+        this(false);
+    }
+
+    public GameScreen(boolean shouldReset) {
+        this.shouldReset = shouldReset;
+    }
 
     @Override
     public void show() {
+        if (shouldReset) {
+            resetGame(); // ✅ now it's safe to reset because everything is initialized
+        }
+
         if (prefs == null) {
             prefs = Gdx.app.getPreferences("DeepDiveDriftPrefs");
         }
@@ -211,6 +224,33 @@ public class GameScreen implements Screen {
             for (Iterator<EnemyFish> eIter = enemies.iterator(); eIter.hasNext(); ) {
                 EnemyFish f = eIter.next();
                 if (h.getBounds().overlaps(f.getBounds())) {
+                    // Handle SHARK
+                    if (f instanceof Shark shark) {
+                        shark.hit();
+                        hIter.remove();
+                        if (shark.isDead()) {
+                            eIter.remove();
+                            score += getEnemyScore(f);
+                            oxygen = Math.min(maxOxygen, oxygen + 10);
+                            AudioManager.playHit();
+                        }
+                        break;
+                    }
+
+                    // Handle PIRANHA SWARM
+                    if (f instanceof PiranhaSwarm swarm) {
+                        swarm.hit();
+                        hIter.remove();
+                        if (swarm.isDead()) {
+                            eIter.remove();
+                            score += getEnemyScore(f);
+                            oxygen = Math.min(maxOxygen, oxygen + 10);
+                            AudioManager.playHit();
+                        }
+                        break;
+                    }
+
+                    // Handle generic enemies
                     hIter.remove();
                     eIter.remove();
                     score += getEnemyScore(f);
@@ -221,6 +261,7 @@ public class GameScreen implements Screen {
             }
         }
 
+        // Oxygen tanks
         for (Iterator<OxygenTank> tIter = oxygenTanks.iterator(); tIter.hasNext(); ) {
             OxygenTank t = tIter.next();
             if (t.getBounds().overlaps(diver.getBounds())) {
@@ -230,6 +271,7 @@ public class GameScreen implements Screen {
             }
         }
 
+        // Enemy–Diver collision
         for (EnemyFish f : enemies) {
             if (f.getBounds().overlaps(diver.getBounds())) {
                 gameOver = true;
@@ -238,6 +280,7 @@ public class GameScreen implements Screen {
             }
         }
     }
+
 
     private void spawnEnemy() {
         float y = randomY();
@@ -364,7 +407,11 @@ public class GameScreen implements Screen {
     private void handlePauseSelection() {
         switch (pauseOptions[selectedPauseIndex]) {
             case "Continue" -> paused = false;
-            case "Options" -> Gdx.app.log("GameScreen", "Options selected (not implemented yet)");
+            case "Options" -> {
+                AudioManager.playSelect();
+                DeepDiveDrift game = (DeepDiveDrift) Gdx.app.getApplicationListener();
+                game.setScreen(new OptionsScreen(game, this)); // this gönderiliyor!
+            }
             case "Main Menu" -> {
                 AudioManager.playSelect();
                 DeepDiveDrift game = (DeepDiveDrift) Gdx.app.getApplicationListener();
@@ -374,21 +421,24 @@ public class GameScreen implements Screen {
     }
 
     private void drawPauseMenu() {
-        float boxW = 300, boxH = 180;
-        float boxX = (Gdx.graphics.getWidth() - boxW) / 2;
-        float boxY = (Gdx.graphics.getHeight() - boxH) / 2;
+        float boxWidth = 320;
+        float boxHeight = 200;
+        float boxX = (Gdx.graphics.getWidth() - boxWidth) / 2;
+        float boxY = (Gdx.graphics.getHeight() - boxHeight) / 2;
 
-        // Draw semi-transparent box
+        // Draw semi-transparent dark box
         batch.end();
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0, 0, 0, 0.7f);
-        shapeRenderer.rect(boxX, boxY, boxW, boxH);
+        shapeRenderer.setColor(0, 0, 0, 0.75f);
+        shapeRenderer.rect(boxX, boxY, boxWidth, boxHeight);
         shapeRenderer.end();
         batch.begin();
 
+        // Title
         font.setColor(Color.WHITE);
-        drawCenteredText("Paused", boxY + boxH - 30);
+        drawCenteredText("Paused", boxY + boxHeight - 30);
 
+        // Draw menu options
         for (int i = 0; i < pauseOptions.length; i++) {
             String option = pauseOptions[i];
             if (i == selectedPauseIndex) {
@@ -396,8 +446,25 @@ public class GameScreen implements Screen {
             } else {
                 font.setColor(Color.LIGHT_GRAY);
             }
-            drawCenteredText(option, boxY + boxH - 70 - (i * 30));
+            drawCenteredText(option, boxY + boxHeight - 70 - (i * 30));
         }
+    }
+
+    public void resetGame() {
+        score = 0;
+        currentLevel = 1;
+        oxygen = maxOxygen;
+        gameOver = false;
+        paused = false;
+        showTutorial = true;
+        tutorialTimer = 0f;
+
+        if (enemies != null) enemies.clear();
+        if (harpoons != null) harpoons.clear();
+        if (oxygenTanks != null) oxygenTanks.clear();
+
+        diver = new Diver();
+        AudioManager.playBackgroundMusic();
     }
 
     @Override public void resize(int width, int height) {}

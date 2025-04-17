@@ -8,5 +8,7 @@ public interface EnemyFish {
     void render(SpriteBatch batch);
     boolean isOutOfScreen();
     Rectangle getBounds();
+    void hit();
+    boolean isDead();
     void dispose();
 }

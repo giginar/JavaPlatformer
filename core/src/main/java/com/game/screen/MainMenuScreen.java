@@ -55,22 +55,28 @@ public class MainMenuScreen implements Screen {
         } else {
             transitionAlpha -= delta;
             if (transitionAlpha <= 0) {
-                game.setScreen(new GameScreen());
+                GameScreen gameScreen = new GameScreen();
+                gameScreen.resetGame(); // 🔁 CLEAR & RESET
+                game.setScreen(gameScreen);
             }
         }
     }
 
     private void handleInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
-            AudioManager.playSelect();
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
             selectedIndex = (selectedIndex + 1) % menuOptions.length;
+            AudioManager.playSelect();
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            selectedIndex = (selectedIndex - 1 + menuOptions.length) % menuOptions.length;
             AudioManager.playSelect();
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             AudioManager.playConfirm();
             switch ((selectedIndex + 1) % menuOptions.length) {
-                case 0 -> transitioning = true; // PLAY
+                case 0 -> {
+                    GameScreen gameScreen = new GameScreen(true);
+                    game.setScreen(gameScreen);
+                    transitioning = true;
+                } // PLAY
                 case 1 -> game.setScreen(new OptionsScreen(game)); // OPTIONS
                 case 2 -> Gdx.app.exit(); // EXIT
             }
@@ -102,6 +108,7 @@ public class MainMenuScreen implements Screen {
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
+
     @Override
     public void dispose() {
         batch.dispose();
