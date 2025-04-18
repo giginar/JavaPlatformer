@@ -15,7 +15,7 @@ public class Shark implements EnemyFish {
     private final Vector2 position;
     private final Rectangle bounds;
     private final float speed = 100f;
-
+    private float speedMultiplier = 1f;
     private int hp = 2;
     private float hitEffectTimer = 0f;
 
@@ -33,7 +33,7 @@ public class Shark implements EnemyFish {
 
     @Override
     public void update(float delta) {
-        position.x -= speed * delta;
+        position.x -= speed * delta * speedMultiplier;;
 
         if (hitEffectTimer > 0) {
             hitEffectTimer -= delta;
@@ -76,5 +76,10 @@ public class Shark implements EnemyFish {
 
     public boolean isDead() {
         return hp <= 0;
+    }
+
+    @Override
+    public void setSpeedMultiplier(float multiplier) {
+        this.speedMultiplier = multiplier;
     }
 }

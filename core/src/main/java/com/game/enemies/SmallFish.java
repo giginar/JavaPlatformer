@@ -13,6 +13,7 @@ public class SmallFish implements EnemyFish {
     private Vector2 position;
     private Rectangle bounds;
     private float speed = 150f;
+    private float speedMultiplier = 1f;
     private float width = 32f;
     private float height = 24f;
     private float animationTime = 0f;
@@ -28,7 +29,7 @@ public class SmallFish implements EnemyFish {
     @Override
     public void update(float delta) {
         animationTime += delta;
-        position.x -= speed * delta;
+        position.x -= speed * speedMultiplier * delta;
         position.y = baseY + (float)Math.sin(animationTime * 4f) * 5f;
         bounds.setPosition(position.x, position.y);
     }
@@ -56,6 +57,10 @@ public class SmallFish implements EnemyFish {
     @Override
     public boolean isDead() {
         return false;
+    }
+
+    public void setSpeedMultiplier(float multiplier) {
+        this.speedMultiplier = multiplier;
     }
 
     @Override

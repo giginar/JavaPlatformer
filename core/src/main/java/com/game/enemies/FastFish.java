@@ -13,6 +13,7 @@ public class FastFish implements EnemyFish {
     private Vector2 position;
     private Rectangle bounds;
     private float speed = 500f;
+    private float speedMultiplier = 1f;
     private float width = 40f;
     private float height = 28f;
     private float animationTime = 0f;
@@ -26,9 +27,14 @@ public class FastFish implements EnemyFish {
     }
 
     @Override
+    public void setSpeedMultiplier(float multiplier) {
+        this.speedMultiplier = multiplier;
+    }
+
+    @Override
     public void update(float delta) {
         animationTime += delta;
-        position.x -= speed * delta;
+        position.x -= speed * delta * speedMultiplier;
         position.y = baseY + (float)Math.sin(animationTime * 5f) * 4f;
         bounds.setPosition(position.x, position.y);
     }
@@ -57,6 +63,7 @@ public class FastFish implements EnemyFish {
     public boolean isDead() {
         return false;
     }
+
 
     @Override
     public void dispose() {

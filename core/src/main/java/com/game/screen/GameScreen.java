@@ -53,6 +53,15 @@ public class GameScreen implements Screen {
     private int selectedPauseIndex = 0;
     private final boolean shouldReset;
 
+    private float enemySpawnInterval = 2.0f;
+    private final float minSpawnInterval = 0.8f;
+    private final float spawnReductionStep = 0.1f;
+
+    private float fishSpeedMultiplier = 1.0f;
+    private final float maxSpeedMultiplier = 2.0f;
+    private float currentSpeedMultiplier = 1.0f;
+    private float currentSpawnInterval = 2.0f;
+
     public GameScreen() {
         this(false);
     }
@@ -284,24 +293,58 @@ public class GameScreen implements Screen {
 
     private void spawnEnemy() {
         float y = randomY();
+        EnemyFish enemy = null;
+
         switch (currentLevel) {
-            case 1 -> enemies.add(new SmallFish(y));
-            case 2 -> enemies.add(random.nextBoolean() ? new SmallFish(y) : new FastFish(y));
-            case 3 -> {
+            case 1 -> enemy = new SmallFish(y);
+            case 2 -> enemy = random.nextBoolean() ? new SmallFish(y) : new FastFish(y);
+            case 3, 4 -> {
                 int r = random.nextInt(4);
-                enemies.add(switch (r) {
+                enemy = switch (r) {
                     case 0 -> new Shark(y);
                     case 1 -> new PiranhaSwarm(y);
                     default -> random.nextBoolean() ? new SmallFish(y) : new FastFish(y);
-                });
+                };
             }
+        }
+
+        if (enemy != null) {
+            enemy.setSpeedMultiplier(currentSpeedMultiplier); // apply multiplier
+            enemies.add(enemy);
         }
     }
 
     private void checkLevelProgression() {
-        if (score > 2500) currentLevel = 3;
-        else if (score > 1000) currentLevel = 2;
-        else currentLevel = 1;
+        if (score > 5000) {
+            currentLevel = 4;
+        } else if (score > 2500) {
+            currentLevel = 3;
+        } else if (score > 1000) {
+            currentLevel = 2;
+        } else {
+            currentLevel = 1;
+        }
+
+        // Adjust spawn interval and speed multiplier
+        switch (currentLevel) {
+            case 1 -> {
+                enemySpawnTimer = Math.min(enemySpawnTimer, 2f); // reset if needed
+                currentSpeedMultiplier = 1.0f;
+                currentSpawnInterval = 2f;
+            }
+            case 2 -> {
+                currentSpeedMultiplier = 1.2f;
+                currentSpawnInterval = 1.7f;
+            }
+            case 3 -> {
+                currentSpeedMultiplier = 1.5f;
+                currentSpawnInterval = 1.4f;
+            }
+            case 4 -> {
+                currentSpeedMultiplier = 2.0f;
+                currentSpawnInterval = 1.1f;
+            }
+        }
     }
 
     private int getEnemyScore(EnemyFish f) {
@@ -410,7 +453,9 @@ public class GameScreen implements Screen {
             case "Options" -> {
                 AudioManager.playSelect();
                 DeepDiveDrift game = (DeepDiveDrift) Gdx.app.getApplicationListener();
-                game.setScreen(new OptionsScreen(game, this)); // this gönderiliyor!
+                OptionsScreen optionsScreen = new OptionsScreen(game, this);
+                optionsScreen.setReturnToPause(true);
+                game.setScreen(optionsScreen);
             }
             case "Main Menu" -> {
                 AudioManager.playSelect();
@@ -467,8 +512,18 @@ public class GameScreen implements Screen {
         AudioManager.playBackgroundMusic();
     }
 
+    public void resumeFromPause() {
+        this.paused = true;
+    }
+
+    public void setPaused(boolean paused) {
+        this.paused = paused;
+    }
+
     @Override public void resize(int width, int height) {}
-    @Override public void pause() {}
+    @Override public void pause() {
+        paused = true;
+    }
     @Override public void resume() {}
     @Override public void hide() {}
 

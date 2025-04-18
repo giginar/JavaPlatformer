@@ -23,6 +23,7 @@ public class OptionsScreen implements Screen {
     private boolean sfxOn = true;
 
     private final Screen previousScreen;
+    private boolean returnToPause = false;
 
     public OptionsScreen(DeepDiveDrift game) {
         this(game, null);
@@ -74,20 +75,18 @@ public class OptionsScreen implements Screen {
                     AudioManager.updateSfxState(sfxOn);
                 }
                 case 2 -> {
-                    if (previousScreen != null) {
-                        game.setScreen(previousScreen);
-                    } else {
-                        game.setScreen(new MainMenuScreen(game));
+                    if (previousScreen instanceof GameScreen gameScreen && returnToPause) {
+                        gameScreen.setPaused(true);
                     }
+                    game.setScreen(previousScreen != null ? previousScreen : new MainMenuScreen(game));
                 }
             }
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             AudioManager.playSelect();
-            if (previousScreen != null) {
-                game.setScreen(previousScreen);
-            } else {
-                game.setScreen(new MainMenuScreen(game));
+            if (previousScreen instanceof GameScreen gameScreen && returnToPause) {
+                gameScreen.setPaused(true);
             }
+            game.setScreen(previousScreen != null ? previousScreen : new MainMenuScreen(game));
         }
     }
 
@@ -106,6 +105,10 @@ public class OptionsScreen implements Screen {
             font.setColor(i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY);
             font.draw(batch, layout, x, y);
         }
+    }
+
+    public void setReturnToPause(boolean returnToPause) {
+        this.returnToPause = returnToPause;
     }
 
     @Override public void resize(int width, int height) {}

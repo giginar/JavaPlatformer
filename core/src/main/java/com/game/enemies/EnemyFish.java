@@ -10,5 +10,6 @@ public interface EnemyFish {
     Rectangle getBounds();
     void hit();
     boolean isDead();
+    void setSpeedMultiplier(float speed);
     void dispose();
 }

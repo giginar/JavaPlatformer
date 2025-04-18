@@ -15,6 +15,7 @@ public class PiranhaSwarm implements EnemyFish {
     private final Texture texture;
     private final ArrayList<Vector2> positions;
     private final float speed = 200f;
+    private float speedMultiplier = 1f;
     private final float width = 32f;
     private final float height = 24f;
 
@@ -40,7 +41,7 @@ public class PiranhaSwarm implements EnemyFish {
     @Override
     public void update(float delta) {
         for (Vector2 pos : positions) {
-            pos.x -= speed * delta;
+            pos.x -= speed * delta * speedMultiplier;;
         }
 
         if (hitEffectTimer > 0) {
@@ -92,5 +93,10 @@ public class PiranhaSwarm implements EnemyFish {
 
     public boolean isDead() {
         return hp <= 0;
+    }
+
+    @Override
+    public void setSpeedMultiplier(float multiplier) {
+        this.speedMultiplier = multiplier;
     }
 }
