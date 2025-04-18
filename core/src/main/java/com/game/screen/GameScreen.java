@@ -73,7 +73,7 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         if (shouldReset) {
-            resetGame(); // ✅ now it's safe to reset because everything is initialized
+            resetGame();
         }
 
         if (prefs == null) {
@@ -137,11 +137,10 @@ public class GameScreen implements Screen {
     }
 
     private void handleInput() {
-        // Toggle pause on P or ESC
         if ((Gdx.input.isKeyJustPressed(Input.Keys.P) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) && !gameOver) {
             paused = !paused;
             selectedPauseIndex = 0;
-            AudioManager.playSelect(); // play retro sound
+            AudioManager.playSelect();
         }
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
@@ -471,7 +470,6 @@ public class GameScreen implements Screen {
         float boxX = (Gdx.graphics.getWidth() - boxWidth) / 2;
         float boxY = (Gdx.graphics.getHeight() - boxHeight) / 2;
 
-        // Draw semi-transparent dark box
         batch.end();
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0, 0, 0, 0.75f);
@@ -479,11 +477,9 @@ public class GameScreen implements Screen {
         shapeRenderer.end();
         batch.begin();
 
-        // Title
         font.setColor(Color.WHITE);
         drawCenteredText("Paused", boxY + boxHeight - 30);
 
-        // Draw menu options
         for (int i = 0; i < pauseOptions.length; i++) {
             String option = pauseOptions[i];
             if (i == selectedPauseIndex) {

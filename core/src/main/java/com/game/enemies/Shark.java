@@ -71,7 +71,7 @@ public class Shark implements EnemyFish {
     @Override
     public void hit() {
         hp--;
-        hitEffectTimer = 0.2f; // flash red for 0.2s
+        hitEffectTimer = 0.2f;
     }
 
     public boolean isDead() {
