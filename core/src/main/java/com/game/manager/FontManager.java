@@ -9,22 +9,30 @@ public class FontManager {
     private static BitmapFont smallFont;
     private static BitmapFont mediumFont;
     private static BitmapFont largeFont;
+    private static boolean initialized;
 
     public static void initialize() {
+        if (initialized) {
+            return;
+        }
+
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Orbitron-Regular.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
         parameter.color = Color.WHITE;
-        parameter.size = 10;
+        parameter.minFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear;
+        parameter.magFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear;
+        parameter.size = 18;
         smallFont = generator.generateFont(parameter);
 
-        parameter.size = 14;
+        parameter.size = 28;
         mediumFont = generator.generateFont(parameter);
 
-        parameter.size = 18;
+        parameter.size = 56;
         largeFont = generator.generateFont(parameter);
 
         generator.dispose();
+        initialized = true;
     }
 
     public static BitmapFont getSmallFont() {
@@ -40,8 +48,15 @@ public class FontManager {
     }
 
     public static void dispose() {
+        if (!initialized) {
+            return;
+        }
         smallFont.dispose();
         mediumFont.dispose();
         largeFont.dispose();
+        smallFont = null;
+        mediumFont = null;
+        largeFont = null;
+        initialized = false;
     }
 }

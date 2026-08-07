@@ -1,34 +1,48 @@
 package com.game.diver;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.game.GameConfig;
+import com.game.manager.GameAssets;
 
 public class Diver {
 
     private final Vector2 position;
     private final Vector2 velocity;
-    private final float GRAVITY = -300f;
-    private final float JUMP_VELOCITY = 200f;
+    private final Rectangle bounds;
+    private final Sprite sprite;
+    private float animationTime;
+
+    private static final float GRAVITY = -360f;
+    private static final float SWIM_VELOCITY = 230f;
+    private static final float MAX_FALL_SPEED = -280f;
+    private static final float HITBOX_PADDING = 8f;
+
     public static final float WIDTH = 64f;
     public static final float HEIGHT = 64f;
 
-    private Texture texture;
-
     public Diver() {
-        position = new Vector2(100, Gdx.graphics.getHeight() / 2f);
-        velocity = new Vector2(0, 0);
-        texture = new Texture("diver.png");
+        position = new Vector2(110f, GameConfig.WORLD_HEIGHT / 2f - HEIGHT / 2f);
+        velocity = new Vector2();
+        bounds = new Rectangle();
+        Texture texture = GameAssets.texture(GameAssets.DIVER);
+        sprite = new Sprite(texture);
+        sprite.setSize(WIDTH, HEIGHT);
+        sprite.setOriginCenter();
+        updateBounds();
     }
 
-    public void update(float delta) {
-        if (Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
-            velocity.y = JUMP_VELOCITY;
+    public void update(float delta, boolean swimmingUp, float agilityMultiplier) {
+        animationTime += delta;
+        if (swimmingUp) {
+            velocity.y = SWIM_VELOCITY * agilityMultiplier;
         } else {
-            velocity.y += GRAVITY * delta;
+            velocity.y += GRAVITY / agilityMultiplier * delta;
+            velocity.y = Math.max(velocity.y, MAX_FALL_SPEED * agilityMultiplier);
         }
 
         position.y += velocity.y * delta;
@@ -38,27 +52,37 @@ public class Diver {
             velocity.y = 0;
         }
 
-        if (position.y > Gdx.graphics.getHeight() - HEIGHT) {
-            position.y = Gdx.graphics.getHeight() - HEIGHT;
+        if (position.y > GameConfig.WORLD_HEIGHT - HEIGHT) {
+            position.y = GameConfig.WORLD_HEIGHT - HEIGHT;
             velocity.y = 0;
         }
+        updateBounds();
     }
 
-    public void render(SpriteBatch batch) {
-        batch.draw(texture, position.x, position.y, WIDTH, HEIGHT);
+    public void render(SpriteBatch batch, float invulnerabilityTimer) {
+        sprite.setPosition(position.x, position.y);
+        sprite.setRotation(MathUtils.clamp(velocity.y * 0.045f, -12f, 10f));
+        float breathing = MathUtils.sin(animationTime * 4f) * 0.025f;
+        sprite.setScale(1f + breathing, 1f - breathing * 0.6f);
+        boolean dimmed = invulnerabilityTimer > 0f && ((int) (invulnerabilityTimer * 14f) % 2 == 0);
+        sprite.setColor(1f, 1f, 1f, dimmed ? 0.3f : 1f);
+        sprite.draw(batch);
     }
 
-    public void dispose() {
-        texture.dispose();
+    public float getX() {
+        return position.x;
     }
 
-    public Vector2 getPosition() {
-        return position;
+    public float getY() {
+        return position.y;
     }
 
     public Rectangle getBounds() {
-        return new Rectangle(position.x, position.y, WIDTH, HEIGHT);
+        return bounds;
     }
 
-
+    private void updateBounds() {
+        bounds.set(position.x + HITBOX_PADDING, position.y + HITBOX_PADDING,
+            WIDTH - HITBOX_PADDING * 2f, HEIGHT - HITBOX_PADDING * 2f);
+    }
 }

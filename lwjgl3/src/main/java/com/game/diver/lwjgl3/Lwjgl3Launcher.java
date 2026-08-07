@@ -1,13 +1,27 @@
 package com.game.diver.lwjgl3;
 
+import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.graphics.glutils.HdpiMode;
 import com.game.DeepDiveDrift;
+import com.game.settings.DisplaySettingsStore;
+import com.game.settings.DisplaySettingsStore.WindowMode;
+
+import java.util.Locale;
 
 /** Launches the desktop (LWJGL3) application. */
-public class Lwjgl3Launcher {
+public final class Lwjgl3Launcher {
+    private static final String DEBUG_PROPERTY = "deepdive.debug";
+
+    private Lwjgl3Launcher() {
+    }
+
     public static void main(String[] args) {
-        if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
+        if (StartupHelper.startNewJvmIfRequired()) {
+            return;
+        }
+        applyLaunchArguments(args);
         createApplication();
     }
 
@@ -17,23 +31,113 @@ public class Lwjgl3Launcher {
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-        configuration.setTitle("DeepDiveDrift");
-        //// Vsync limits the frames per second to what your hardware can display, and helps eliminate
-        //// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
-        configuration.useVsync(true);
-        //// Limits FPS to the refresh rate of the currently active monitor, plus 1 to try to match fractional
-        //// refresh rates. The Vsync setting above should limit the actual FPS to match the monitor.
-        configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
-        //// If you remove the above line and set Vsync to false, you can get unlimited FPS, which can be
-        //// useful for testing performance, but can also be very stressful to some hardware.
-        //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
+        configuration.setTitle("DeepDive Drift");
+        configuration.setHdpiMode(HdpiMode.Logical);
+        configuration.useVsync(DisplaySettingsStore.vsyncEnabled());
+        configuration.setForegroundFPS(DisplaySettingsStore.fpsLimit());
+        configuration.setIdleFPS(30);
+        configuration.setBackBufferConfig(8, 8, 8, 8, 24, 8,
+            DisplaySettingsStore.msaaSamples());
 
-        configuration.setWindowedMode(1280, 720);
+        configuration.setWindowSizeLimits(
+            DisplaySettingsStore.MIN_WINDOW_WIDTH,
+            DisplaySettingsStore.MIN_WINDOW_HEIGHT,
+            -1,
+            -1
+        );
         configuration.setResizable(true);
-        configuration.useVsync(true);
-        //// You can change these files; they are in lwjgl3/src/main/resources/ .
-        //// They can also be loaded from the root of assets/ .
-        configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
+        configuration.setAutoIconify(false);
+        applyInitialWindowMode(configuration);
+
+        configuration.setWindowIcon(
+            "deepdive128.png",
+            "deepdive64.png",
+            "deepdive32.png",
+            "deepdive16.png"
+        );
+        if (Boolean.getBoolean(DEBUG_PROPERTY)) {
+            configuration.enableGLDebugOutput(true, System.err);
+        }
         return configuration;
+    }
+
+    private static void applyInitialWindowMode(Lwjgl3ApplicationConfiguration configuration) {
+        WindowMode mode = DisplaySettingsStore.windowMode();
+        Graphics.DisplayMode displayMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
+        switch (mode) {
+            case WINDOWED -> {
+                configuration.setDecorated(true);
+                configuration.setWindowedMode(
+                    DisplaySettingsStore.windowWidth(),
+                    DisplaySettingsStore.windowHeight()
+                );
+            }
+            case BORDERLESS -> {
+                configuration.setDecorated(false);
+                configuration.setWindowedMode(displayMode.width, displayMode.height);
+            }
+            case FULLSCREEN -> configuration.setFullscreenMode(findFullscreenMode(displayMode));
+        }
+    }
+
+    private static Graphics.DisplayMode findFullscreenMode(Graphics.DisplayMode fallback) {
+        Graphics.DisplayMode selected = null;
+        int requestedWidth = DisplaySettingsStore.windowWidth();
+        int requestedHeight = DisplaySettingsStore.windowHeight();
+        for (Graphics.DisplayMode candidate : Lwjgl3ApplicationConfiguration.getDisplayModes()) {
+            if (candidate.width == requestedWidth && candidate.height == requestedHeight
+                && (selected == null || candidate.refreshRate > selected.refreshRate)) {
+                selected = candidate;
+            }
+        }
+        return selected == null ? fallback : selected;
+    }
+
+    private static void applyLaunchArguments(String[] args) {
+        for (String argument : args) {
+            switch (argument.toLowerCase(Locale.ROOT)) {
+                case "--debug" -> System.setProperty(DEBUG_PROPERTY, "true");
+                case "--windowed" -> DisplaySettingsStore.setWindowMode(WindowMode.WINDOWED);
+                case "--borderless" -> DisplaySettingsStore.setWindowMode(WindowMode.BORDERLESS);
+                case "--fullscreen" -> DisplaySettingsStore.setWindowMode(WindowMode.FULLSCREEN);
+                case "--vsync" -> DisplaySettingsStore.setVsyncEnabled(true);
+                case "--no-vsync" -> DisplaySettingsStore.setVsyncEnabled(false);
+                case "--msaa" -> DisplaySettingsStore.setMsaaSamples(4);
+                case "--no-msaa" -> DisplaySettingsStore.setMsaaSamples(0);
+                default -> applyValueArgument(argument);
+            }
+        }
+    }
+
+    private static void applyValueArgument(String argument) {
+        if (argument.regionMatches(true, 0, "--resolution=", 0, 13)) {
+            String[] dimensions = argument.substring(13).toLowerCase(Locale.ROOT).split("x", 2);
+            if (dimensions.length == 2) {
+                try {
+                    DisplaySettingsStore.setWindowSize(
+                        Integer.parseInt(dimensions[0]),
+                        Integer.parseInt(dimensions[1])
+                    );
+                } catch (NumberFormatException ignored) {
+                    System.err.println("Ignoring invalid resolution argument: " + argument);
+                }
+            }
+            return;
+        }
+
+        if (argument.regionMatches(true, 0, "--fps=", 0, 6)) {
+            try {
+                int requestedFps = Integer.parseInt(argument.substring(6));
+                for (int supportedFps : DisplaySettingsStore.FPS_LIMITS) {
+                    if (requestedFps == supportedFps) {
+                        DisplaySettingsStore.setFpsLimit(requestedFps);
+                        return;
+                    }
+                }
+            } catch (NumberFormatException ignored) {
+                // The warning below also covers non-numeric values.
+            }
+            System.err.println("Ignoring unsupported FPS limit: " + argument);
+        }
     }
 }

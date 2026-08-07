@@ -1,78 +1,99 @@
 package com.game.enemies;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.Gdx;
+import com.game.GameConfig;
+import com.game.manager.GameAssets;
 
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.List;
 
 public class PiranhaSwarm implements EnemyFish {
+    private static final float SPEED = 205f;
+    private static final float WIDTH = 36f;
+    private static final float HEIGHT = 27f;
+    private static final int MAX_HP = 3;
 
     private final Texture texture;
-    private final ArrayList<Vector2> positions;
-    private final float speed = 200f;
-    private float speedMultiplier = 1f;
-    private final float width = 32f;
-    private final float height = 24f;
-
+    private final Vector2 center;
+    private final List<Vector2> positions;
     private final Rectangle bounds;
-    private int hp = 3;
-    private float hitEffectTimer = 0f;
+
+    private State state = State.APPROACH;
+    private float stateTimer;
+    private float speedMultiplier = 1f;
+    private float hitEffectTimer;
+    private float animationTime;
+    private int hp = MAX_HP;
 
     public PiranhaSwarm(float baseY) {
-        this.texture = new Texture("enemy_piranha.png");
-        this.positions = new ArrayList<>();
-
-        Random random = new Random();
-        int count = 3 + random.nextInt(3);
+        texture = GameAssets.texture(GameAssets.PIRANHA);
+        center = new Vector2(GameConfig.WORLD_WIDTH + 25f, baseY);
+        positions = new ArrayList<>();
+        int count = 3 + MathUtils.random(2);
         for (int i = 0; i < count; i++) {
-            float yOffset = random.nextFloat() * 40 - 20;
-            positions.add(new Vector2(Gdx.graphics.getWidth() + i * 10, baseY + yOffset));
+            positions.add(new Vector2());
         }
-
-        Vector2 first = positions.get(0);
-        this.bounds = new Rectangle(first.x, first.y, width, height);
+        bounds = new Rectangle();
+        updateFormation();
+        updateBounds();
     }
 
     @Override
-    public void update(float delta) {
-        for (Vector2 pos : positions) {
-            pos.x -= speed * delta * speedMultiplier;;
+    public void update(float delta, float targetX, float targetY) {
+        animationTime += delta;
+        hitEffectTimer = Math.max(0f, hitEffectTimer - delta);
+
+        switch (state) {
+            case APPROACH -> {
+                center.x -= SPEED * speedMultiplier * delta;
+                center.y = MathUtils.lerp(center.y, targetY, Math.min(1f, delta * 1.8f));
+                if (center.x <= targetX + 310f) {
+                    state = State.FORMATION;
+                    stateTimer = 1.35f;
+                }
+            }
+            case FORMATION -> {
+                stateTimer -= delta;
+                center.x = MathUtils.lerp(center.x, targetX + 185f, Math.min(1f, delta * 3f));
+                center.y = MathUtils.lerp(center.y, targetY, Math.min(1f, delta * 3.4f));
+                if (stateTimer <= 0f) {
+                    state = State.CHARGE;
+                }
+            }
+            case CHARGE -> {
+                center.x -= SPEED * 1.85f * speedMultiplier * delta;
+                center.y += MathUtils.sin(animationTime * 9f) * 22f * delta;
+            }
         }
 
-        if (hitEffectTimer > 0) {
-            hitEffectTimer -= delta;
-        }
-
-        Vector2 first = positions.get(0);
-        bounds.setPosition(first.x, first.y);
+        updateFormation();
+        updateBounds();
     }
 
     @Override
     public void render(SpriteBatch batch) {
-        if (hitEffectTimer > 0) {
+        if (hitEffectTimer > 0f) {
             batch.setColor(Color.RED);
+        } else if (state == State.FORMATION) {
+            batch.setColor(1f, 0.55f + MathUtils.sin(animationTime * 18f) * 0.25f, 0.2f, 1f);
         }
 
-        for (Vector2 pos : positions) {
-            batch.draw(texture, pos.x, pos.y, width, height);
+        for (int i = 0; i < positions.size(); i++) {
+            Vector2 position = positions.get(i);
+            float pulse = 1f + MathUtils.sin(animationTime * 9f + i) * 0.08f;
+            batch.draw(texture, position.x, position.y, WIDTH * pulse, HEIGHT / pulse);
         }
-
-        if (hitEffectTimer > 0) {
-            batch.setColor(Color.WHITE);
-        }
+        batch.setColor(Color.WHITE);
     }
 
     @Override
     public boolean isOutOfScreen() {
-        for (Vector2 pos : positions) {
-            if (pos.x + width > 0) return false;
-        }
-        return true;
+        return bounds.x + bounds.width < 0f;
     }
 
     @Override
@@ -81,22 +102,82 @@ public class PiranhaSwarm implements EnemyFish {
     }
 
     @Override
-    public void dispose() {
-        texture.dispose();
-    }
-
-    @Override
     public void hit() {
         hp--;
         hitEffectTimer = 0.2f;
+        if (positions.size() > 1) {
+            positions.remove(positions.size() - 1);
+            updateFormation();
+            updateBounds();
+        }
     }
 
+    @Override
     public boolean isDead() {
         return hp <= 0;
     }
 
     @Override
     public void setSpeedMultiplier(float multiplier) {
-        this.speedMultiplier = multiplier;
+        speedMultiplier = multiplier;
+    }
+
+    @Override
+    public int getScoreValue() {
+        return 220;
+    }
+
+    @Override
+    public float getCollisionDamage() {
+        return state == State.CHARGE ? 38f : 32f;
+    }
+
+    @Override
+    public boolean isTelegraphing() {
+        return state == State.FORMATION;
+    }
+
+    @Override
+    public float getHealthRatio() {
+        return Math.max(0f, hp / (float) MAX_HP);
+    }
+
+    private void updateFormation() {
+        int count = positions.size();
+        for (int i = 0; i < count; i++) {
+            Vector2 position = positions.get(i);
+            if (state == State.FORMATION) {
+                float angle = animationTime * 3.4f + MathUtils.PI2 * i / count;
+                position.set(center.x + MathUtils.cos(angle) * 67f - WIDTH / 2f,
+                    center.y + MathUtils.sin(angle) * 43f - HEIGHT / 2f);
+            } else if (state == State.CHARGE) {
+                float offset = i - (count - 1) / 2f;
+                position.set(center.x + Math.abs(offset) * 16f,
+                    center.y + offset * 22f - HEIGHT / 2f);
+            } else {
+                position.set(center.x + i * 15f,
+                    center.y + MathUtils.sin(animationTime * 5f + i * 1.3f) * 18f - HEIGHT / 2f);
+            }
+        }
+    }
+
+    private void updateBounds() {
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        for (Vector2 position : positions) {
+            minX = Math.min(minX, position.x);
+            minY = Math.min(minY, position.y);
+            maxX = Math.max(maxX, position.x + WIDTH);
+            maxY = Math.max(maxY, position.y + HEIGHT);
+        }
+        bounds.set(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    private enum State {
+        APPROACH,
+        FORMATION,
+        CHARGE
     }
 }

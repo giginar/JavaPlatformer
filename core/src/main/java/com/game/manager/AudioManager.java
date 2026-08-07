@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.game.GameConfig;
 
 public class AudioManager {
 
@@ -18,9 +19,8 @@ public class AudioManager {
 
     public static void initialize() {
         if (initialized) return;
-        initialized = true;
 
-        prefs = Gdx.app.getPreferences("DeepDiveDriftPrefs");
+        prefs = Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME);
 
         musicOn = prefs.getBoolean("musicOn", true);
         sfxOn = prefs.getBoolean("sfxOn", true);
@@ -37,6 +37,7 @@ public class AudioManager {
         selectSound = Gdx.audio.newSound(Gdx.files.internal("select.wav"));
         confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirm.wav"));
 
+        initialized = true;
         if (musicOn) backgroundMusic.play();
     }
 
@@ -51,56 +52,56 @@ public class AudioManager {
 
     public static void updateMusicState(boolean enabled) {
         musicOn = enabled;
-        if (enabled) {
-            if (!backgroundMusic.isPlaying()) backgroundMusic.play();
-        } else {
-            backgroundMusic.stop();
+        saveBoolean("musicOn", enabled);
+        if (backgroundMusic == null) {
+            return;
+        }
+        if (enabled && !backgroundMusic.isPlaying()) {
+            backgroundMusic.play();
+        } else if (!enabled) {
+            backgroundMusic.pause();
         }
     }
 
     public static void updateSfxState(boolean enabled) {
         sfxOn = enabled;
+        saveBoolean("sfxOn", enabled);
     }
 
     public static void playShoot() {
-        if (sfxOn) shootSound.play();
+        play(shootSound);
     }
 
     public static void playHit() {
-        if (sfxOn) hitSound.play();
+        play(hitSound);
     }
 
     public static void playOxygen() {
-        if (sfxOn) oxygenSound.play();
+        play(oxygenSound);
     }
 
     public static void playGameOver() {
-        if (sfxOn) gameoverSound.play();
+        play(gameoverSound);
     }
 
     public static void playBreath() {
-        if (sfxOn) breathSound.play();
+        play(breathSound);
     }
 
     public static void playSelect() {
-        if (sfxOn) selectSound.play();
+        play(selectSound);
     }
 
     public static void playConfirm() {
-        if (sfxOn) confirmSound.play();
+        play(confirmSound);
     }
 
     public static void toggleMusic() {
-        musicOn = !musicOn;
-        prefs.putBoolean("musicOn", musicOn);
-        prefs.flush();
-        updateMusicState(musicOn);
+        updateMusicState(!musicOn);
     }
 
     public static void toggleSfx() {
-        sfxOn = !sfxOn;
-        prefs.putBoolean("sfxOn", sfxOn);
-        prefs.flush();
+        updateSfxState(!sfxOn);
     }
 
     public static boolean isMusicEnabled() {
@@ -120,11 +121,35 @@ public class AudioManager {
         oxygenSound.dispose();
         gameoverSound.dispose();
         breathSound.dispose();
+        selectSound.dispose();
+        confirmSound.dispose();
 
+        backgroundMusic = null;
+        shootSound = null;
+        hitSound = null;
+        oxygenSound = null;
+        gameoverSound = null;
+        breathSound = null;
+        selectSound = null;
+        confirmSound = null;
+        prefs = null;
         initialized = false;
     }
 
     public static boolean isInitialized() {
-        return prefs != null;
+        return initialized;
+    }
+
+    private static void play(Sound sound) {
+        if (initialized && sfxOn && sound != null) {
+            sound.play();
+        }
+    }
+
+    private static void saveBoolean(String key, boolean value) {
+        if (prefs != null) {
+            prefs.putBoolean(key, value);
+            prefs.flush();
+        }
     }
 }
