@@ -43,7 +43,7 @@ public final class GameAssets {
 
             for (String path : TEXTURES) {
                 Texture texture = newManager.get(path, Texture.class);
-                texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
             }
             manager = newManager;
         } catch (RuntimeException exception) {
