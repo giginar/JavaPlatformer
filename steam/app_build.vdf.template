@@ -1,0 +1,15 @@
+"appbuild"
+{
+    "appid" "{{APP_ID}}"
+    "desc" "DeepDive Drift {{VERSION}}"
+    "buildoutput" "{{BUILD_OUTPUT}}"
+    "contentroot" "{{PROJECT_ROOT}}"
+    "setlive" "{{SET_LIVE_BRANCH}}"
+    "preview" "0"
+
+    "depots"
+    {
+        "{{WINDOWS_DEPOT_ID}}" "{{WINDOWS_DEPOT_SCRIPT}}"
+{{LINUX_DEPOT_ENTRY}}
+    }
+}
