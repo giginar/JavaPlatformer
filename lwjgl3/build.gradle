@@ -34,6 +34,7 @@ dependencies {
   implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
   implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+  implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
   implementation project(':core')
 
   if (enableGraalNative == 'true') {
@@ -178,4 +179,44 @@ startScripts.classpath = project.tasks.jar.outputs.files
 
 if(enableGraalNative == 'true') {
   apply from: file("nativeimage.gradle")
+}
+
+def registerSteamDepotTask = { String taskName, String targetName, String platformDirectory ->
+  tasks.register(taskName, Sync) {
+    dependsOn "package${targetName}"
+    group = 'distribution'
+    description = "Creates an unpacked ${targetName} Steam depot directory."
+
+    def packageArchive = layout.buildDirectory.file("construo/dist/${appName}-${targetName}.zip")
+    from({ zipTree(packageArchive.get().asFile) }) {
+      eachFile { details ->
+        int firstSeparator = details.path.indexOf('/')
+        if (firstSeparator < 0) {
+          details.exclude()
+        } else {
+          details.path = details.path.substring(firstSeparator + 1)
+        }
+      }
+      includeEmptyDirs = false
+    }
+    into layout.buildDirectory.dir("steam/${platformDirectory}")
+  }
+}
+
+registerSteamDepotTask('prepareSteamWinX64', 'WinX64', 'windows-x64')
+registerSteamDepotTask('prepareSteamLinuxX64', 'LinuxX64', 'linux-x64')
+
+// Construo writes every archive into one directory. When both depots are requested,
+// make each reader wait until the other platform package has finished writing there.
+tasks.named('prepareSteamWinX64') {
+  mustRunAfter 'packageLinuxX64'
+}
+tasks.named('prepareSteamLinuxX64') {
+  mustRunAfter 'packageWinX64'
+}
+
+tasks.register('prepareSteam') {
+  dependsOn 'prepareSteamWinX64', 'prepareSteamLinuxX64'
+  group = 'distribution'
+  description = 'Creates unpacked Windows and Linux Steam depot directories.'
 }

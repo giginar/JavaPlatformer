@@ -1,5 +1,6 @@
 package com.game.settings;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.game.settings.DisplaySettingsStore.Resolution;
@@ -18,6 +19,7 @@ public final class DisplaySettings {
     private static int activeMsaaSamples;
     private static boolean screenShakeEnabled;
     private static boolean flashEffectsEnabled;
+    private static boolean displayConfigurationSupported;
     private static boolean initialized;
 
     private DisplaySettings() {
@@ -25,8 +27,10 @@ public final class DisplaySettings {
 
     public static void initialize() {
         if (initialized) {
+            applyAll();
             return;
         }
+        displayConfigurationSupported = Gdx.app.getType() == Application.ApplicationType.Desktop;
         windowMode = DisplaySettingsStore.windowMode();
         windowWidth = DisplaySettingsStore.windowWidth();
         windowHeight = DisplaySettingsStore.windowHeight();
@@ -42,12 +46,19 @@ public final class DisplaySettings {
     }
 
     public static void applyAll() {
-        applyWindowMode();
-        Gdx.graphics.setVSync(vsyncEnabled);
-        Gdx.graphics.setForegroundFPS(fpsLimit);
+        if (displayConfigurationSupported) {
+            applyWindowMode();
+            Gdx.graphics.setVSync(vsyncEnabled);
+            Gdx.graphics.setForegroundFPS(fpsLimit);
+        } else {
+            Gdx.graphics.setForegroundFPS(60);
+        }
     }
 
     public static void cycleWindowMode(int direction) {
+        if (!displayConfigurationSupported) {
+            return;
+        }
         if (windowMode == WindowMode.WINDOWED && !Gdx.graphics.isFullscreen()) {
             captureCurrentWindowSize();
         }
@@ -57,6 +68,9 @@ public final class DisplaySettings {
     }
 
     public static void cycleResolution(int direction) {
+        if (!displayConfigurationSupported) {
+            return;
+        }
         resolutionIndex = Math.floorMod(resolutionIndex + direction,
             DisplaySettingsStore.RESOLUTIONS.size());
         Resolution preset = DisplaySettingsStore.RESOLUTIONS.get(resolutionIndex);
@@ -71,12 +85,18 @@ public final class DisplaySettings {
     }
 
     public static void toggleVsync() {
+        if (!displayConfigurationSupported) {
+            return;
+        }
         vsyncEnabled = !vsyncEnabled;
         DisplaySettingsStore.setVsyncEnabled(vsyncEnabled);
         Gdx.graphics.setVSync(vsyncEnabled);
     }
 
     public static void cycleFpsLimit(int direction) {
+        if (!displayConfigurationSupported) {
+            return;
+        }
         int currentIndex = 0;
         for (int i = 0; i < DisplaySettingsStore.FPS_LIMITS.length; i++) {
             if (DisplaySettingsStore.FPS_LIMITS[i] == fpsLimit) {
@@ -91,6 +111,9 @@ public final class DisplaySettings {
     }
 
     public static void toggleMsaa() {
+        if (!displayConfigurationSupported) {
+            return;
+        }
         desiredMsaaSamples = desiredMsaaSamples >= 4 ? 0 : 4;
         DisplaySettingsStore.setMsaaSamples(desiredMsaaSamples);
     }
@@ -106,7 +129,8 @@ public final class DisplaySettings {
     }
 
     public static void captureWindowSize() {
-        if (!initialized || windowMode != WindowMode.WINDOWED || Gdx.graphics.isFullscreen()) {
+        if (!initialized || !displayConfigurationSupported
+            || windowMode != WindowMode.WINDOWED || Gdx.graphics.isFullscreen()) {
             return;
         }
         captureCurrentWindowSize();
@@ -140,7 +164,19 @@ public final class DisplaySettings {
     }
 
     public static boolean restartRequired() {
-        return desiredMsaaSamples != activeMsaaSamples;
+        return displayConfigurationSupported && desiredMsaaSamples != activeMsaaSamples;
+    }
+
+    public static boolean supportsDisplayConfiguration() {
+        return displayConfigurationSupported;
+    }
+
+    public static boolean isMobile() {
+        if (Gdx.app == null) {
+            return false;
+        }
+        Application.ApplicationType type = Gdx.app.getType();
+        return type == Application.ApplicationType.Android || type == Application.ApplicationType.iOS;
     }
 
     public static boolean screenShakeEnabled() {

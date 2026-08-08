@@ -39,6 +39,7 @@ import java.util.Random;
 public class GameScreen extends BaseScreen {
     private static final String[] PAUSE_OPTIONS = {"CONTINUE", "OPTIONS", "MAIN MENU"};
     private static final boolean DEBUG_MODE = Boolean.getBoolean("deepdive.debug");
+    private static final boolean CAPTURE_AUTOPLAY = Boolean.getBoolean("deepdive.capture.autoplay");
     private static final Color BOSS_TEXT_COLOR = new Color(0.9f, 0.55f, 1f, 1f);
     private static final Color UPGRADE_TEXT_COLOR = new Color(0.45f, 0.92f, 1f, 1f);
 
@@ -51,6 +52,11 @@ public class GameScreen extends BaseScreen {
     private static final float TUTORIAL_DURATION = 7f;
     private static final float BANNER_DURATION = 1.8f;
     private static final float BOSS_WARNING_DURATION = 2.7f;
+    private static final Rectangle TOUCH_SWIM_BUTTON = new Rectangle(32f, 28f, 230f, 120f);
+    private static final Rectangle TOUCH_FIRE_BUTTON = new Rectangle(1018f, 28f, 230f, 120f);
+    private static final Rectangle TOUCH_PAUSE_BUTTON = new Rectangle(1182f, 548f, 66f, 66f);
+    private static final Rectangle GAME_OVER_RETRY_BUTTON = new Rectangle(405f, 236f, 470f, 48f);
+    private static final Rectangle GAME_OVER_MENU_BUTTON = new Rectangle(405f, 194f, 470f, 38f);
 
     private final BitmapFont smallFont;
     private final BitmapFont mediumFont;
@@ -64,6 +70,7 @@ public class GameScreen extends BaseScreen {
     private final GameSession session;
     private final Random random;
     private final Preferences preferences;
+    private final Rectangle interactiveRow = new Rectangle();
 
     private Diver diver;
     private GameBalance.Difficulty difficulty;
@@ -92,6 +99,7 @@ public class GameScreen extends BaseScreen {
     private boolean choosingUpgrade;
     private boolean bossSpawned;
     private boolean victory;
+    private boolean captureSwimmingUp;
 
     public GameScreen(DeepDiveDrift game) {
         super(game);
@@ -109,6 +117,9 @@ public class GameScreen extends BaseScreen {
         preferences = Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME);
         highScore = preferences.getInteger("highScore", 0);
         resetGame();
+        if (Boolean.getBoolean("deepdive.capture.boss")) {
+            spawnBoss();
+        }
     }
 
     @Override
@@ -121,6 +132,8 @@ public class GameScreen extends BaseScreen {
         float frameDelta = Math.min(delta, MAX_FRAME_DELTA);
         updateWorldCamera(frameDelta);
         prepareFrame(0f, 0.04f, 0.12f);
+        layoutTouchControls();
+        updateInput();
 
         if (handleInput()) {
             return;
@@ -154,10 +167,12 @@ public class GameScreen extends BaseScreen {
 
         if (gameOver) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.R)
-                || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                || game.input().confirmJustPressed()
+                || game.input().pointerJustPressed(GAME_OVER_RETRY_BUTTON)) {
                 AudioManager.playConfirm();
                 resetGame();
-            } else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            } else if (game.input().backJustPressed()
+                || game.input().pointerJustPressed(GAME_OVER_MENU_BUTTON)) {
                 AudioManager.playSelect();
                 game.showMainMenu();
                 return true;
@@ -166,28 +181,39 @@ public class GameScreen extends BaseScreen {
         }
 
         if (paused) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.P)
-                || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            for (int i = 0; i < PAUSE_OPTIONS.length; i++) {
+                pauseRowBounds(i);
+                if (game.input().pointerOver(interactiveRow) && selectedPauseIndex != i) {
+                    selectedPauseIndex = i;
+                    AudioManager.playSelect();
+                }
+                if (game.input().pointerJustPressed(interactiveRow)) {
+                    selectedPauseIndex = i;
+                    return handlePauseSelection();
+                }
+            }
+
+            if (game.input().pauseJustPressed() || game.input().backJustPressed()) {
                 paused = false;
                 AudioManager.playSelect();
-            } else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+            } else if (game.input().menuUpJustPressed()) {
                 selectedPauseIndex = Math.floorMod(selectedPauseIndex - 1, PAUSE_OPTIONS.length);
                 AudioManager.playSelect();
-            } else if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+            } else if (game.input().menuDownJustPressed()) {
                 selectedPauseIndex = (selectedPauseIndex + 1) % PAUSE_OPTIONS.length;
                 AudioManager.playSelect();
-            } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            } else if (game.input().confirmJustPressed()) {
                 return handlePauseSelection();
             }
             return false;
         }
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.P)
-            || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+        if (game.input().pauseJustPressed()
+            || game.input().pointerJustPressed(TOUCH_PAUSE_BUTTON)) {
             paused = true;
             selectedPauseIndex = 0;
             AudioManager.playSelect();
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+        } else if (game.input().helpJustPressed()) {
             showTutorial = true;
             tutorialTimer = 0f;
             AudioManager.playSelect();
@@ -200,12 +226,23 @@ public class GameScreen extends BaseScreen {
     }
 
     private void handleUpgradeInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)
-            || Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
+        for (int i = 0; i < upgradeChoices.size(); i++) {
+            upgradeCardBounds(i);
+            if (game.input().pointerOver(interactiveRow) && selectedUpgradeIndex != i) {
+                selectedUpgradeIndex = i;
+                AudioManager.playSelect();
+            }
+            if (game.input().pointerJustPressed(interactiveRow)) {
+                selectedUpgradeIndex = i;
+                applySelectedUpgrade();
+                return;
+            }
+        }
+
+        if (game.input().menuLeftJustPressed() || game.input().menuUpJustPressed()) {
             selectedUpgradeIndex = Math.floorMod(selectedUpgradeIndex - 1, upgradeChoices.size());
             AudioManager.playSelect();
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)
-            || Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+        } else if (game.input().menuRightJustPressed() || game.input().menuDownJustPressed()) {
             selectedUpgradeIndex = (selectedUpgradeIndex + 1) % upgradeChoices.size();
             AudioManager.playSelect();
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
@@ -217,7 +254,7 @@ public class GameScreen extends BaseScreen {
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3) && upgradeChoices.size() > 2) {
             selectedUpgradeIndex = 2;
             applySelectedUpgrade();
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+        } else if (game.input().confirmJustPressed()) {
             applySelectedUpgrade();
         }
     }
@@ -284,9 +321,16 @@ public class GameScreen extends BaseScreen {
         spawnEntities(delta);
         shootIfRequested();
 
-        boolean swimmingUp = Gdx.input.isKeyPressed(Input.Keys.SPACE)
-            || Gdx.input.isKeyPressed(Input.Keys.W)
-            || Gdx.input.isKeyPressed(Input.Keys.UP);
+        if (CAPTURE_AUTOPLAY) {
+            if (diver.getY() < 250f) {
+                captureSwimmingUp = true;
+            } else if (diver.getY() > 410f) {
+                captureSwimmingUp = false;
+            }
+        }
+        boolean swimmingUp = game.input().swimPressed()
+            || game.input().pointerPressed(TOUCH_SWIM_BUTTON)
+            || CAPTURE_AUTOPLAY && captureSwimmingUp;
         diver.update(delta, swimmingUp, session.getAgilityMultiplier());
         updateDiverBubbles(delta, swimmingUp);
         background.update(delta);
@@ -383,8 +427,9 @@ public class GameScreen extends BaseScreen {
     }
 
     private void shootIfRequested() {
-        boolean shootPressed = Gdx.input.isKeyJustPressed(Input.Keys.Z)
-            || Gdx.input.isKeyJustPressed(Input.Keys.X);
+        boolean shootPressed = game.input().shootJustPressed()
+            || game.input().pointerJustPressed(TOUCH_FIRE_BUTTON)
+            || CAPTURE_AUTOPLAY;
         if (!shootPressed || shootCooldownTimer > 0f) {
             return;
         }
@@ -519,6 +564,8 @@ public class GameScreen extends BaseScreen {
     private void triggerHitFeedback(float shake, float hitStop) {
         triggerShake(shake, Math.min(0.5f, 0.12f + shake * 0.018f));
         hitStopTimer = Math.max(hitStopTimer, hitStop);
+        game.input().vibrateController(Math.round(28f + shake * 4f),
+            MathUtils.clamp(0.18f + shake * 0.035f, 0f, 1f));
     }
 
     private void triggerShake(float magnitude, float duration) {
@@ -666,9 +713,26 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.rect(0f, 0f, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
         }
 
+        boolean touchControlsVisible = game.input().isMobile()
+            && !paused && !gameOver && !choosingUpgrade;
+        if (touchControlsVisible) {
+            shapeRenderer.setColor(0.02f, 0.12f, 0.2f,
+                game.input().pointerPressed(TOUCH_SWIM_BUTTON) ? 0.92f : 0.72f);
+            shapeRenderer.rect(TOUCH_SWIM_BUTTON.x, TOUCH_SWIM_BUTTON.y,
+                TOUCH_SWIM_BUTTON.width, TOUCH_SWIM_BUTTON.height);
+            shapeRenderer.setColor(0.16f, 0.24f, 0.3f,
+                game.input().pointerPressed(TOUCH_FIRE_BUTTON) ? 0.96f : 0.76f);
+            shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
+                TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
+            shapeRenderer.setColor(0.01f, 0.08f, 0.15f, 0.8f);
+            shapeRenderer.rect(TOUCH_PAUSE_BUTTON.x, TOUCH_PAUSE_BUTTON.y,
+                TOUCH_PAUSE_BUTTON.width, TOUCH_PAUSE_BUTTON.height);
+        }
+
         if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
             shapeRenderer.setColor(0.01f, 0.04f, 0.09f, 0.84f);
-            shapeRenderer.rect(220f, 18f, 840f, 78f);
+            float tutorialY = game.input().isMobile() ? tutorialPanelY() : 18f;
+            shapeRenderer.rect(220f, tutorialY, 840f, 78f);
         }
 
         if (choosingUpgrade) {
@@ -680,6 +744,21 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.rect(365f, 175f, 550f, 370f);
             shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
             shapeRenderer.rect(365f, 540f, 550f, 5f);
+            if (paused) {
+                pauseRowBounds(selectedPauseIndex);
+                shapeRenderer.setColor(0.06f, 0.22f, 0.29f, 0.85f);
+                shapeRenderer.rect(interactiveRow.x, interactiveRow.y,
+                    interactiveRow.width, interactiveRow.height);
+            } else {
+                shapeRenderer.setColor(0.04f, 0.21f, 0.28f,
+                    game.input().pointerOver(GAME_OVER_RETRY_BUTTON) ? 0.95f : 0.75f);
+                shapeRenderer.rect(GAME_OVER_RETRY_BUTTON.x, GAME_OVER_RETRY_BUTTON.y,
+                    GAME_OVER_RETRY_BUTTON.width, GAME_OVER_RETRY_BUTTON.height);
+                shapeRenderer.setColor(0.02f, 0.1f, 0.17f,
+                    game.input().pointerOver(GAME_OVER_MENU_BUTTON) ? 0.95f : 0.72f);
+                shapeRenderer.rect(GAME_OVER_MENU_BUTTON.x, GAME_OVER_MENU_BUTTON.y,
+                    GAME_OVER_MENU_BUTTON.width, GAME_OVER_MENU_BUTTON.height);
+            }
         }
         endShapes();
 
@@ -691,10 +770,20 @@ public class GameScreen extends BaseScreen {
         }
         if (choosingUpgrade) {
             for (int i = 0; i < upgradeChoices.size(); i++) {
-                float x = 85f + i * 380f;
+                float x = upgradeCardX(i);
                 shapeRenderer.setColor(i == selectedUpgradeIndex ? Color.YELLOW : Color.CYAN);
                 shapeRenderer.rect(x, 170f, 350f, 360f);
             }
+        }
+        if (touchControlsVisible) {
+            shapeRenderer.setColor(Color.CYAN);
+            shapeRenderer.rect(TOUCH_SWIM_BUTTON.x, TOUCH_SWIM_BUTTON.y,
+                TOUCH_SWIM_BUTTON.width, TOUCH_SWIM_BUTTON.height);
+            shapeRenderer.setColor(Color.LIGHT_GRAY);
+            shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
+                TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
+            shapeRenderer.rect(TOUCH_PAUSE_BUTTON.x, TOUCH_PAUSE_BUTTON.y,
+                TOUCH_PAUSE_BUTTON.width, TOUCH_PAUSE_BUTTON.height);
         }
         shapeRenderer.end();
     }
@@ -703,7 +792,7 @@ public class GameScreen extends BaseScreen {
         shapeRenderer.setColor(0f, 0f, 0f, 0.78f);
         shapeRenderer.rect(0f, 0f, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
         for (int i = 0; i < upgradeChoices.size(); i++) {
-            float x = 85f + i * 380f;
+            float x = upgradeCardX(i);
             if (i == selectedUpgradeIndex) {
                 shapeRenderer.setColor(0.04f, 0.23f, 0.31f, 0.98f);
             } else {
@@ -738,9 +827,31 @@ public class GameScreen extends BaseScreen {
         }
 
         if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
-            drawCentered(smallFont, "HOLD SPACE / W / UP TO SWIM  |  Z / X FIRE", 76f, Color.WHITE);
-            drawCentered(smallFont, "P / ESC PAUSE  |  T HELP  |  LEVEL UP TO CHOOSE AN UPGRADE",
-                47f, Color.LIGHT_GRAY);
+            if (game.input().isMobile()) {
+                float tutorialY = tutorialPanelY();
+                drawCentered(smallFont, "HOLD SWIM TO RISE  |  TAP FIRE TO SHOOT",
+                    tutorialY + 58f, Color.WHITE);
+                drawCentered(smallFont, "PAUSE IS AT THE TOP RIGHT  |  LEVEL UP FOR UPGRADES",
+                    tutorialY + 29f, Color.LIGHT_GRAY);
+            } else if (game.input().hasController()) {
+                drawCentered(smallFont, "A / STICK UP TO SWIM  |  X / B / RB TO FIRE", 76f, Color.WHITE);
+                drawCentered(smallFont, "START PAUSE  |  Y HELP  |  LEVEL UP FOR UPGRADES",
+                    47f, Color.LIGHT_GRAY);
+            } else {
+                drawCentered(smallFont, "SPACE / W / UP OR LEFT MOUSE TO SWIM  |  Z / X OR RIGHT MOUSE FIRE",
+                    76f, Color.WHITE);
+                drawCentered(smallFont, "P / ESC PAUSE  |  T HELP  |  LEVEL UP FOR UPGRADES",
+                    47f, Color.LIGHT_GRAY);
+            }
+        }
+
+        if (game.input().isMobile() && !paused && !gameOver && !choosingUpgrade) {
+            drawCenteredAt(mediumFont, "SWIM", TOUCH_SWIM_BUTTON.x + TOUCH_SWIM_BUTTON.width / 2f,
+                TOUCH_SWIM_BUTTON.y + 74f, Color.WHITE);
+            drawCenteredAt(mediumFont, "FIRE", TOUCH_FIRE_BUTTON.x + TOUCH_FIRE_BUTTON.width / 2f,
+                TOUCH_FIRE_BUTTON.y + 74f, Color.WHITE);
+            drawCenteredAt(smallFont, "II", TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width / 2f,
+                TOUCH_PAUSE_BUTTON.y + 44f, Color.WHITE);
         }
 
         if (bannerTimer > 0f && !paused && !gameOver && !choosingUpgrade) {
@@ -769,7 +880,12 @@ public class GameScreen extends BaseScreen {
 
     private void drawUpgradeSelection() {
         drawCentered(largeFont, "CHOOSE AN UPGRADE", 625f, Color.WHITE);
-        drawCentered(smallFont, "LEFT / RIGHT OR 1-3  |  ENTER TO INSTALL", 580f, Color.LIGHT_GRAY);
+        String hint = game.input().isMobile()
+            ? "TAP A CARD TO INSTALL"
+            : game.input().hasController()
+            ? "D-PAD TO CHOOSE  |  A TO INSTALL"
+            : "LEFT / RIGHT OR 1-3  |  ENTER OR CLICK TO INSTALL";
+        drawCentered(smallFont, hint, 580f, Color.LIGHT_GRAY);
 
         for (int i = 0; i < upgradeChoices.size(); i++) {
             UpgradeType type = upgradeChoices.get(i);
@@ -793,6 +909,10 @@ public class GameScreen extends BaseScreen {
             String prefix = i == selectedPauseIndex ? ">  " : "   ";
             drawCentered(mediumFont, prefix + PAUSE_OPTIONS[i], startY - i * 62f, color);
         }
+        String hint = game.input().isMobile() ? "TAP AN OPTION"
+            : game.input().hasController() ? "D-PAD + A  |  B / START RESUME"
+            : "ARROWS + ENTER  |  ESC RESUME";
+        drawCentered(smallFont, hint, 195f, Color.LIGHT_GRAY);
     }
 
     private void drawGameOverScreen() {
@@ -800,8 +920,49 @@ public class GameScreen extends BaseScreen {
             victory ? Color.CYAN : Color.WHITE);
         drawCentered(mediumFont, "SCORE  " + session.getDisplayScore(), 385f, Color.YELLOW);
         drawCentered(smallFont, "BEST  " + highScore, 340f, Color.LIGHT_GRAY);
-        drawCentered(smallFont, "ENTER / R TO DIVE AGAIN", 267f, Color.WHITE);
-        drawCentered(smallFont, "ESC TO RETURN TO MENU", 230f, Color.LIGHT_GRAY);
+        String retry = game.input().isMobile() ? "TAP TO DIVE AGAIN"
+            : game.input().hasController() ? "A TO DIVE AGAIN" : "ENTER / R OR CLICK TO DIVE AGAIN";
+        String menu = game.input().isMobile() ? "TAP TO RETURN TO MENU"
+            : game.input().hasController() ? "B TO RETURN TO MENU" : "ESC OR CLICK TO RETURN TO MENU";
+        drawCentered(smallFont, retry, 267f, Color.WHITE);
+        drawCentered(smallFont, menu, 220f, Color.LIGHT_GRAY);
+    }
+
+    private Rectangle pauseRowBounds(int index) {
+        float baseline = 385f - index * 62f;
+        return interactiveRow.set(365f, baseline - 40f, 550f, 54f);
+    }
+
+    private Rectangle upgradeCardBounds(int index) {
+        return interactiveRow.set(upgradeCardX(index), 170f, 350f, 360f);
+    }
+
+    private float upgradeCardX(int index) {
+        return 85f + index * 380f;
+    }
+
+    private void layoutTouchControls() {
+        if (!game.input().isMobile()) {
+            return;
+        }
+        float horizontalScale = viewport.getScreenWidth() == 0 ? 1f
+            : GameConfig.WORLD_WIDTH / viewport.getScreenWidth();
+        float verticalScale = viewport.getScreenHeight() == 0 ? 1f
+            : GameConfig.WORLD_HEIGHT / viewport.getScreenHeight();
+        float safeLeft = Gdx.graphics.getSafeInsetLeft() * horizontalScale;
+        float safeRight = Gdx.graphics.getSafeInsetRight() * horizontalScale;
+        float safeTop = Gdx.graphics.getSafeInsetTop() * verticalScale;
+        float safeBottom = Gdx.graphics.getSafeInsetBottom() * verticalScale;
+
+        TOUCH_SWIM_BUTTON.set(32f + safeLeft, 28f + safeBottom, 230f, 120f);
+        TOUCH_FIRE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 262f,
+            28f + safeBottom, 230f, 120f);
+        TOUCH_PAUSE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 98f,
+            GameConfig.WORLD_HEIGHT - safeTop - 172f, 66f, 66f);
+    }
+
+    private float tutorialPanelY() {
+        return TOUCH_SWIM_BUTTON.y + TOUCH_SWIM_BUTTON.height + 16f;
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {
@@ -847,10 +1008,11 @@ public class GameScreen extends BaseScreen {
         upgradeChoices = List.of();
         paused = false;
         gameOver = false;
-        showTutorial = true;
+        showTutorial = !Boolean.getBoolean("deepdive.hideTutorial");
         choosingUpgrade = false;
         bossSpawned = false;
         victory = false;
+        captureSwimmingUp = false;
         centerCamera();
         AudioManager.playBackgroundMusic();
     }

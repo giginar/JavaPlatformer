@@ -1,10 +1,9 @@
 package com.game.screen;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.math.Rectangle;
 import com.game.DeepDiveDrift;
 import com.game.GameConfig;
 import com.game.diver.Background;
@@ -12,7 +11,8 @@ import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 
 public class MainMenuScreen extends BaseScreen {
-    private static final String[] MENU_OPTIONS = {"PLAY", "OPTIONS", "EXIT"};
+    private static final String[] DESKTOP_MENU_OPTIONS = {"PLAY", "OPTIONS", "EXIT"};
+    private static final String[] MOBILE_MENU_OPTIONS = {"PLAY", "OPTIONS"};
     private static final float TRANSITION_DURATION = 0.45f;
     private static final Color ACCENT_COLOR = new Color(0.55f, 0.9f, 1f, 1f);
 
@@ -21,6 +21,8 @@ public class MainMenuScreen extends BaseScreen {
     private final BitmapFont mediumFont;
     private final BitmapFont largeFont;
     private final GlyphLayout layout;
+    private final Rectangle menuRow = new Rectangle();
+    private final String[] menuOptions;
 
     private int selectedIndex;
     private boolean transitioning;
@@ -33,6 +35,7 @@ public class MainMenuScreen extends BaseScreen {
         mediumFont = FontManager.getMediumFont();
         largeFont = FontManager.getLargeFont();
         layout = new GlyphLayout();
+        menuOptions = game.input().isMobile() ? MOBILE_MENU_OPTIONS : DESKTOP_MENU_OPTIONS;
     }
 
     @Override
@@ -44,6 +47,7 @@ public class MainMenuScreen extends BaseScreen {
     public void render(float delta) {
         float frameDelta = Math.min(delta, 0.1f);
         prepareFrame(0f, 0.05f, 0.12f);
+        updateInput();
 
         if (!transitioning && handleInput()) {
             return;
@@ -70,13 +74,13 @@ public class MainMenuScreen extends BaseScreen {
         drawCentered(smallFont, "SURVIVE THE ABYSS", 557f, ACCENT_COLOR);
 
         float startY = 420f;
-        for (int i = 0; i < MENU_OPTIONS.length; i++) {
+        for (int i = 0; i < menuOptions.length; i++) {
             Color color = i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY;
             String prefix = i == selectedIndex ? ">  " : "   ";
-            drawCentered(mediumFont, prefix + MENU_OPTIONS[i], startY - i * 62f, color);
+            drawCentered(mediumFont, prefix + menuOptions[i], startY - i * 62f, color);
         }
 
-        drawCentered(smallFont, "ARROW KEYS TO NAVIGATE  |  ENTER TO SELECT", 72f, Color.LIGHT_GRAY);
+        drawCentered(smallFont, inputHint(), 72f, Color.LIGHT_GRAY);
         batch.end();
 
         if (transitioning) {
@@ -92,25 +96,59 @@ public class MainMenuScreen extends BaseScreen {
     }
 
     private boolean handleInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            selectedIndex = (selectedIndex + 1) % MENU_OPTIONS.length;
-            AudioManager.playSelect();
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            selectedIndex = (selectedIndex - 1 + MENU_OPTIONS.length) % MENU_OPTIONS.length;
-            AudioManager.playSelect();
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            AudioManager.playConfirm();
-            switch (selectedIndex) {
-                case 0 -> transitioning = true;
-                case 1 -> {
-                    game.openOptions();
-                    return true;
-                }
-                case 2 -> Gdx.app.exit();
-                default -> throw new IllegalStateException("Unknown menu option: " + selectedIndex);
+        for (int i = 0; i < menuOptions.length; i++) {
+            rowBounds(i);
+            if (game.input().pointerOver(menuRow) && selectedIndex != i) {
+                selectedIndex = i;
+                AudioManager.playSelect();
+            }
+            if (game.input().pointerJustPressed(menuRow)) {
+                selectedIndex = i;
+                return activateSelected();
             }
         }
+
+        if (game.input().menuDownJustPressed()) {
+            selectedIndex = (selectedIndex + 1) % menuOptions.length;
+            AudioManager.playSelect();
+        } else if (game.input().menuUpJustPressed()) {
+            selectedIndex = Math.floorMod(selectedIndex - 1, menuOptions.length);
+            AudioManager.playSelect();
+        } else if (game.input().confirmJustPressed()) {
+            return activateSelected();
+        } else if (game.input().backJustPressed()) {
+            com.badlogic.gdx.Gdx.app.exit();
+        }
         return false;
+    }
+
+    private boolean activateSelected() {
+        AudioManager.playConfirm();
+        switch (selectedIndex) {
+            case 0 -> transitioning = true;
+            case 1 -> {
+                game.openOptions();
+                return true;
+            }
+            case 2 -> com.badlogic.gdx.Gdx.app.exit();
+            default -> throw new IllegalStateException("Unknown menu option: " + selectedIndex);
+        }
+        return false;
+    }
+
+    private Rectangle rowBounds(int index) {
+        float baseline = 420f - index * 62f;
+        return menuRow.set(405f, baseline - 40f, 470f, 55f);
+    }
+
+    private String inputHint() {
+        if (game.input().isMobile()) {
+            return "TAP AN OPTION TO SELECT";
+        }
+        if (game.input().hasController()) {
+            return "D-PAD / STICK TO NAVIGATE  |  A TO SELECT";
+        }
+        return "ARROWS / MOUSE TO NAVIGATE  |  ENTER TO SELECT";
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {

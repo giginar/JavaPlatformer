@@ -1,8 +1,10 @@
 package com.game.settings;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
+
 import java.util.List;
-import java.util.prefs.BackingStoreException;
-import java.util.prefs.Preferences;
+import java.util.Objects;
 
 public final class DisplaySettingsStore {
     public static final int MIN_WINDOW_WIDTH = 640;
@@ -20,13 +22,21 @@ public final class DisplaySettingsStore {
         new Resolution(2560, 1440)
     );
 
-    private static final Preferences PREFS = Preferences.userRoot().node("com/game/deepdive-drift/display");
+    private static PreferenceBackend backend;
 
     private DisplaySettingsStore() {
     }
 
+    /**
+     * Installs a platform-specific backend. The desktop launcher uses this before libGDX starts,
+     * because its window settings are needed while constructing the application.
+     */
+    public static void installBackend(PreferenceBackend preferenceBackend) {
+        backend = Objects.requireNonNull(preferenceBackend, "preferenceBackend");
+    }
+
     public static WindowMode windowMode() {
-        String stored = PREFS.get("windowMode", WindowMode.WINDOWED.name());
+        String stored = backend().getString("windowMode", WindowMode.WINDOWED.name());
         try {
             return WindowMode.valueOf(stored);
         } catch (IllegalArgumentException exception) {
@@ -35,37 +45,37 @@ public final class DisplaySettingsStore {
     }
 
     public static void setWindowMode(WindowMode mode) {
-        PREFS.put("windowMode", mode.name());
+        backend().putString("windowMode", mode.name());
         flush();
     }
 
     public static int windowWidth() {
-        return clamp(PREFS.getInt("windowWidth", DEFAULT_WIDTH),
+        return clamp(backend().getInt("windowWidth", DEFAULT_WIDTH),
             MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
     }
 
     public static int windowHeight() {
-        return clamp(PREFS.getInt("windowHeight", DEFAULT_HEIGHT),
+        return clamp(backend().getInt("windowHeight", DEFAULT_HEIGHT),
             MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
     }
 
     public static void setWindowSize(int width, int height) {
-        PREFS.putInt("windowWidth", clamp(width, MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH));
-        PREFS.putInt("windowHeight", clamp(height, MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT));
+        backend().putInt("windowWidth", clamp(width, MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH));
+        backend().putInt("windowHeight", clamp(height, MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT));
         flush();
     }
 
     public static boolean vsyncEnabled() {
-        return PREFS.getBoolean("vsync", true);
+        return backend().getBoolean("vsync", true);
     }
 
     public static void setVsyncEnabled(boolean enabled) {
-        PREFS.putBoolean("vsync", enabled);
+        backend().putBoolean("vsync", enabled);
         flush();
     }
 
     public static int fpsLimit() {
-        int stored = PREFS.getInt("fpsLimit", 144);
+        int stored = backend().getInt("fpsLimit", 144);
         for (int value : FPS_LIMITS) {
             if (value == stored) {
                 return stored;
@@ -75,47 +85,112 @@ public final class DisplaySettingsStore {
     }
 
     public static void setFpsLimit(int fpsLimit) {
-        PREFS.putInt("fpsLimit", fpsLimit);
+        backend().putInt("fpsLimit", fpsLimit);
         flush();
     }
 
     public static int msaaSamples() {
-        return PREFS.getInt("msaaSamples", 4) >= 4 ? 4 : 0;
+        return backend().getInt("msaaSamples", 4) >= 4 ? 4 : 0;
     }
 
     public static void setMsaaSamples(int samples) {
-        PREFS.putInt("msaaSamples", samples >= 4 ? 4 : 0);
+        backend().putInt("msaaSamples", samples >= 4 ? 4 : 0);
         flush();
     }
 
     public static boolean screenShakeEnabled() {
-        return PREFS.getBoolean("screenShake", true);
+        return backend().getBoolean("screenShake", true);
     }
 
     public static void setScreenShakeEnabled(boolean enabled) {
-        PREFS.putBoolean("screenShake", enabled);
+        backend().putBoolean("screenShake", enabled);
         flush();
     }
 
     public static boolean flashEffectsEnabled() {
-        return PREFS.getBoolean("flashEffects", true);
+        return backend().getBoolean("flashEffects", true);
     }
 
     public static void setFlashEffectsEnabled(boolean enabled) {
-        PREFS.putBoolean("flashEffects", enabled);
+        backend().putBoolean("flashEffects", enabled);
         flush();
     }
 
-    private static void flush() {
-        try {
-            PREFS.flush();
-        } catch (BackingStoreException exception) {
-            System.err.println("Could not persist display settings: " + exception.getMessage());
+    private static PreferenceBackend backend() {
+        if (backend == null) {
+            if (Gdx.app == null) {
+                throw new IllegalStateException("Display settings were used before a platform backend was available");
+            }
+            backend = new GdxPreferenceBackend(Gdx.app.getPreferences("DeepDiveDriftDisplay"));
         }
+        return backend;
+    }
+
+    private static void flush() {
+        backend().flush();
     }
 
     private static int clamp(int value, int minimum, int maximum) {
         return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    public interface PreferenceBackend {
+        String getString(String key, String defaultValue);
+
+        int getInt(String key, int defaultValue);
+
+        boolean getBoolean(String key, boolean defaultValue);
+
+        void putString(String key, String value);
+
+        void putInt(String key, int value);
+
+        void putBoolean(String key, boolean value);
+
+        void flush();
+    }
+
+    private static final class GdxPreferenceBackend implements PreferenceBackend {
+        private final Preferences preferences;
+
+        private GdxPreferenceBackend(Preferences preferences) {
+            this.preferences = preferences;
+        }
+
+        @Override
+        public String getString(String key, String defaultValue) {
+            return preferences.getString(key, defaultValue);
+        }
+
+        @Override
+        public int getInt(String key, int defaultValue) {
+            return preferences.getInteger(key, defaultValue);
+        }
+
+        @Override
+        public boolean getBoolean(String key, boolean defaultValue) {
+            return preferences.getBoolean(key, defaultValue);
+        }
+
+        @Override
+        public void putString(String key, String value) {
+            preferences.putString(key, value);
+        }
+
+        @Override
+        public void putInt(String key, int value) {
+            preferences.putInteger(key, value);
+        }
+
+        @Override
+        public void putBoolean(String key, boolean value) {
+            preferences.putBoolean(key, value);
+        }
+
+        @Override
+        public void flush() {
+            preferences.flush();
+        }
     }
 
     public enum WindowMode {

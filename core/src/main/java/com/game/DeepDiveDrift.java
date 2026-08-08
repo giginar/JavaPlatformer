@@ -1,7 +1,14 @@
 package com.game;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.PixmapIO;
+import com.badlogic.gdx.utils.BufferUtils;
+import com.badlogic.gdx.utils.ScreenUtils;
+import com.game.input.GameInput;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 import com.game.manager.GameAssets;
@@ -15,14 +22,68 @@ import java.util.Deque;
 
 public class DeepDiveDrift extends Game {
     private final Deque<Screen> suspendedScreens = new ArrayDeque<>();
+    private GameInput input;
+    private float captureElapsed;
+    private boolean captureCompleted;
 
     @Override
     public void create() {
         DisplaySettings.initialize();
+        input = new GameInput();
+        Gdx.input.setCatchKey(Input.Keys.BACK, true);
         GameAssets.initialize();
         FontManager.initialize();
         AudioManager.initialize();
-        showMainMenu();
+        if (Boolean.getBoolean("deepdive.autostart")) {
+            startNewGame();
+        } else {
+            showMainMenu();
+            if (Boolean.getBoolean("deepdive.openOptions")) {
+                openOptions();
+            }
+        }
+    }
+
+    public GameInput input() {
+        return input;
+    }
+
+    @Override
+    public void render() {
+        super.render();
+        captureFrameIfRequested();
+    }
+
+    private void captureFrameIfRequested() {
+        String capturePath = System.getProperty("deepdive.capture.path");
+        if (captureCompleted || capturePath == null || capturePath.isBlank()) {
+            return;
+        }
+
+        captureElapsed += Math.min(Gdx.graphics.getDeltaTime(), 0.1f);
+        float delay = Float.parseFloat(System.getProperty("deepdive.capture.delay", "1.0"));
+        if (captureElapsed < delay) {
+            return;
+        }
+
+        int width = Gdx.graphics.getBackBufferWidth();
+        int height = Gdx.graphics.getBackBufferHeight();
+        byte[] pixels = ScreenUtils.getFrameBufferPixels(0, 0, width, height, true);
+        Pixmap screenshot = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        BufferUtils.copy(pixels, 0, screenshot.getPixels(), pixels.length);
+        try {
+            var output = Gdx.files.absolute(capturePath);
+            output.parent().mkdirs();
+            PixmapIO.writePNG(output, screenshot);
+            captureCompleted = true;
+            System.out.println("Captured storefront screenshot: " + output.file().getAbsolutePath());
+        } finally {
+            screenshot.dispose();
+        }
+
+        if (Boolean.getBoolean("deepdive.capture.exit")) {
+            Gdx.app.exit();
+        }
     }
 
     public void showMainMenu() {

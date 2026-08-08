@@ -21,6 +21,7 @@ public final class Lwjgl3Launcher {
         if (StartupHelper.startNewJvmIfRequired()) {
             return;
         }
+        DisplaySettingsStore.installBackend(new DesktopPreferencesBackend());
         applyLaunchArguments(args);
         createApplication();
     }
@@ -97,6 +98,12 @@ public final class Lwjgl3Launcher {
         for (String argument : args) {
             switch (argument.toLowerCase(Locale.ROOT)) {
                 case "--debug" -> System.setProperty(DEBUG_PROPERTY, "true");
+                case "--autostart" -> System.setProperty("deepdive.autostart", "true");
+                case "--open-options" -> System.setProperty("deepdive.openOptions", "true");
+                case "--capture-exit" -> System.setProperty("deepdive.capture.exit", "true");
+                case "--capture-autoplay" -> System.setProperty("deepdive.capture.autoplay", "true");
+                case "--capture-boss" -> System.setProperty("deepdive.capture.boss", "true");
+                case "--hide-tutorial" -> System.setProperty("deepdive.hideTutorial", "true");
                 case "--windowed" -> DisplaySettingsStore.setWindowMode(WindowMode.WINDOWED);
                 case "--borderless" -> DisplaySettingsStore.setWindowMode(WindowMode.BORDERLESS);
                 case "--fullscreen" -> DisplaySettingsStore.setWindowMode(WindowMode.FULLSCREEN);
@@ -110,6 +117,28 @@ public final class Lwjgl3Launcher {
     }
 
     private static void applyValueArgument(String argument) {
+        if (argument.regionMatches(true, 0, "--capture=", 0, 10)) {
+            String outputPath = argument.substring(10).trim();
+            if (!outputPath.isEmpty()) {
+                System.setProperty("deepdive.capture.path", outputPath);
+            }
+            return;
+        }
+
+        if (argument.regionMatches(true, 0, "--capture-delay=", 0, 16)) {
+            try {
+                float delay = Float.parseFloat(argument.substring(16));
+                if (delay >= 0f && delay <= 60f) {
+                    System.setProperty("deepdive.capture.delay", Float.toString(delay));
+                    return;
+                }
+            } catch (NumberFormatException ignored) {
+                // The warning below also covers non-numeric values.
+            }
+            System.err.println("Ignoring invalid capture delay: " + argument);
+            return;
+        }
+
         if (argument.regionMatches(true, 0, "--resolution=", 0, 13)) {
             String[] dimensions = argument.substring(13).toLowerCase(Locale.ROOT).split("x", 2);
             if (dimensions.length == 2) {
