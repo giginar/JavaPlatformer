@@ -1,143 +1,116 @@
-# DeepDiveDrift
+# DeepDive Drift
 
-DeepDiveDrift, libGDX ile geliştirilmiş hızlı tempolu bir su altı hayatta kalma oyunudur. Dalgıcın yüksekliğini kontrol et, farklı saldırı düzenlerine sahip deniz canlılarını zıpkınla avla, derinlik yükseltmelerini seç ve Abyss Leviathan'ı yen.
+DeepDive Drift, libGDX ile geliştirilen hızlı tempolu bir su altı hayatta kalma oyunudur. Dalgıcın yüksekliğini kontrol et, zıpkınla avlan, derinlik yükseltmelerini seç ve Abyss Leviathan’a ulaş.
 
-## Oynanış
+## Desteklenen hedefler
 
-- Oksijen saniyede azalır. Oksijen tüpleri büyük, düşman avlamak küçük miktarda oksijen kazandırır.
-- Düşmanla çarpışmak türüne göre oksijen kaybettirir, combo'yu bozar ve kısa süreli dokunulmazlık verir.
-- Üç saniye içinde yapılan ardışık avlar combo oluşturur; puan çarpanı en fazla `x3` olur.
-- `1000`, `2500` ve `5000` puanda yeni derinlik seviyeleri açılır. Her geçişte rastgele üç yükseltmeden biri seçilir.
-- `6500` puanda normal düşmanlar çekilir ve çok aşamalı Abyss Leviathan boss savaşı başlar.
-- Boss yenildiğinde dalış tamamlanır; oksijen biterse koşu sona erer.
-- Skor, oksijen ve hareket hesapları FPS'den bağımsızdır.
+- Windows ve Linux masaüstü paketleri
+- Steam için açılmış Windows/Linux depot klasörleri
+- Android 5.0+ (`minSdk 21`) ve Google Play için Android App Bundle
+- Hedef Android API: 36
 
-## Düşmanlar
-
-- **Small Fish:** Dalgalı ve öngörülebilir başlangıç düşmanı.
-- **Fast Fish:** Yüksek hızla geniş bir zikzak çizerek ilerler.
-- **Shark:** Dalgıcın yüksekliğine kilitlenir, saldırısını haber verir ve ileri atılır.
-- **Piranha Swarm:** Hedefin çevresinde formasyon kurar, ardından kama biçiminde hücum eder.
-- **Abyss Leviathan:** Oyuncuyu takip eden, saldırı öncesi uyarı veren, öfke evresi ve ayrı can çubuğu bulunan final boss'u.
-
-## Yükseltmeler
-
-Her yükseltme en fazla üç seviyeye çıkarılabilir:
-
-- **Rapid Fire:** Zıpkın bekleme süresini seviye başına `%18` azaltır.
-- **Piercing:** Zıpkının delebileceği hedef sayısını artırır.
-- **Air Recycler:** Oksijen tüketimini seviye başına `%15` azaltır.
-- **Pressurized Tanks:** Tüplerden alınan oksijene seviye başına `+10` ekler.
-- **Hydro Fins:** Yüzme çevikliğini seviye başına `%12` artırır.
-
-## Görsel geri bildirim ve erişilebilirlik
-
-- Yüzme baloncukları, zıpkın izleri, darbe kıvılcımları, patlamalar ve oksijen parçacıkları havuzlanarak tekrar kullanılır.
-- Dalgıç ve düşmanlarda nefes alma, esneme, yalpalama ve saldırı animasyonları bulunur.
-- Güçlü darbeler hit-stop ve ekran sarsıntısı üretir.
-- Ayarlardan ekran sarsıntısı ve yanıp sönen hasar/uyarı efektleri ayrı ayrı kapatılabilir.
+Apple/iOS ve macOS bu sürüm çalışmasının kapsamına dahil değildir.
 
 ## Kontroller
 
-| Tuş | İşlev |
-| --- | --- |
-| `Space`, `W`, `↑` | Yukarı yüz; bırakınca alçal |
-| `Z`, `X` | Zıpkın at |
-| `P`, `Esc` | Oyunu duraklat / devam et |
-| `T` | Kontrol yardımını yeniden göster |
-| `↑`, `↓`, `←`, `→`, `Enter` | Menü ve ayarlarda gezin |
-| `←`, `→`, `1`-`3`, `Enter` | Yükseltme seç |
-| `R`, `Enter` | Koşu bittikten sonra yeniden başla |
-| `Esc` | Sonuç ekranından ana menüye dön |
+| Ortam | Yüzme | Ateş | Menü / duraklatma |
+| --- | --- | --- | --- |
+| Klavye | `Space`, `W`, `↑` veya sol fare | `Z`, `X` veya sağ fare | Oklar, `Enter`, `Esc`, `P` |
+| Gamepad | `A`, sol çubuk veya D-pad yukarı | `X`, `B`, `RB` veya `RT` | D-pad/çubuk, `A`, `B`, `Start` |
+| Android | Ekrandaki `SWIM` düğmesini basılı tut | `FIRE` düğmesine dokun | Seçeneğe dokun, sağ üstten duraklat |
 
-## Görüntü ayarları
+Dokunmatik düğmeler ekranın güvenli alanlarına göre yerleşir. Menü, ayarlar, yükseltme seçimi, duraklatma ve sonuç ekranlarının tamamı dokunmatik ve gamepad ile kullanılabilir.
 
-Ayarlar ekranından aşağıdaki seçenekler değiştirilebilir:
+## Oynanış
 
-- Pencereli, çerçevesiz ve gerçek tam ekran modu
-- `960x540` ile `2560x1440` arasında çözünürlükler
-- VSync ve `60 / 120 / 144 / 240 / sınırsız` FPS limiti
-- `4x MSAA` kenar yumuşatma; bu seçenek yeniden başlatmada uygulanır
-- Müzik, ses efektleri, ekran sarsıntısı ve flaş efektleri
+- Oksijen zamanla azalır; tüpler ve avlar oksijen kazandırır.
+- Art arda avlar en fazla `x3` puan çarpanına ulaşan combo oluşturur.
+- `1000`, `2500` ve `5000` puanda bir yükseltme seçilir.
+- `6500` puanda Abyss Leviathan savaşı başlar.
+- Ekran sarsıntısı ve flaş efektleri ayarlardan ayrı ayrı kapatılabilir.
+- Skor, oksijen ve hareket hesapları FPS’den bağımsızdır.
 
-Son pencereli boyut ve tüm görüntü tercihleri oturumlar arasında saklanır.
+## Geliştirme
 
-## Çalıştırma
-
-Gereksinim: Java 21.
-
-Windows:
+Masaüstü geliştirme için Java 21 kullanılır:
 
 ```powershell
-.\gradlew.bat lwjgl3:run
-```
-
-Linux veya macOS:
-
-```bash
-./gradlew lwjgl3:run
-```
-
-Testleri çalıştırmak için:
-
-```powershell
+.\gradlew.bat :lwjgl3:run
 .\gradlew.bat test
 ```
 
-Dağıtılabilir masaüstü JAR'ını üretmek için:
+Android derlemesi için Android SDK Platform 36 ve Build Tools 36.0.0 gerekir. Android Studio bunları kurabilir; SDK yolu `local.properties` içindeki `sdk.dir` ile belirtilir.
+
+Doğrulanmış CC0/OFL kaynaklardan oyun, ikon ve mağaza görsellerini yeniden üretmek için:
 
 ```powershell
-.\gradlew.bat clean lwjgl3:jar
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-licensed-art.ps1
 ```
 
-Çıktı `lwjgl3/build/libs/DeepDiveDrift-1.0.0.jar` altında oluşur.
+Kaynak URL’leri, lisans metni ve SHA-256 kayıtları `third_party/cc0` altında tutulur.
 
-Java'yı beraberinde taşıyan platform paketleri için `packageWinX64`, `packageLinuxX64`,
-`packageMacM1` veya `packageMacX64` görevleri kullanılabilir. Bu görevler uygun Temurin 21
-çalışma zamanını ilk kullanımda indirir ve çıktıları `lwjgl3/build/construo/dist` altında üretir.
-
-## Launcher seçenekleri
-
-Argümanlar Gradle üzerinden `--args="..."` ile veya doğrudan JAR'a verilebilir:
+## Google Play paketi
 
 ```powershell
-.\gradlew.bat lwjgl3:run --args="--debug --windowed --resolution=1280x720 --fps=144"
-java -jar lwjgl3/build/libs/DeepDiveDrift-1.0.0.jar --fullscreen --vsync --msaa
+.\gradlew.bat :android:prepareGooglePlayBundle
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-release.ps1
 ```
 
-Desteklenen bayraklar:
+Çıktı `android/build/store/google-play` altında oluşur. Doğrulama betiği APK ZIP hizalamasını, dört ABI için 16 KB ELF uyumluluğunu, AAB içeriğini ve imzayı denetler. `keystore.properties` yoksa dosya bilinçli olarak `-unsigned.aab` adıyla üretilir. Özel yükleme anahtarını oluşturmak ve imzalı paket almak için:
 
-- `--windowed`, `--borderless`, `--fullscreen`
-- `--vsync`, `--no-vsync`
-- `--msaa`, `--no-msaa`
-- `--resolution=GENİŞLİKxYÜKSEKLİK`
-- `--fps=60`, `120`, `144`, `240` veya `0` (sınırsız)
-- `--debug`: OpenGL debug çıktısını ve oyun içi test kısayollarını açar
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-android-upload-key.ps1
+Copy-Item keystore.properties.example keystore.properties
+# Parolaları keystore.properties içine girdikten sonra:
+.\gradlew.bat :android:prepareGooglePlayBundle
+```
 
-Debug modunda `F2` bir sonraki derinlik eşiğine ilerletir, `F3` boss savaşını başlatır.
+`keystore.properties` ve `upload-keystore.jks` Git tarafından yok sayılır. Anahtarın güvenli bir yedeğini saklayın.
 
-## Mimari
+## Steam paketleri
 
-- `DeepDiveDrift`: Ekran geçişlerini, ayar kaplamasını ve uygulama kaynaklarının yaşam döngüsünü yönetir.
-- `BaseScreen`: Bütün ekranlara yeniden boyutlandırılabilir sabit `1280x720` oyun alanı sağlar.
-- `GameSession` / `GameBalance`: Test edilebilir skor, oksijen, combo, zorluk ve yükseltme kurallarını tutar.
-- `GameAssets`, `FontManager`, `AudioManager`: Ağır kaynakları bir kez yükler ve ekranlar arasında paylaşır.
-- `ParticleSystem`: Sınırlı ve havuzlanan parçacıkların güncelleme/çizim yaşam döngüsünü yönetir.
-- `DisplaySettings` / `DisplaySettingsStore`: Çalışma zamanı görüntü ayarlarını uygular ve masaüstü tercihlerini saklar.
-- `Lwjgl3Launcher`: HDPI, pencere modu, VSync, FPS, MSAA, debug çıktısı ve özel uygulama ikonlarını yapılandırır.
+```powershell
+.\gradlew.bat :lwjgl3:prepareSteam
+```
+
+Depot içerikleri şuralarda oluşur:
+
+- `lwjgl3/build/steam/windows-x64`
+- `lwjgl3/build/steam/linux-x64`
+
+Steamworks App ID ve Depot ID’leri alındıktan sonra VDF dosyalarını üretmek için:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\prepare-steam-release.ps1 `
+  -AppId APP_ID `
+  -WindowsDepotId WINDOWS_DEPOT_ID `
+  -LinuxDepotId LINUX_DEPOT_ID
+```
+
+Yükleme komutu ve mağaza adımları [steam/README.md](steam/README.md) içinde açıklanmıştır.
+
+## Yayın belgeleri
+
+- [Google Play mağaza metinleri](store/google-play/listing-tr.md)
+- [Veri güvenliği beyanı](store/google-play/data-safety-tr.md)
+- [Gizlilik politikası](store/privacy-policy-tr.md)
+- [Steam mağaza metinleri](steam/store-page-tr.md)
+- [Yayın kontrol listesi](store/RELEASE_CHECKLIST_TR.md)
+- [Varlık hakları kontrolü](store/ASSET_RIGHTS_CHECKLIST.md)
+- [Mağaza görsellerinin üretim kaydı](store/art/README.md)
+- [Gerçek oyun ekran görüntüleri](store/screenshots/README.md)
 
 ## Proje yapısı
 
 ```text
-assets/                         Görsel, ses ve font dosyaları
-core/src/main/java/com/game/
-├── diver/                      Dalgıç, zıpkın, oksijen tüpü ve arka plan
-├── effects/                    Havuzlanan parçacık sistemi
-├── enemies/                    Düşman davranışları ve boss
-├── manager/                    Texture, font ve ses yönetimi
-├── model/                      Oyun durumu, denge ve yükseltmeler
-├── screen/                     Ana menü, ayarlar ve oyun ekranları
-└── settings/                   Görüntü ayarları ve kalıcı tercihler
-core/src/test/                  JUnit 5 denge, oturum, yükseltme ve efekt testleri
-lwjgl3/                         Masaüstü launcher, ikonlar ve paketleme görevleri
+android/                         Android launcher ve AAB yapılandırması
+assets/                          Görsel, ses ve font dosyaları
+core/src/main/java/com/game/     Oyun, ekranlar ve platform bağımsız giriş
+core/src/test/                   JUnit 5 testleri
+lwjgl3/                          Masaüstü launcher ve paketleme
+scripts/                         İmzalama ve mağaza yükleme yardımcıları
+steam/                           SteamPipe şablonları ve mağaza metinleri
+store/                           Google Play metinleri ve yayın belgeleri
+third_party/cc0/                 CC0 kaynak dosyaları, lisans ve doğrulama kayıtları
 ```
