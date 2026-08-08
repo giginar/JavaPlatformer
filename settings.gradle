@@ -1,5 +1,6 @@
 pluginManagement {
   repositories {
+    google()
     gradlePluginPortal()
     mavenCentral()
   }
@@ -12,3 +13,4 @@ plugins {
 rootProject.name = 'DeepDiveDrift'
 include 'core'
 include 'lwjgl3'
+include 'android'

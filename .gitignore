@@ -26,9 +26,14 @@ hs_err_pid*
 /android/libs/arm64-v8a/
 /android/libs/x86/
 /android/libs/x86_64/
+/android/libs/
 /android/gen/
 /android/out/
 local.properties
+/keystore.properties
+/upload-keystore.jks
+/.android-sdk/
+/steam/generated/
 com_crashlytics_export_strings.xml
 
 ## Robovm:
@@ -154,6 +159,7 @@ Thumbs.db
 *#*#
 /.kotlin/
 /assets/assets.txt
+/.asset-work/
 
 ## Special cases:
 
