@@ -2,37 +2,82 @@ param(
     [switch]$SkipBuild
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = 'Stop'
 $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$gradleWrapper = Join-Path $projectRootPath 'gradlew.bat'
+$androidTargetPath = Join-Path $projectRootPath 'android\target'
+$releasePath = Join-Path $androidTargetPath 'store\google-play'
+$mavenWrapper = Join-Path $projectRootPath 'mvnw.cmd'
 
 if (-not $SkipBuild) {
-    & $gradleWrapper :android:prepareGooglePlayBundle :android:assembleRelease
+    & $mavenWrapper -B -ntp -Pandroid-release -pl android -am package
     if ($LASTEXITCODE -ne 0) {
         throw "Android release build failed with exit code $LASTEXITCODE"
     }
 }
 
-$sdkDirectoryLine = Get-Content (Join-Path $projectRootPath 'local.properties') |
-    Where-Object { $_ -like 'sdk.dir=*' } | Select-Object -First 1
-if (-not $sdkDirectoryLine) {
-    throw "local.properties does not contain sdk.dir"
+function Read-PropertiesFile {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $properties = @{}
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith('#')) {
+            continue
+        }
+        $parts = $trimmed.Split('=', 2)
+        if ($parts.Count -eq 2) {
+            $properties[$parts[0].Trim()] = $parts[1].Trim()
+        }
+    }
+    return $properties
 }
-$sdkDirectory = $sdkDirectoryLine.Split('=', 2)[1].Trim()
-$sdkDirectory = $sdkDirectory.Replace('\:', ':').Replace('\\', '\')
+
+$localPropertiesPath = Join-Path $projectRootPath 'local.properties'
+$sdkDirectory = ''
+if (Test-Path -LiteralPath $localPropertiesPath) {
+    $localProperties = Read-PropertiesFile $localPropertiesPath
+    if ($localProperties.ContainsKey('sdk.dir')) {
+        $sdkDirectory = $localProperties['sdk.dir'].Replace('\:', ':').Replace('\\', '\')
+    }
+}
+if (-not $sdkDirectory -and $env:ANDROID_SDK_ROOT) {
+    $sdkDirectory = $env:ANDROID_SDK_ROOT
+}
+if (-not $sdkDirectory -and $env:ANDROID_HOME) {
+    $sdkDirectory = $env:ANDROID_HOME
+}
+if (-not $sdkDirectory) {
+    throw 'Android SDK path is missing. Set sdk.dir in local.properties or ANDROID_SDK_ROOT.'
+}
+$sdkDirectory = [System.IO.Path]::GetFullPath($sdkDirectory)
 $zipalignPath = Join-Path $sdkDirectory 'build-tools\36.0.0\zipalign.exe'
-$releaseApk = Get-ChildItem (Join-Path $projectRootPath 'android\build\outputs\apk\release\*.apk') |
-    Select-Object -First 1
-$releaseBundle = Get-ChildItem (Join-Path $projectRootPath 'android\build\outputs\bundle\release\*.aab') |
-    Select-Object -First 1
+$apksignerPath = Join-Path $sdkDirectory 'build-tools\36.0.0\apksigner.bat'
+$releaseApk = Get-ChildItem -LiteralPath $releasePath -Filter '*-universal.apk' |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$releaseBundle = Get-ChildItem -LiteralPath $releasePath -Filter '*.aab' |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if (-not $releaseApk -or -not $releaseBundle) {
-    throw "Release APK or AAB is missing"
+    throw "Release APK or AAB is missing below $releasePath"
 }
 
 & $zipalignPath -c -P 16 -v 4 $releaseApk.FullName | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    throw "APK ZIP alignment is not 16 KB compatible"
+    throw 'APK ZIP alignment is not 16 KB compatible'
+}
+& $apksignerPath verify --verbose $releaseApk.FullName | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw 'Universal test APK signature verification failed'
+}
+
+$bundletoolPath = Get-ChildItem -LiteralPath (Join-Path $projectRootPath '.mvn\tools') `
+    -Filter 'bundletool-all-*.jar' | Sort-Object Name -Descending | Select-Object -First 1
+if (-not $bundletoolPath) {
+    throw 'bundletool is missing; run the Android Maven release build first'
+}
+& java.exe -jar $bundletoolPath.FullName validate "--bundle=$($releaseBundle.FullName)"
+if ($LASTEXITCODE -ne 0) {
+    throw 'bundletool validation failed'
 }
 
 function Get-ElfLoadAlignments([string]$Path) {
@@ -77,37 +122,61 @@ function Get-ElfLoadAlignments([string]$Path) {
     return $alignments
 }
 
-$expectedAbis = 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-$bundleEntries = & jar.exe tf $releaseBundle.FullName
-if ($LASTEXITCODE -ne 0) {
-    throw "Unable to inspect the release AAB"
+$verificationPath = Join-Path $androidTargetPath 'android-verification'
+$resolvedAndroidTarget = [System.IO.Path]::GetFullPath($androidTargetPath).TrimEnd('\') + '\'
+$resolvedVerificationPath = [System.IO.Path]::GetFullPath($verificationPath)
+if (-not $resolvedVerificationPath.StartsWith(
+    $resolvedAndroidTarget, [System.StringComparison]::OrdinalIgnoreCase
+)) {
+    throw "Refusing to clean a verification directory outside Android target: $resolvedVerificationPath"
 }
-foreach ($abi in $expectedAbis) {
-    $libraries = Get-ChildItem (Join-Path $projectRootPath "android\libs\$abi\*.so")
-    if ($libraries.Count -lt 2) {
-        throw "Expected native libraries are missing for $abi"
+if (Test-Path -LiteralPath $verificationPath) {
+    Remove-Item -LiteralPath $verificationPath -Recurse -Force
+}
+New-Item -ItemType Directory -Path $verificationPath -Force | Out-Null
+
+try {
+    Push-Location $verificationPath
+    try {
+        & jar.exe xf $releaseBundle.FullName
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to extract the release AAB'
+        }
+    } finally {
+        Pop-Location
     }
-    foreach ($library in $libraries) {
-        foreach ($alignment in (Get-ElfLoadAlignments $library.FullName)) {
-            if ($alignment -lt 16384) {
-                throw "$($library.FullName) has a LOAD segment aligned to only $alignment bytes"
+
+    $expectedAbis = 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+    foreach ($abi in $expectedAbis) {
+        $nativePath = Join-Path $verificationPath "base\lib\$abi"
+        $libraries = @(Get-ChildItem -LiteralPath $nativePath -Filter '*.so' -ErrorAction SilentlyContinue)
+        if ($libraries.Count -lt 2) {
+            throw "Expected AAB native libraries are missing for $abi"
+        }
+        foreach ($library in $libraries) {
+            foreach ($alignment in (Get-ElfLoadAlignments $library.FullName)) {
+                if ($alignment -lt 16384) {
+                    throw "$($library.FullName) has a LOAD segment aligned to only $alignment bytes"
+                }
             }
         }
     }
-    if (-not ($bundleEntries -match "^base/lib/$([regex]::Escape($abi))/.+\.so$")) {
-        throw "Release AAB does not contain native libraries for $abi"
+} finally {
+    if (Test-Path -LiteralPath $verificationPath) {
+        Remove-Item -LiteralPath $verificationPath -Recurse -Force
     }
 }
 
 $signatureOutput = (& jarsigner.exe -verify -verbose $releaseBundle.FullName 2>&1 | Out-String)
 $isSigned = $signatureOutput -notmatch 'jar is unsigned'
-if ((Test-Path (Join-Path $projectRootPath 'keystore.properties')) -and -not $isSigned) {
-    throw "keystore.properties exists, but the release AAB is unsigned"
+if ((Test-Path -LiteralPath (Join-Path $projectRootPath 'keystore.properties')) -and -not $isSigned) {
+    throw 'keystore.properties exists, but the release AAB is unsigned'
 }
 
-Write-Host "Android verification passed:"
-Write-Host "  APK ZIP alignment: 16 KB"
-Write-Host "  ELF LOAD alignment: 16 KB across all four ABIs"
-Write-Host "  AAB native libraries: all four ABIs"
+Write-Host 'Android verification passed:'
+Write-Host '  Bundletool schema: valid'
+Write-Host '  APK ZIP alignment: 16 KB compatible'
+Write-Host '  Universal APK signature: valid local debug key'
+Write-Host '  ELF LOAD alignment: 16 KB across all four ABIs'
 Write-Host "  AAB: $($releaseBundle.FullName)"
 Write-Host "  AAB signature: $(if ($isSigned) { 'signed' } else { 'unsigned (upload key still required)' })"

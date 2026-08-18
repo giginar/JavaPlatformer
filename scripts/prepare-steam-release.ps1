@@ -12,18 +12,11 @@ param(
 $ErrorActionPreference = "Stop"
 $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $generatedDirectory = Join-Path $projectRootPath 'steam\generated'
-$gradleWrapper = Join-Path $projectRootPath 'gradlew.bat'
+$mavenWrapper = Join-Path $projectRootPath 'mvnw.cmd'
 
-& $gradleWrapper :lwjgl3:prepareSteamWinX64
+& $mavenWrapper -B -ntp -Psteam -pl lwjgl3 -am verify
 if ($LASTEXITCODE -ne 0) {
-    throw "Windows Steam package failed with exit code $LASTEXITCODE"
-}
-
-if ($LinuxDepotId) {
-    & $gradleWrapper :lwjgl3:prepareSteamLinuxX64
-    if ($LASTEXITCODE -ne 0) {
-        throw "Linux Steam package failed with exit code $LASTEXITCODE"
-    }
+    throw "Steam package build failed with exit code $LASTEXITCODE"
 }
 
 New-Item -ItemType Directory -Path $generatedDirectory -Force | Out-Null
@@ -38,7 +31,7 @@ $depotTemplate = [System.IO.File]::ReadAllText($depotTemplatePath)
 $appTemplate = [System.IO.File]::ReadAllText($appTemplatePath)
 
 $windowsDepotScript = Join-Path $generatedDirectory 'depot_windows.vdf'
-$windowsContent = Join-Path $projectRootPath 'lwjgl3\build\steam\windows-x64'
+$windowsContent = Join-Path $projectRootPath 'lwjgl3\target\steam\windows-x64'
 $windowsVdf = $depotTemplate.Replace('{{DEPOT_ID}}', $WindowsDepotId)
 $windowsVdf = $windowsVdf.Replace('{{CONTENT_ROOT}}', (Convert-ToVdfPath $windowsContent))
 [System.IO.File]::WriteAllText($windowsDepotScript, $windowsVdf)
@@ -46,15 +39,15 @@ $windowsVdf = $windowsVdf.Replace('{{CONTENT_ROOT}}', (Convert-ToVdfPath $window
 $linuxDepotEntry = ''
 if ($LinuxDepotId) {
     $linuxDepotScript = Join-Path $generatedDirectory 'depot_linux.vdf'
-    $linuxContent = Join-Path $projectRootPath 'lwjgl3\build\steam\linux-x64'
+    $linuxContent = Join-Path $projectRootPath 'lwjgl3\target\steam\linux-x64'
     $linuxVdf = $depotTemplate.Replace('{{DEPOT_ID}}', $LinuxDepotId)
     $linuxVdf = $linuxVdf.Replace('{{CONTENT_ROOT}}', (Convert-ToVdfPath $linuxContent))
     [System.IO.File]::WriteAllText($linuxDepotScript, $linuxVdf)
     $linuxDepotEntry = '        "' + $LinuxDepotId + '" "' + (Convert-ToVdfPath $linuxDepotScript) + '"'
 }
 
-$version = (Get-Content (Join-Path $projectRootPath 'gradle.properties') |
-    Where-Object { $_ -like 'projectVersion=*' }).Split('=', 2)[1]
+[xml]$projectPom = Get-Content -LiteralPath (Join-Path $projectRootPath 'pom.xml') -Raw
+$version = [string]$projectPom.project.version
 $appVdf = $appTemplate.Replace('{{APP_ID}}', $AppId)
 $appVdf = $appVdf.Replace('{{VERSION}}', $version)
 $appVdf = $appVdf.Replace('{{BUILD_OUTPUT}}', (Convert-ToVdfPath (Join-Path $generatedDirectory 'output')))
