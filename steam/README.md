@@ -3,17 +3,17 @@
 ## 1. Depot içeriklerini üret
 
 ```powershell
-.\gradlew.bat :lwjgl3:prepareSteam
+.\mvnw.cmd -B -ntp -Psteam -pl lwjgl3 -am verify
 ```
 
-Windows başlangıç dosyası `DeepDiveDrift.exe`’dir. Çalışma dizini depot kökü olarak bırakılabilir. Linux başlangıç dosyası `DeepDiveDrift`’tir.
+Steamworks > Installation > General Installation bölümünde platforma göre şu başlatma seçeneklerini tanımlayın:
 
-Steamworks > Installation > General Installation bölümünde ayrı başlatma seçenekleri tanımlayın:
+- Windows 64-bit: executable `DeepDiveDrift.exe`, argüman yok
+- Linux 64-bit: executable `runtime/bin/java`, argüman `-jar DeepDiveDrift.jar`
 
-- Windows 64-bit: `DeepDiveDrift.exe`
-- Linux 64-bit: `DeepDiveDrift`
+Çalışma dizini her iki platformda depot kökü olarak bırakılabilir. Windows ve Linux depolarını geliştirici paketine ekleyin; aksi halde özel dal testi sırasında ilgili platforma dosya kurulmaz. Linux sürümünü en güncel Ubuntu LTS veya SteamOS üzerinde gerçek Steam istemcisinden ayrıca test edin.
 
-Windows ve Linux depolarını geliştirici paketine ekleyin; aksi halde özel dal testi sırasında ilgili platforma dosya kurulmaz. Linux sürümünü en güncel Ubuntu LTS veya SteamOS üzerinde gerçek Steam istemcisinden ayrıca test edin.
+Herkese açık Windows yayını öncesinde `DeepDiveDrift.exe` dosyasını kendi kod imzalama sertifikanızla imzalayın; Launch4j çıktısı teknik olarak çalışsa da imzasız EXE bazı antivirüs ürünlerinde yanlış pozitif üretebilir.
 
 ## 2. Mağaza varlıklarını hazırla
 
@@ -33,7 +33,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -LinuxDepotId LINUX_DEPOT_ID
 ```
 
-Linux deposu açılmadıysa `-LinuxDepotId` atlanabilir. Oluşan dosyalar `steam/generated` altında tutulur ve Git tarafından yok sayılır.
+Linux deposu açılmadıysa `-LinuxDepotId` atlanabilir. Betik önce Maven Steam profilini çalıştırır, ardından `steam/generated` altında VDF dosyalarını üretir. Bu dizin Git tarafından yok sayılır.
 
 ## 4. SteamPipe’a yükle
 

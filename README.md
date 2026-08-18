@@ -30,16 +30,17 @@ Dokunmatik düğmeler ekranın güvenli alanlarına göre yerleşir. Menü, ayar
 - Ekran sarsıntısı ve flaş efektleri ayarlardan ayrı ayrı kapatılabilir.
 - Skor, oksijen ve hareket hesapları FPS’den bağımsızdır.
 
-## Geliştirme
+## Maven ile geliştirme
 
-Masaüstü geliştirme için Java 21 kullanılır:
+Proje Maven 3.9.16 Wrapper ve Java 21 kullanır. Yerel Maven kurulumu gerekmez:
 
 ```powershell
-.\gradlew.bat :lwjgl3:run
-.\gradlew.bat test
+.\mvnw.cmd test
+.\mvnw.cmd -pl lwjgl3 -am package
+java -jar .\lwjgl3\target\DeepDiveDrift-1.0.0.jar
 ```
 
-Android derlemesi için Android SDK Platform 36 ve Build Tools 36.0.0 gerekir. Android Studio bunları kurabilir; SDK yolu `local.properties` içindeki `sdk.dir` ile belirtilir.
+İkinci komut masaüstü için bütün bağımlılıkları ve varlıkları içeren çalıştırılabilir JAR üretir. Sürüm tek noktadan, kök `pom.xml` içindeki `<version>` alanından yönetilir.
 
 Doğrulanmış CC0/OFL kaynaklardan oyun, ikon ve mağaza görsellerini yeniden üretmek için:
 
@@ -51,18 +52,22 @@ Kaynak URL’leri, lisans metni ve SHA-256 kayıtları `third_party/cc0` altınd
 
 ## Google Play paketi
 
+Android derlemesi için Android SDK Platform 36 ve Build Tools 36.0.0 gerekir. SDK yolu `local.properties` içindeki `sdk.dir` ile veya `ANDROID_SDK_ROOT` ortam değişkeniyle belirtilir.
+
 ```powershell
-.\gradlew.bat :android:prepareGooglePlayBundle
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-release.ps1
+.\mvnw.cmd -B -ntp -Pandroid-release -pl android -am package
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-release.ps1 -SkipBuild
 ```
 
-Çıktı `android/build/store/google-play` altında oluşur. Doğrulama betiği APK ZIP hizalamasını, dört ABI için 16 KB ELF uyumluluğunu, AAB içeriğini ve imzayı denetler. `keystore.properties` yoksa dosya bilinçli olarak `-unsigned.aab` adıyla üretilir. Özel yükleme anahtarını oluşturmak ve imzalı paket almak için:
+Çıktılar `android/target/store/google-play` altında oluşur. Maven profili AAPT2, D8 ve Bundletool’un resmi komut satırı araçlarını kullanır; doğrulama betiği Bundletool şemasını, yerel debug anahtarıyla imzalanmış evrensel test APK’sını, ZIP hizalamasını, dört ABI için 16 KB ELF uyumluluğunu ve AAB imzasını denetler.
+
+`keystore.properties` yoksa AAB bilinçli olarak `-unsigned.aab` adıyla üretilir. Özel yükleme anahtarını oluşturmak ve imzalı paket almak için:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-android-upload-key.ps1
 Copy-Item keystore.properties.example keystore.properties
-# Parolaları keystore.properties içine girdikten sonra:
-.\gradlew.bat :android:prepareGooglePlayBundle
+# Parolaları keystore.properties içine girdikten sonra aynı Maven komutunu çalıştırın.
+.\mvnw.cmd -B -ntp -Pandroid-release -pl android -am package
 ```
 
 `keystore.properties` ve `upload-keystore.jks` Git tarafından yok sayılır. Anahtarın güvenli bir yedeğini saklayın.
@@ -70,15 +75,15 @@ Copy-Item keystore.properties.example keystore.properties
 ## Steam paketleri
 
 ```powershell
-.\gradlew.bat :lwjgl3:prepareSteam
+.\mvnw.cmd -B -ntp -Psteam -pl lwjgl3 -am verify
 ```
 
-Depot içerikleri şuralarda oluşur:
+Bu profil sabitlenmiş ve SHA-256 ile doğrulanan Temurin 21 JRE’lerini indirir. Depot içerikleri şuralarda oluşur:
 
-- `lwjgl3/build/steam/windows-x64`
-- `lwjgl3/build/steam/linux-x64`
+- `lwjgl3/target/steam/windows-x64`
+- `lwjgl3/target/steam/linux-x64`
 
-Steamworks App ID ve Depot ID’leri alındıktan sonra VDF dosyalarını üretmek için:
+Steamworks App ID ve Depot ID’leri alındıktan sonra paketleri ve VDF dosyalarını birlikte üretmek için:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -104,12 +109,13 @@ Yükleme komutu ve mağaza adımları [steam/README.md](steam/README.md) içinde
 ## Proje yapısı
 
 ```text
-android/                         Android launcher ve AAB yapılandırması
+pom.xml                          Çok modüllü Maven üst projesi ve ortak sürümler
+android/                         Android launcher ve AAB profili
 assets/                          Görsel, ses ve font dosyaları
 core/src/main/java/com/game/     Oyun, ekranlar ve platform bağımsız giriş
 core/src/test/                   JUnit 5 testleri
-lwjgl3/                          Masaüstü launcher ve paketleme
-scripts/                         İmzalama ve mağaza yükleme yardımcıları
+lwjgl3/                          Masaüstü launcher ve Steam paketleme profili
+scripts/                         Paketleme, imzalama ve mağaza yükleme yardımcıları
 steam/                           SteamPipe şablonları ve mağaza metinleri
 store/                           Google Play metinleri ve yayın belgeleri
 third_party/cc0/                 CC0 kaynak dosyaları, lisans ve doğrulama kayıtları
