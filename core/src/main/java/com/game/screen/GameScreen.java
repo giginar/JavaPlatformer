@@ -74,7 +74,7 @@ public class GameScreen extends BaseScreen {
 
     private Diver diver;
     private GameBalance.Difficulty difficulty;
-    private List<UpgradeType> upgradeChoices = List.of();
+    private List<UpgradeType> upgradeChoices = Collections.emptyList();
     private String bannerText = "";
     private float enemySpawnTimer;
     private float oxygenTankSpawnTimer;
@@ -402,7 +402,8 @@ public class GameScreen extends BaseScreen {
         List<UpgradeType> candidates = new ArrayList<>(session.getAvailableUpgrades());
         Collections.shuffle(candidates, random);
         int choiceCount = Math.min(3, candidates.size());
-        upgradeChoices = List.copyOf(candidates.subList(0, choiceCount));
+        upgradeChoices = Collections.unmodifiableList(
+            new ArrayList<>(candidates.subList(0, choiceCount)));
         selectedUpgradeIndex = 0;
         choosingUpgrade = !upgradeChoices.isEmpty();
         if (!choosingUpgrade) {
@@ -1005,7 +1006,7 @@ public class GameScreen extends BaseScreen {
         damageFlashTimer = 0f;
         selectedPauseIndex = 0;
         selectedUpgradeIndex = 0;
-        upgradeChoices = List.of();
+        upgradeChoices = Collections.emptyList();
         paused = false;
         gameOver = false;
         showTutorial = !Boolean.getBoolean("deepdive.hideTutorial");

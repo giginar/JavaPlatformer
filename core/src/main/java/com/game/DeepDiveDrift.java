@@ -56,7 +56,7 @@ public class DeepDiveDrift extends Game {
 
     private void captureFrameIfRequested() {
         String capturePath = System.getProperty("deepdive.capture.path");
-        if (captureCompleted || capturePath == null || capturePath.isBlank()) {
+        if (captureCompleted || capturePath == null || capturePath.trim().isEmpty()) {
             return;
         }
 

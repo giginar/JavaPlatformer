@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.game.diver.deepdivedrift">
 
     <uses-feature
         android:glEsVersion="0x00020000"
@@ -16,7 +17,7 @@
         android:supportsRtl="true"
         android:theme="@style/GdxTheme">
         <activity
-            android:name=".AndroidLauncher"
+            android:name="com.game.diver.android.AndroidLauncher"
             android:configChanges="density|keyboard|keyboardHidden|navigation|orientation|screenSize|smallestScreenSize|screenLayout|uiMode"
             android:exported="true"
             android:launchMode="singleTask"

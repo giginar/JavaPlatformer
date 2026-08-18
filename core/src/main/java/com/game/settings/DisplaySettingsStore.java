@@ -3,6 +3,8 @@ package com.game.settings;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -14,13 +16,13 @@ public final class DisplaySettingsStore {
     public static final int DEFAULT_WIDTH = 1280;
     public static final int DEFAULT_HEIGHT = 720;
     public static final int[] FPS_LIMITS = {60, 120, 144, 240, 0};
-    public static final List<Resolution> RESOLUTIONS = List.of(
+    public static final List<Resolution> RESOLUTIONS = Collections.unmodifiableList(Arrays.asList(
         new Resolution(960, 540),
         new Resolution(1280, 720),
         new Resolution(1600, 900),
         new Resolution(1920, 1080),
         new Resolution(2560, 1440)
-    );
+    ));
 
     private static PreferenceBackend backend;
 
