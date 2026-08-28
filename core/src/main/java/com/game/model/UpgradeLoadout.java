@@ -20,9 +20,6 @@ public final class UpgradeLoadout {
 
     public boolean apply(UpgradeType type) {
         int currentLevel = level(type);
-        if (currentLevel >= type.maxLevel()) {
-            return false;
-        }
         levels.put(type, currentLevel + 1);
         return true;
     }
@@ -34,9 +31,7 @@ public final class UpgradeLoadout {
     public List<UpgradeType> availableUpgrades() {
         List<UpgradeType> available = new ArrayList<>();
         for (UpgradeType type : UpgradeType.values()) {
-            if (level(type) < type.maxLevel()) {
-                available.add(type);
-            }
+            available.add(type);
         }
         return available;
     }

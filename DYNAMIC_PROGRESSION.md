@@ -31,6 +31,10 @@ Torpedo Dash. A completed dive awards one Pressure Pearl per 100 m (modified by 
 The Dive Shop persists pearl balance and permanent equipment levels in the existing game
 preferences.
 
+Run upgrades are offered at 1,000, 2,500, and 5,000 score, then every additional 2,500 score
+for the rest of the dive. Their levels have no run-specific maximum and reset whenever a new
+dive starts. Dive Shop equipment remains separate and persists between dives.
+
 Each transition increases the displayed physical depth, moves the scenery upward, reduces
 available light, and accelerates rising silt to sell the feeling of descending. After stage five,
 the full-height Abyssal Octopus alternates aimed ink salvos, thrown broodlings, and telegraphed

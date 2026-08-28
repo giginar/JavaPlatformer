@@ -3,7 +3,6 @@ package com.game.model;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UpgradeLoadoutTest {
@@ -25,17 +24,15 @@ class UpgradeLoadoutTest {
     }
 
     @Test
-    void upgradeLevelsCapAndDisappearFromAvailableChoices() {
+    void upgradeLevelsRemainAvailableBeyondTheFormerCap() {
         UpgradeLoadout loadout = new UpgradeLoadout();
 
-        assertTrue(loadout.apply(UpgradeType.RAPID_FIRE));
-        assertTrue(loadout.apply(UpgradeType.RAPID_FIRE));
-        assertTrue(loadout.apply(UpgradeType.RAPID_FIRE));
-        assertFalse(loadout.apply(UpgradeType.RAPID_FIRE));
+        for (int level = 0; level < 20; level++) {
+            assertTrue(loadout.apply(UpgradeType.RAPID_FIRE));
+        }
 
-        assertEquals(UpgradeType.RAPID_FIRE.maxLevel(),
-            loadout.level(UpgradeType.RAPID_FIRE));
-        assertFalse(loadout.availableUpgrades().contains(UpgradeType.RAPID_FIRE));
+        assertEquals(20, loadout.level(UpgradeType.RAPID_FIRE));
+        assertTrue(loadout.availableUpgrades().contains(UpgradeType.RAPID_FIRE));
     }
 
     @Test

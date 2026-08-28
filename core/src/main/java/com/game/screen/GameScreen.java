@@ -38,6 +38,7 @@ import com.game.model.GameSession;
 import com.game.model.PowerUpType;
 import com.game.model.ProgressionStore;
 import com.game.model.RunDirector;
+import com.game.model.RunUpgradeSchedule;
 import com.game.model.UpgradeType;
 import com.game.settings.DisplaySettings;
 
@@ -70,7 +71,6 @@ public class GameScreen extends BaseScreen {
     private static final float POWER_UP_SPAWN_INTERVAL = 18f;
     private static final float BASE_MAGNET_RANGE = 78f;
     private static final int MAX_DASH_CHARGES = 2;
-    private static final float[] RUN_UPGRADE_SCORES = {1000f, 2500f, 5000f};
     private static final Rectangle TOUCH_SWIM_BUTTON = new Rectangle(32f, 28f, 230f, 120f);
     private static final Rectangle TOUCH_FIRE_BUTTON = new Rectangle(1018f, 28f, 230f, 120f);
     private static final Rectangle TOUCH_DASH_BUTTON = new Rectangle(530f, 28f, 220f, 76f);
@@ -508,8 +508,8 @@ public class GameScreen extends BaseScreen {
     }
 
     private boolean updateRunUpgradeProgression() {
-        if (safetyTimer > 0f || nextRunUpgradeIndex >= RUN_UPGRADE_SCORES.length
-            || session.getScore() < RUN_UPGRADE_SCORES[nextRunUpgradeIndex]) {
+        if (safetyTimer > 0f
+            || session.getScore() < RunUpgradeSchedule.scoreForSelection(nextRunUpgradeIndex)) {
             return false;
         }
         nextRunUpgradeIndex++;
