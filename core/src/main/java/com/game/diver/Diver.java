@@ -81,6 +81,10 @@ public class Diver {
         return bounds;
     }
 
+    public boolean isTouchingBottom() {
+        return position.y <= 0f;
+    }
+
     private void updateBounds() {
         bounds.set(position.x + HITBOX_PADDING, position.y + HITBOX_PADDING,
             WIDTH - HITBOX_PADDING * 2f, HEIGHT - HITBOX_PADDING * 2f);

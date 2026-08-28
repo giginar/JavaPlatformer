@@ -62,6 +62,7 @@ public class GameScreen extends BaseScreen {
     private static final float OXYGEN_TANK_SPAWN_INTERVAL = 8f;
     private static final float BASE_OXYGEN_PICKUP = 30f;
     private static final float INVULNERABILITY_DURATION = 1.1f;
+    private static final float SEABED_CONTACT_DAMAGE = 18f;
     private static final float BREATH_INTERVAL = 10f;
     private static final float TUTORIAL_DURATION = 7f;
     private static final float BANNER_DURATION = 1.8f;
@@ -758,6 +759,11 @@ public class GameScreen extends BaseScreen {
             return;
         }
 
+        if (diver.isTouchingBottom()) {
+            damageDiver(SEABED_CONTACT_DAMAGE, false);
+            return;
+        }
+
         for (Iterator<EnemyProjectile> iterator = enemyProjectiles.iterator(); iterator.hasNext(); ) {
             EnemyProjectile projectile = iterator.next();
             if (projectile.bounds().overlaps(diver.getBounds())) {
@@ -1297,18 +1303,18 @@ public class GameScreen extends BaseScreen {
         if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
             if (game.input().usingController()) {
                 drawCentered(smallFont, "[A] / STICK UP SWIM  |  [X / B / RB] FIRE", 76f, Color.WHITE);
-                drawCentered(smallFont, "[LB] DASH WHEN READY  |  [START] PAUSE  |  [Y] HELP",
+                drawCentered(smallFont, "AVOID THE SEABED  |  [LB] DASH  |  [START] PAUSE  |  [Y] HELP",
                     47f, Color.LIGHT_GRAY);
             } else if (game.input().usingTouch()) {
                 float tutorialY = tutorialPanelY();
                 drawCentered(smallFont, "HOLD SWIM TO RISE  |  TAP FIRE TO SHOOT",
                     tutorialY + 58f, Color.WHITE);
-                drawCentered(smallFont, "TAP DASH WHEN READY  |  PAUSE IS AT THE TOP RIGHT",
+                drawCentered(smallFont, "AVOID THE SEABED  |  TAP DASH  |  PAUSE IS AT THE TOP RIGHT",
                     tutorialY + 29f, Color.LIGHT_GRAY);
             } else {
                 drawCentered(smallFont, "SPACE / W / UP OR LEFT MOUSE TO SWIM  |  Z / X OR RIGHT MOUSE FIRE",
                     76f, Color.WHITE);
-                drawCentered(smallFont, "[C] DASH WHEN READY  |  [P / ESC] PAUSE  |  [T] HELP",
+                drawCentered(smallFont, "AVOID THE SEABED  |  [C] DASH  |  [P / ESC] PAUSE  |  [T] HELP",
                     47f, Color.LIGHT_GRAY);
             }
         }
