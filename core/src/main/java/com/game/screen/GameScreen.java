@@ -27,7 +27,7 @@ import com.game.enemies.Shark;
 import com.game.enemies.SmallFish;
 import com.game.hazards.CrushingGate;
 import com.game.hazards.EnvironmentalHazard;
-import com.game.hazards.FallingRock;
+import com.game.hazards.FallingDebris;
 import com.game.hazards.ReefBarrier;
 import com.game.hazards.SeaMine;
 import com.game.hazards.ThermalVent;
@@ -589,7 +589,7 @@ public class GameScreen extends BaseScreen {
                     addEnemy(roll < 68 ? new SmallFish(y) : new FastFish(y));
                 }
                 if (roll < 22) {
-                    hazards.add(new FallingRock(GameConfig.WORLD_WIDTH - 90f,
+                    hazards.add(new FallingDebris(GameConfig.WORLD_WIDTH - 90f,
                         RunDirector.BASE_SCROLL_SPEED_WORLD_UNITS));
                 }
             }
@@ -644,16 +644,16 @@ public class GameScreen extends BaseScreen {
             case 1 -> new ReefBarrier(random.nextBoolean(), MathUtils.random(115f, 195f), speed);
             case 2 -> roll < 55
                 ? new ReefBarrier(random.nextBoolean(), MathUtils.random(130f, 220f), speed)
-                : new FallingRock(MathUtils.random(900f, 1200f), speed);
+                : new FallingDebris(MathUtils.random(900f, 1200f), speed);
             case 3 -> roll < 35 ? new SeaMine(randomY(), speed)
-                : roll < 70 ? new FallingRock(MathUtils.random(820f, 1180f), speed)
+                : roll < 70 ? new FallingDebris(MathUtils.random(820f, 1180f), speed)
                 : new ReefBarrier(random.nextBoolean(), MathUtils.random(150f, 230f), speed);
             case 4 -> roll < 35 ? new CrushingGate(randomY(), speed)
                 : roll < 65 ? new ThermalVent(speed)
                 : new SeaMine(randomY(), speed);
             default -> roll < 30 ? new CrushingGate(randomY(), speed)
                 : roll < 55 ? new ThermalVent(speed)
-                : roll < 78 ? new FallingRock(MathUtils.random(760f, 1150f), speed)
+                : roll < 78 ? new FallingDebris(MathUtils.random(760f, 1150f), speed)
                 : new SeaMine(randomY(), speed);
         };
         hazards.add(hazard);

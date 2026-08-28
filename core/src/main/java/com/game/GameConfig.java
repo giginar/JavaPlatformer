@@ -9,6 +9,9 @@ public final class GameConfig {
     public static final float MAX_STAGE_DURATION_SECONDS = 600f;
     public static final float DIVER_REFERENCE_HEIGHT_METERS = 1.8f;
     public static final float DIVER_REFERENCE_HEIGHT_WORLD_UNITS = 64f;
+    /** Slow descent keeps falling debris visible long enough to become a dodgeable threat. */
+    public static final float FALLING_DEBRIS_ACCELERATION = 35f;
+    public static final float FALLING_DEBRIS_MAX_SPEED = 70f;
     /** Keep enabled while testing; disable before creating a release build. */
     public static final boolean TEST_SHORTCUTS_ENABLED = false;
 
