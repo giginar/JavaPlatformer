@@ -40,7 +40,9 @@ public final class StoreScreen extends BaseScreen {
         updateInput();
         background.update(frameDelta);
         statusTimer = Math.max(0f, statusTimer - frameDelta);
-        handleInput();
+        if (handleInput()) {
+            return;
+        }
 
         batch.begin();
         background.render(batch);
@@ -77,7 +79,10 @@ public final class StoreScreen extends BaseScreen {
         batch.end();
     }
 
-    private void handleInput() {
+    /**
+     * @return {@code true} when this screen was replaced and rendering must stop immediately
+     */
+    private boolean handleInput() {
         for (int i = 0; i < UPGRADES.length; i++) {
             rowBounds(i);
             if (game.input().pointerOver(row)) {
@@ -86,12 +91,12 @@ public final class StoreScreen extends BaseScreen {
             if (game.input().pointerJustPressed(row)) {
                 selected = i;
                 purchaseSelected();
-                return;
+                return false;
             }
         }
         if (game.input().pointerJustPressed(backButton)) {
             returnToMenu();
-            return;
+            return true;
         }
         if (game.input().menuUpJustPressed()) {
             selected = Math.floorMod(selected - 1, UPGRADES.length);
@@ -103,7 +108,9 @@ public final class StoreScreen extends BaseScreen {
             purchaseSelected();
         } else if (game.input().backJustPressed()) {
             returnToMenu();
+            return true;
         }
+        return false;
     }
 
     private void returnToMenu() {
