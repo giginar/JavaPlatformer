@@ -51,6 +51,18 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-licensed
 
 Kaynak URL’leri, lisans metni ve SHA-256 kayıtları `third_party/cc0` altında tutulur.
 
+## Windows kurulum dosyası
+
+Java kurulumu gerektirmeyen, kurulum sihirbazlı Windows EXE dosyasını üretmek için:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows-installer.ps1
+```
+
+Betik masaüstü JAR'ını derler, gerekli WiX araçlarını doğrulanmış proje önbelleğine
+indirir ve kurulumu `lwjgl3/target/installer` altında oluşturur. Üretilen tek EXE
+dosyası başka bir Windows bilgisayara doğrudan gönderilebilir.
+
 ## Google Play paketi
 
 Android derlemesi için Android SDK Platform 36 ve Build Tools 36.0.0 gerekir. SDK yolu `local.properties` içindeki `sdk.dir` ile veya `ANDROID_SDK_ROOT` ortam değişkeniyle belirtilir.
