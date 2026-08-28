@@ -134,7 +134,7 @@ $landscapeArt = Join-Path $artSourceDirectory 'key-art-branded-landscape-v1.png'
 $portraitArt = Join-Path $artSourceDirectory 'key-art-branded-portrait-v1.png'
 $unbrandedArt = Join-Path $artSourceDirectory 'key-art-master-v1.png'
 $wordmark = Join-Path $artSourceDirectory 'title-wordmark-v1.png'
-$squareIcon = Join-Path $projectRootPath 'lwjgl3\icons\logo.png'
+$squareIcon = Join-Path $projectRootPath 'lwjgl3\icons\deepdive-icon-source.png'
 
 Export-CroppedPng $landscapeArt (Join-Path $playOutputDirectory 'feature-graphic-1024x500.png') 1024 500 0.0
 Export-CroppedPng $landscapeArt (Join-Path $steamOutputDirectory 'header-capsule-920x430.png') 920 430 0.0

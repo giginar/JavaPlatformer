@@ -3,13 +3,6 @@
 /*/target/
 /.mvn/tools/
 
-## Legacy local outputs left by pre-Maven checkouts
-/.gradle/
-/build/
-/*/build/
-/assets/assets.txt
-/android/libs/
-
 ## Java
 *.class
 *.war

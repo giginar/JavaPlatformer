@@ -672,7 +672,6 @@ try {
 $iconMaster = New-IconMaster
 try {
     Export-PngIcon $iconMaster (Join-Path $iconsDirectory 'deepdive-icon-source.png') 1024
-    Export-PngIcon $iconMaster (Join-Path $iconsDirectory 'logo.png') 512
     Export-PngIcon $iconMaster (Join-Path $androidDrawableDirectory 'deepdive_icon.png') 512
     Export-PngIcon $iconMaster (Join-Path $playAssetsDirectory 'icon-512.png') 512
     Export-PngIcon $iconMaster (Join-Path $lwjglResourcesDirectory 'deepdive128.png') 128
