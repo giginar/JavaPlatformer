@@ -64,6 +64,15 @@ class GameSessionTest {
     }
 
     @Test
+    void permanentTankCapacityIsUsedForResetAndRatio() {
+        GameSession session = new GameSession(130f);
+
+        assertEquals(130f, session.getOxygen(), 0.001f);
+        assertEquals(130f, session.getMaxOxygen(), 0.001f);
+        assertEquals(1f, session.getOxygenRatio(), 0.001f);
+    }
+
+    @Test
     void oxygenEfficiencyUpgradeReducesDrainAndResetClearsIt() {
         GameSession session = new GameSession();
         session.applyUpgrade(UpgradeType.OXYGEN_EFFICIENCY);

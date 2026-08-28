@@ -25,11 +25,22 @@ public class OxygenTank {
     }
 
     public void update(float delta) {
+        update(delta, Float.NaN, Float.NaN, 0f);
+    }
+
+    public void update(float delta, float targetX, float targetY, float magnetRange) {
         time += delta;
         x -= SPEED * delta;
 
         float wobble = MathUtils.sin(time * 3f) * 3f;
         bounds.setPosition(x, baseY + wobble);
+        float dx = targetX - bounds.x;
+        float dy = targetY - bounds.y;
+        if (magnetRange > 0f && dx * dx + dy * dy <= magnetRange * magnetRange) {
+            x = MathUtils.lerp(x, targetX, Math.min(1f, delta * 5f));
+            baseY = MathUtils.lerp(baseY, targetY, Math.min(1f, delta * 5f));
+            bounds.setPosition(x, baseY + wobble);
+        }
     }
 
     public void render(SpriteBatch batch) {

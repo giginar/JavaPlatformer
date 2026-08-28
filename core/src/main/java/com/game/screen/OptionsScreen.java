@@ -74,17 +74,20 @@ public class OptionsScreen extends BaseScreen {
         }
 
         String hint;
+        String backHint = game.input().usingController() ? "[B] BACK"
+            : game.input().usingTouch() ? "TAP BACK" : "[ESC] BACK";
         if (options[selectedIndex] == Option.RESOLUTION
             && DisplaySettings.windowMode() == WindowMode.BORDERLESS) {
-            hint = "BORDERLESS MODE USES THE DESKTOP RESOLUTION  |  ESC TO GO BACK";
+            hint = "BORDERLESS MODE USES THE DESKTOP RESOLUTION  |  " + backHint;
         } else if (DisplaySettings.restartRequired()) {
-            hint = "LEFT / RIGHT TO CHANGE  |  ESC BACK  |  ANTIALIASING APPLIES AFTER RESTART";
-        } else if (game.input().isMobile()) {
-            hint = "TAP AN OPTION TO CHANGE IT";
-        } else if (game.input().hasController()) {
-            hint = "D-PAD TO CHANGE  |  A TO SELECT  |  B TO GO BACK";
+            hint = "CHANGE SETTING  |  " + backHint
+                + "  |  ANTIALIASING APPLIES AFTER RESTART";
+        } else if (game.input().usingController()) {
+            hint = "GAMEPAD  D-PAD CHANGE  |  [A] SELECT  |  [B] BACK";
+        } else if (game.input().usingTouch()) {
+            hint = "TAP A SETTING TO CHANGE IT  |  TAP BACK TO RETURN";
         } else {
-            hint = "LEFT / RIGHT OR CLICK TO CHANGE  |  ESC TO GO BACK";
+            hint = "KEYBOARD  ARROWS / WASD OR CLICK CHANGE  |  [ENTER / SPACE] SELECT  |  [ESC] BACK";
         }
         drawCentered(smallFont, hint, 34f, Color.LIGHT_GRAY);
         batch.end();

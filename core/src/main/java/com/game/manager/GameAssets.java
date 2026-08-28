@@ -12,6 +12,7 @@ public final class GameAssets {
     public static final String FAST_FISH = "enemy_fast.png";
     public static final String PIRANHA = "enemy_piranha.png";
     public static final String SHARK = "enemy_shark.png";
+    public static final String OCTOPUS_BOSS = "enemy_octopus_boss.png";
 
     private static final String[] TEXTURES = {
         BACKGROUND,
@@ -21,7 +22,8 @@ public final class GameAssets {
         SMALL_FISH,
         FAST_FISH,
         PIRANHA,
-        SHARK
+        SHARK,
+        OCTOPUS_BOSS
     };
 
     private static AssetManager manager;

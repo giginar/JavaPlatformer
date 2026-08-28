@@ -15,22 +15,35 @@ import com.game.diver.Background;
 import com.game.diver.Diver;
 import com.game.diver.Harpoon;
 import com.game.diver.OxygenTank;
+import com.game.diver.PowerUpPickup;
 import com.game.effects.ParticleSystem;
-import com.game.enemies.AbyssLeviathan;
+import com.game.enemies.AbyssalOctopus;
 import com.game.enemies.EnemyFish;
+import com.game.enemies.EnemyProjectile;
+import com.game.enemies.ElectricEel;
 import com.game.enemies.FastFish;
 import com.game.enemies.PiranhaSwarm;
 import com.game.enemies.Shark;
 import com.game.enemies.SmallFish;
+import com.game.hazards.CrushingGate;
+import com.game.hazards.EnvironmentalHazard;
+import com.game.hazards.FallingRock;
+import com.game.hazards.ReefBarrier;
+import com.game.hazards.SeaMine;
+import com.game.hazards.ThermalVent;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 import com.game.model.GameBalance;
 import com.game.model.GameSession;
+import com.game.model.PowerUpType;
+import com.game.model.ProgressionStore;
+import com.game.model.RunDirector;
 import com.game.model.UpgradeType;
 import com.game.settings.DisplaySettings;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -38,7 +51,8 @@ import java.util.Random;
 
 public class GameScreen extends BaseScreen {
     private static final String[] PAUSE_OPTIONS = {"CONTINUE", "OPTIONS", "MAIN MENU"};
-    private static final boolean DEBUG_MODE = Boolean.getBoolean("deepdive.debug");
+    private static final boolean DEBUG_MODE = GameConfig.TEST_SHORTCUTS_ENABLED
+        || Boolean.getBoolean("deepdive.debug");
     private static final boolean CAPTURE_AUTOPLAY = Boolean.getBoolean("deepdive.capture.autoplay");
     private static final Color BOSS_TEXT_COLOR = new Color(0.9f, 0.55f, 1f, 1f);
     private static final Color UPGRADE_TEXT_COLOR = new Color(0.45f, 0.92f, 1f, 1f);
@@ -46,14 +60,20 @@ public class GameScreen extends BaseScreen {
     private static final float MAX_FRAME_DELTA = 1f / 15f;
     private static final float OXYGEN_TANK_SPAWN_INTERVAL = 8f;
     private static final float BASE_OXYGEN_PICKUP = 30f;
-    private static final float BASE_SHOOT_COOLDOWN = 0.22f;
     private static final float INVULNERABILITY_DURATION = 1.1f;
     private static final float BREATH_INTERVAL = 10f;
     private static final float TUTORIAL_DURATION = 7f;
     private static final float BANNER_DURATION = 1.8f;
+    private static final float POWER_UP_BANNER_DURATION = 2.8f;
+    private static final float CELEBRATION_DURATION = 2.7f;
     private static final float BOSS_WARNING_DURATION = 2.7f;
+    private static final float POWER_UP_SPAWN_INTERVAL = 18f;
+    private static final float BASE_MAGNET_RANGE = 78f;
+    private static final int MAX_DASH_CHARGES = 2;
+    private static final float[] RUN_UPGRADE_SCORES = {1000f, 2500f, 5000f};
     private static final Rectangle TOUCH_SWIM_BUTTON = new Rectangle(32f, 28f, 230f, 120f);
     private static final Rectangle TOUCH_FIRE_BUTTON = new Rectangle(1018f, 28f, 230f, 120f);
+    private static final Rectangle TOUCH_DASH_BUTTON = new Rectangle(530f, 28f, 220f, 76f);
     private static final Rectangle TOUCH_PAUSE_BUTTON = new Rectangle(1182f, 548f, 66f, 66f);
     private static final Rectangle GAME_OVER_RETRY_BUTTON = new Rectangle(405f, 236f, 470f, 48f);
     private static final Rectangle GAME_OVER_MENU_BUTTON = new Rectangle(405f, 194f, 470f, 38f);
@@ -66,18 +86,29 @@ public class GameScreen extends BaseScreen {
     private final List<EnemyFish> enemies;
     private final List<Harpoon> harpoons;
     private final List<OxygenTank> oxygenTanks;
+    private final List<EnvironmentalHazard> hazards;
+    private final List<EnemyProjectile> enemyProjectiles;
+    private final List<EnemyFish> enemySpawnBuffer;
+    private final List<PowerUpPickup> powerUpPickups;
+    private final EnumMap<PowerUpType, Float> activePowerUps;
     private final ParticleSystem particles;
     private final GameSession session;
     private final Random random;
     private final Preferences preferences;
+    private final ProgressionStore progression;
     private final Rectangle interactiveRow = new Rectangle();
 
     private Diver diver;
+    private RunDirector runDirector;
     private GameBalance.Difficulty difficulty;
     private List<UpgradeType> upgradeChoices = Collections.emptyList();
     private String bannerText = "";
+    private String bannerSubtitle = "";
     private float enemySpawnTimer;
     private float oxygenTankSpawnTimer;
+    private float hazardSpawnTimer;
+    private float powerUpSpawnTimer;
+    private float safetyTimer;
     private float shootCooldownTimer;
     private float invulnerabilityTimer;
     private float breathTimer;
@@ -89,9 +120,15 @@ public class GameScreen extends BaseScreen {
     private float shakeMagnitude;
     private float bubbleTimer;
     private float damageFlashTimer;
+    private float inkVeilTimer;
+    private float descentMotionTimer;
+    private float ambientTime;
     private int selectedPauseIndex;
     private int selectedUpgradeIndex;
     private int highScore;
+    private int nextRunUpgradeIndex;
+    private int earnedPearls;
+    private int dashCharges;
     private boolean highScoreDirty;
     private boolean paused;
     private boolean gameOver;
@@ -99,6 +136,8 @@ public class GameScreen extends BaseScreen {
     private boolean choosingUpgrade;
     private boolean bossSpawned;
     private boolean victory;
+    private boolean finalePending;
+    private boolean progressionRewardGranted;
     private boolean captureSwimmingUp;
 
     public GameScreen(DeepDiveDrift game) {
@@ -107,18 +146,24 @@ public class GameScreen extends BaseScreen {
         mediumFont = FontManager.getMediumFont();
         largeFont = FontManager.getLargeFont();
         layout = new GlyphLayout();
-        background = new Background();
+        background = new Background(RunDirector.BASE_SCROLL_SPEED_WORLD_UNITS);
         enemies = new ArrayList<>();
         harpoons = new ArrayList<>();
         oxygenTanks = new ArrayList<>();
+        hazards = new ArrayList<>();
+        enemyProjectiles = new ArrayList<>();
+        enemySpawnBuffer = new ArrayList<>();
+        powerUpPickups = new ArrayList<>();
+        activePowerUps = new EnumMap<>(PowerUpType.class);
         particles = new ParticleSystem();
-        session = new GameSession();
         random = new Random();
         preferences = Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME);
+        progression = new ProgressionStore(preferences);
+        session = new GameSession(progression.startingMaxOxygen());
         highScore = preferences.getInteger("highScore", 0);
         resetGame();
         if (Boolean.getBoolean("deepdive.capture.boss")) {
-            spawnBoss();
+            jumpToBossForDebug();
         }
     }
 
@@ -213,6 +258,10 @@ public class GameScreen extends BaseScreen {
             paused = true;
             selectedPauseIndex = 0;
             AudioManager.playSelect();
+        } else if (dashCharges > 0 && (game.input().dashJustPressed()
+            || game.input().isMobile()
+            && game.input().pointerJustPressed(TOUCH_DASH_BUTTON))) {
+            useDashCharge();
         } else if (game.input().helpJustPressed()) {
             showTutorial = true;
             tutorialTimer = 0f;
@@ -263,7 +312,7 @@ public class GameScreen extends BaseScreen {
         UpgradeType selected = upgradeChoices.get(selectedUpgradeIndex);
         if (session.applyUpgrade(selected)) {
             choosingUpgrade = false;
-            showBanner("DEPTH LEVEL " + difficulty.level());
+            showBanner(selected.title() + " INSTALLED");
             particles.spawnOxygenBurst(diver.getX() + Diver.WIDTH / 2f,
                 diver.getY() + Diver.HEIGHT / 2f);
             AudioManager.playConfirm();
@@ -289,16 +338,20 @@ public class GameScreen extends BaseScreen {
 
     private void handleDebugInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.F2)) {
-            float score = session.getScore();
-            if (score < 1000f) session.addScore(1000f - score);
-            else if (score < 2500f) session.addScore(2500f - score);
-            else if (score < 5000f) session.addScore(5000f - score);
-            else session.addScore(500f);
+            runDirector.advanceStageForDebug();
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.F3) && !bossSpawned) {
-            session.addScore(Math.max(0f, GameBalance.BOSS_SCORE - session.getScore()));
-            spawnBoss();
+            jumpToBossForDebug();
         }
+    }
+
+    private void jumpToBossForDebug() {
+        runDirector.jumpToFinaleForDebug();
+        difficulty = runDirector.difficulty();
+        background.setDepthStage(difficulty.level(), difficulty.scrollSpeedMultiplier());
+        safetyTimer = 0f;
+        finalePending = true;
+        spawnBoss();
     }
 
     private void updateGame(float delta) {
@@ -310,15 +363,18 @@ public class GameScreen extends BaseScreen {
         }
 
         updateTimers(delta);
-        if (updateDifficulty()) {
+        RunDirector.UpdateResult runUpdate = runDirector.update(delta);
+        updateRunProgression(runUpdate);
+        if (updateRunUpgradeProgression()) {
             return;
         }
 
-        if (!bossSpawned && session.getScore() >= GameBalance.BOSS_SCORE) {
+        if (finalePending && safetyTimer <= 0f && !bossSpawned) {
             spawnBoss();
         }
 
-        spawnEntities(delta);
+        float threatDelta = isPowerActive(PowerUpType.TIME_BUBBLE) ? delta * 0.45f : delta;
+        spawnEntities(threatDelta);
         shootIfRequested();
 
         if (CAPTURE_AUTOPLAY) {
@@ -342,12 +398,43 @@ public class GameScreen extends BaseScreen {
 
         float targetX = diver.getX() + Diver.WIDTH / 2f;
         float targetY = diver.getY() + Diver.HEIGHT / 2f;
-        enemies.forEach(enemy -> enemy.update(delta, targetX, targetY));
-        oxygenTanks.forEach(tank -> tank.update(delta));
+        enemySpawnBuffer.clear();
+        for (EnemyFish enemy : enemies) {
+            enemy.update(threatDelta, targetX, targetY);
+            EnemyProjectile projectile = enemy.pollProjectile(targetX, targetY);
+            if (projectile != null) {
+                enemyProjectiles.add(projectile);
+            }
+            EnemyFish spawnedEnemy = enemy.pollSpawnedEnemy();
+            if (spawnedEnemy != null) {
+                enemySpawnBuffer.add(spawnedEnemy);
+            }
+            EnvironmentalHazard spawnedHazard = enemy.pollHazard();
+            if (spawnedHazard != null) {
+                hazards.add(spawnedHazard);
+            }
+        }
+        enemies.addAll(enemySpawnBuffer);
+        hazards.forEach(hazard -> hazard.update(threatDelta));
+        for (Iterator<EnemyProjectile> iterator = enemyProjectiles.iterator(); iterator.hasNext(); ) {
+            EnemyProjectile projectile = iterator.next();
+            projectile.update(threatDelta);
+            if (projectile.shouldBurstIntoInk()) {
+                inkVeilTimer = Math.max(inkVeilTimer, 4.5f);
+                iterator.remove();
+                triggerShake(3f, 0.25f);
+            }
+        }
+        float magnetRange = activeMagnetRange();
+        oxygenTanks.forEach(tank -> tank.update(delta, targetX, targetY, magnetRange));
+        powerUpPickups.forEach(pickup -> pickup.update(delta, targetX, targetY, magnetRange));
 
         harpoons.removeIf(Harpoon::isOutOfScreen);
         enemies.removeIf(EnemyFish::isOutOfScreen);
         oxygenTanks.removeIf(OxygenTank::isOutOfScreen);
+        hazards.removeIf(EnvironmentalHazard::isOutOfScreen);
+        enemyProjectiles.removeIf(EnemyProjectile::isOutOfScreen);
+        powerUpPickups.removeIf(PowerUpPickup::isOutOfScreen);
 
         checkCollisions();
         refreshHighScore();
@@ -371,6 +458,16 @@ public class GameScreen extends BaseScreen {
         bannerTimer = Math.max(0f, bannerTimer - delta);
         bossWarningTimer = Math.max(0f, bossWarningTimer - delta);
         damageFlashTimer = Math.max(0f, damageFlashTimer - delta);
+        inkVeilTimer = Math.max(0f, inkVeilTimer - delta);
+        descentMotionTimer = Math.max(0f, descentMotionTimer - delta);
+        ambientTime += delta;
+        safetyTimer = Math.max(0f, safetyTimer - delta);
+        for (PowerUpType type : PowerUpType.values()) {
+            float remaining = activePowerUps.getOrDefault(type, 0f);
+            if (remaining > 0f) {
+                activePowerUps.put(type, Math.max(0f, remaining - delta));
+            }
+        }
 
         breathTimer += delta;
         if (breathTimer >= BREATH_INTERVAL) {
@@ -386,16 +483,38 @@ public class GameScreen extends BaseScreen {
         }
     }
 
-    private boolean updateDifficulty() {
-        GameBalance.Difficulty nextDifficulty = session.getDifficulty();
-        if (nextDifficulty.level() > difficulty.level()) {
+    private void updateRunProgression(RunDirector.UpdateResult update) {
+        GameBalance.Difficulty nextDifficulty = runDirector.difficulty();
+        if (update.stageChanged()) {
             difficulty = nextDifficulty;
             enemySpawnTimer = Math.min(enemySpawnTimer, difficulty.spawnInterval());
-            beginUpgradeSelection();
-            return true;
+            background.setDepthStage(difficulty.level(), difficulty.scrollSpeedMultiplier());
+            descentMotionTimer = CELEBRATION_DURATION + 1.2f;
+            String stageSubtitle = difficulty.level() == GameBalance.stageCount()
+                ? "ANY HIT IS FATAL"
+                : "DESCENDING TO " + runDirector.displayDepthMeters() + " M";
+            beginCelebration(difficulty.name(), stageSubtitle);
+        } else {
+            difficulty = nextDifficulty;
         }
-        difficulty = nextDifficulty;
-        return false;
+        if (update.milestoneMeters() > 0) {
+            String distance = formatDistance(update.milestoneMeters());
+            beginCelebration(distance + " REACHED", "NEW DIVE MILESTONE");
+        }
+        if (update.finaleReady() && !finalePending) {
+            finalePending = true;
+            beginCelebration("THE ABYSS OPENS", "COLOSSAL OCTOPUS SIGNAL DETECTED");
+        }
+    }
+
+    private boolean updateRunUpgradeProgression() {
+        if (safetyTimer > 0f || nextRunUpgradeIndex >= RUN_UPGRADE_SCORES.length
+            || session.getScore() < RUN_UPGRADE_SCORES[nextRunUpgradeIndex]) {
+            return false;
+        }
+        nextRunUpgradeIndex++;
+        beginUpgradeSelection();
+        return choosingUpgrade;
     }
 
     private void beginUpgradeSelection() {
@@ -407,16 +526,22 @@ public class GameScreen extends BaseScreen {
         selectedUpgradeIndex = 0;
         choosingUpgrade = !upgradeChoices.isEmpty();
         if (!choosingUpgrade) {
-            showBanner("DEPTH LEVEL " + difficulty.level());
+            showBanner(difficulty.name());
         }
     }
 
     private void spawnEntities(float delta) {
-        if (!hasActiveBoss()) {
+        if (!hasActiveBoss() && safetyTimer <= 0f && !finalePending) {
             enemySpawnTimer += delta;
             if (enemySpawnTimer >= difficulty.spawnInterval()) {
                 enemySpawnTimer -= difficulty.spawnInterval();
-                spawnEnemy();
+                spawnEncounter();
+            }
+
+            hazardSpawnTimer += delta;
+            if (hazardSpawnTimer >= difficulty.hazardInterval()) {
+                hazardSpawnTimer -= difficulty.hazardInterval();
+                spawnHazard();
             }
         }
 
@@ -425,45 +550,133 @@ public class GameScreen extends BaseScreen {
             oxygenTankSpawnTimer -= OXYGEN_TANK_SPAWN_INTERVAL;
             oxygenTanks.add(new OxygenTank(GameConfig.WORLD_WIDTH, randomY()));
         }
+
+        powerUpSpawnTimer += delta;
+        if (!hasActiveBoss() && powerUpSpawnTimer >= POWER_UP_SPAWN_INTERVAL) {
+            powerUpSpawnTimer -= POWER_UP_SPAWN_INTERVAL;
+            spawnPowerUp();
+        }
     }
 
     private void shootIfRequested() {
         boolean shootPressed = game.input().shootJustPressed()
             || game.input().pointerJustPressed(TOUCH_FIRE_BUTTON)
             || CAPTURE_AUTOPLAY;
-        if (!shootPressed || shootCooldownTimer > 0f) {
+        boolean overdrive = isPowerActive(PowerUpType.HARPOON_OVERDRIVE);
+        if (!shootPressed || shootCooldownTimer > 0f
+            || harpoons.size() >= GameBalance.maxActiveHarpoons(overdrive)) {
             return;
         }
 
         harpoons.add(new Harpoon(diver.getX() + 50f, diver.getY() + 26f,
-            session.getHarpoonHitCount()));
-        shootCooldownTimer = BASE_SHOOT_COOLDOWN * session.getShootCooldownMultiplier();
+            session.getHarpoonHitCount() + progression.startingHarpoonBonus()
+                + (overdrive ? 2 : 0)));
+        shootCooldownTimer = GameBalance.harpoonCooldown(
+            session.getShootCooldownMultiplier(), overdrive);
         particles.spawnImpact(diver.getX() + 56f, diver.getY() + 30f, false);
         AudioManager.playShoot();
     }
 
-    private void spawnEnemy() {
+    private void spawnEncounter() {
         float y = randomY();
         int roll = random.nextInt(100);
-        EnemyFish enemy = switch (difficulty.level()) {
-            case 1 -> new SmallFish(y);
-            case 2 -> roll < 62 ? new SmallFish(y) : new FastFish(y);
+        switch (difficulty.level()) {
+            case 1 -> addEnemy(new SmallFish(y));
+            case 2 -> {
+                if (roll < 30) {
+                    addEnemy(new ElectricEel(y));
+                } else {
+                    addEnemy(roll < 68 ? new SmallFish(y) : new FastFish(y));
+                }
+                if (roll < 22) {
+                    hazards.add(new FallingRock(GameConfig.WORLD_WIDTH - 90f,
+                        RunDirector.BASE_SCROLL_SPEED_WORLD_UNITS));
+                }
+            }
             case 3 -> {
-                if (roll < 20) yield new Shark(y);
-                if (roll < 45) yield new PiranhaSwarm(y);
-                if (roll < 75) yield new FastFish(y);
-                yield new SmallFish(y);
+                if (roll < 25) {
+                    addEnemy(new ElectricEel(y));
+                    addEnemy(new SmallFish(oppositeLane(y)));
+                } else if (roll < 55) {
+                    addEnemy(new PiranhaSwarm(y));
+                } else {
+                    addEnemy(new FastFish(y));
+                    addEnemy(new SmallFish(oppositeLane(y)));
+                }
+            }
+            case 4 -> {
+                if (roll < 32) {
+                    addEnemy(new Shark(y));
+                    addEnemy(new SmallFish(oppositeLane(y)));
+                } else if (roll < 63) {
+                    addEnemy(new ElectricEel(y));
+                    addEnemy(new FastFish(oppositeLane(y)));
+                } else {
+                    addEnemy(new PiranhaSwarm(y));
+                }
             }
             default -> {
-                if (roll < 30) yield new Shark(y);
-                if (roll < 60) yield new PiranhaSwarm(y);
-                if (roll < 88) yield new FastFish(y);
-                yield new SmallFish(y);
+                if (roll < 35) {
+                    addEnemy(new Shark(y));
+                    addEnemy(new ElectricEel(oppositeLane(y)));
+                } else if (roll < 68) {
+                    addEnemy(new PiranhaSwarm(y));
+                    addEnemy(new FastFish(oppositeLane(y)));
+                } else {
+                    addEnemy(new ElectricEel(y));
+                    addEnemy(new FastFish(MathUtils.clamp(y + 145f, 90f, 610f)));
+                    addEnemy(new SmallFish(MathUtils.clamp(y - 145f, 90f, 610f)));
+                }
             }
-        };
+        }
+    }
 
+    private void addEnemy(EnemyFish enemy) {
         enemy.setSpeedMultiplier(difficulty.enemySpeedMultiplier());
         enemies.add(enemy);
+    }
+
+    private void spawnHazard() {
+        float speed = RunDirector.BASE_SCROLL_SPEED_WORLD_UNITS
+            * difficulty.scrollSpeedMultiplier();
+        int roll = random.nextInt(100);
+        EnvironmentalHazard hazard = switch (difficulty.level()) {
+            case 1 -> new ReefBarrier(random.nextBoolean(), MathUtils.random(115f, 195f), speed);
+            case 2 -> roll < 55
+                ? new ReefBarrier(random.nextBoolean(), MathUtils.random(130f, 220f), speed)
+                : new FallingRock(MathUtils.random(900f, 1200f), speed);
+            case 3 -> roll < 35 ? new SeaMine(randomY(), speed)
+                : roll < 70 ? new FallingRock(MathUtils.random(820f, 1180f), speed)
+                : new ReefBarrier(random.nextBoolean(), MathUtils.random(150f, 230f), speed);
+            case 4 -> roll < 35 ? new CrushingGate(randomY(), speed)
+                : roll < 65 ? new ThermalVent(speed)
+                : new SeaMine(randomY(), speed);
+            default -> roll < 30 ? new CrushingGate(randomY(), speed)
+                : roll < 55 ? new ThermalVent(speed)
+                : roll < 78 ? new FallingRock(MathUtils.random(760f, 1150f), speed)
+                : new SeaMine(randomY(), speed);
+        };
+        hazards.add(hazard);
+    }
+
+    private void spawnPowerUp() {
+        PowerUpType type = switch (difficulty.level()) {
+            case 1 -> PowerUpType.TORPEDO_DASH;
+            case 2 -> random.nextBoolean() ? PowerUpType.PRESSURE_SHIELD : PowerUpType.TORPEDO_DASH;
+            case 3 -> switch (random.nextInt(3)) {
+                case 0 -> PowerUpType.PRESSURE_SHIELD;
+                case 1 -> PowerUpType.TIME_BUBBLE;
+                default -> PowerUpType.MAGNETIC_CURRENT;
+            };
+            default -> PowerUpType.values()[random.nextInt(PowerUpType.values().length)];
+        };
+        powerUpPickups.add(new PowerUpPickup(type, GameConfig.WORLD_WIDTH, randomY()));
+    }
+
+    private float oppositeLane(float y) {
+        return y < GameConfig.WORLD_HEIGHT / 2f
+            ? MathUtils.clamp(y + 245f, 90f, 610f)
+            : MathUtils.clamp(y - 245f, 90f, 610f);
     }
 
     private void spawnBoss() {
@@ -476,7 +689,9 @@ public class GameScreen extends BaseScreen {
         }
         enemies.clear();
         harpoons.clear();
-        enemies.add(new AbyssLeviathan());
+        hazards.clear();
+        enemyProjectiles.clear();
+        enemies.add(new AbyssalOctopus());
         triggerShake(13f, 0.65f);
         AudioManager.playBreath();
     }
@@ -484,6 +699,7 @@ public class GameScreen extends BaseScreen {
     private void checkCollisions() {
         checkHarpoonCollisions();
         checkOxygenCollisions();
+        checkPowerUpCollisions();
         checkDiverCollisions();
     }
 
@@ -538,7 +754,28 @@ public class GameScreen extends BaseScreen {
 
     private void checkDiverCollisions() {
         if (invulnerabilityTimer > 0f) {
+            enemyProjectiles.removeIf(projectile -> projectile.bounds().overlaps(diver.getBounds()));
             return;
+        }
+
+        for (Iterator<EnemyProjectile> iterator = enemyProjectiles.iterator(); iterator.hasNext(); ) {
+            EnemyProjectile projectile = iterator.next();
+            if (projectile.bounds().overlaps(diver.getBounds())) {
+                iterator.remove();
+                damageDiver(projectile.damage(), false);
+                return;
+            }
+        }
+
+        for (Iterator<EnvironmentalHazard> iterator = hazards.iterator(); iterator.hasNext(); ) {
+            EnvironmentalHazard hazard = iterator.next();
+            if (hazard.collides(diver.getBounds())) {
+                if (hazard.removeOnCollision()) {
+                    iterator.remove();
+                }
+                damageDiver(hazard.collisionDamage(), false);
+                return;
+            }
         }
 
         for (Iterator<EnemyFish> iterator = enemies.iterator(); iterator.hasNext(); ) {
@@ -547,19 +784,72 @@ public class GameScreen extends BaseScreen {
                 continue;
             }
 
-            session.takeDamage(enemy.getCollisionDamage());
-            invulnerabilityTimer = INVULNERABILITY_DURATION;
-            damageFlashTimer = 0.25f;
             if (enemy.removeOnPlayerCollision()) {
                 iterator.remove();
             }
-            Rectangle diverBounds = diver.getBounds();
-            particles.spawnImpact(diverBounds.x + diverBounds.width / 2f,
-                diverBounds.y + diverBounds.height / 2f, enemy.isBoss());
-            triggerHitFeedback(enemy.isBoss() ? 14f : 9f, 0.075f);
-            AudioManager.playHit();
+            damageDiver(enemy.getCollisionDamage(), enemy.isBoss());
             break;
         }
+    }
+
+    private void checkPowerUpCollisions() {
+        for (Iterator<PowerUpPickup> iterator = powerUpPickups.iterator(); iterator.hasNext(); ) {
+            PowerUpPickup pickup = iterator.next();
+            if (!pickup.bounds().overlaps(diver.getBounds())) {
+                continue;
+            }
+            iterator.remove();
+            activatePowerUp(pickup.type());
+        }
+    }
+
+    private void activatePowerUp(PowerUpType type) {
+        if (!type.activatesOnPickup()) {
+            dashCharges = Math.min(MAX_DASH_CHARGES, dashCharges + 1);
+        } else {
+            activePowerUps.put(type, type.duration());
+        }
+        if (type == PowerUpType.PRESSURE_SHIELD) {
+            invulnerabilityTimer = Math.max(invulnerabilityTimer, type.duration());
+        }
+        Rectangle bounds = diver.getBounds();
+        particles.spawnOxygenBurst(bounds.x + bounds.width / 2f, bounds.y + bounds.height / 2f);
+        if (safetyTimer <= 0f) {
+            showPowerUpBanner(type);
+        }
+        AudioManager.playConfirm();
+    }
+
+    private void useDashCharge() {
+        dashCharges--;
+        PowerUpType type = PowerUpType.TORPEDO_DASH;
+        activePowerUps.put(type, type.duration());
+        invulnerabilityTimer = Math.max(invulnerabilityTimer, type.duration());
+        enemies.removeIf(enemy -> !enemy.isBoss());
+        hazards.clear();
+        enemyProjectiles.clear();
+        Rectangle bounds = diver.getBounds();
+        particles.spawnOxygenBurst(bounds.x + bounds.width / 2f,
+            bounds.y + bounds.height / 2f);
+        triggerShake(11f, 0.4f);
+        showBanner("TORPEDO DASH!");
+        game.input().vibrateController(120, 0.7f);
+        AudioManager.playConfirm();
+    }
+
+    private void damageDiver(float damage, boolean bossHit) {
+        if (damage <= 0f) {
+            return;
+        }
+        session.takeDamage(GameBalance.playerDamageForStage(
+            difficulty.level(), damage, session.getOxygen()));
+        invulnerabilityTimer = INVULNERABILITY_DURATION;
+        damageFlashTimer = 0.25f;
+        Rectangle diverBounds = diver.getBounds();
+        particles.spawnImpact(diverBounds.x + diverBounds.width / 2f,
+            diverBounds.y + diverBounds.height / 2f, bossHit);
+        triggerHitFeedback(bossHit ? 14f : 9f, 0.075f);
+        AudioManager.playHit();
     }
 
     private void triggerHitFeedback(float shake, float hitStop) {
@@ -603,6 +893,10 @@ public class GameScreen extends BaseScreen {
         gameOver = true;
         paused = false;
         choosingUpgrade = false;
+        if (!progressionRewardGranted) {
+            earnedPearls = progression.awardDistance(runDirector.distanceMeters());
+            progressionRewardGranted = true;
+        }
         refreshHighScore();
         saveHighScore();
         if (won) {
@@ -631,7 +925,73 @@ public class GameScreen extends BaseScreen {
 
     private void showBanner(String message) {
         bannerText = message;
+        bannerSubtitle = "";
         bannerTimer = BANNER_DURATION;
+    }
+
+    private void showPowerUpBanner(PowerUpType type) {
+        bannerText = type.title() + (type.activatesOnPickup() ? " ACTIVE" : " READY");
+        bannerSubtitle = type == PowerUpType.TORPEDO_DASH
+            ? type.usageHint() + "  |  " + dashInstruction()
+            : type.usageHint() + " FOR " + Math.round(type.duration()) + "s";
+        bannerTimer = POWER_UP_BANNER_DURATION;
+    }
+
+    private void beginCelebration(String title, String subtitle) {
+        bannerText = title;
+        bannerSubtitle = subtitle;
+        bannerTimer = CELEBRATION_DURATION;
+        safetyTimer = CELEBRATION_DURATION;
+        enemies.removeIf(enemy -> !enemy.isBoss());
+        hazards.clear();
+        enemyProjectiles.clear();
+        triggerShake(4f, 0.3f);
+        AudioManager.playConfirm();
+    }
+
+    private boolean isPowerActive(PowerUpType type) {
+        return activePowerUps.getOrDefault(type, 0f) > 0f;
+    }
+
+    private float activeMagnetRange() {
+        float range = BASE_MAGNET_RANGE + progression.magnetBonusRange();
+        if (isPowerActive(PowerUpType.MAGNETIC_CURRENT)) {
+            range += 260f;
+        }
+        return range;
+    }
+
+    private String activePowerText() {
+        for (PowerUpType type : PowerUpType.values()) {
+            float remaining = activePowerUps.getOrDefault(type, 0f);
+            if (remaining > 0f) {
+                return type.title() + "  " + String.format(Locale.ROOT, "%.1fs", remaining);
+            }
+        }
+        return "";
+    }
+
+    private String dashInstruction() {
+        if (game.input().usingController()) {
+            return "PRESS [LB] TO DASH";
+        }
+        if (game.input().usingTouch()) {
+            return "TAP THE DASH BUTTON";
+        }
+        return "PRESS [C] TO DASH";
+    }
+
+    private String dashStatusText() {
+        return "DASH x" + dashCharges + " READY  |  " + dashInstruction();
+    }
+
+    private static String formatDistance(int meters) {
+        if (meters >= 1000) {
+            return meters % 1000 == 0
+                ? (meters / 1000) + " KM"
+                : String.format(Locale.ROOT, "%.1f KM", meters / 1000f);
+        }
+        return meters + " M";
     }
 
     private float randomY() {
@@ -664,6 +1024,10 @@ public class GameScreen extends BaseScreen {
 
     private void drawWorldEffects() {
         beginFilledShapes();
+        drawDepthAtmosphere();
+        hazards.forEach(hazard -> hazard.render(shapeRenderer));
+        enemyProjectiles.forEach(projectile -> projectile.render(shapeRenderer));
+        powerUpPickups.forEach(pickup -> pickup.render(shapeRenderer));
         for (EnemyFish enemy : enemies) {
             if (enemy.isTelegraphing()) {
                 Rectangle bounds = enemy.getBounds();
@@ -675,8 +1039,65 @@ public class GameScreen extends BaseScreen {
                     Math.max(0f, bounds.x), 4f);
             }
         }
+        if (isPowerActive(PowerUpType.PRESSURE_SHIELD)
+            || isPowerActive(PowerUpType.TORPEDO_DASH)) {
+            Rectangle bounds = diver.getBounds();
+            float pulse = 39f + MathUtils.sin(Gdx.graphics.getFrameId() * 0.14f) * 4f;
+            shapeRenderer.setColor(0.25f, 0.9f, 1f, 0.28f);
+            shapeRenderer.circle(bounds.x + bounds.width / 2f,
+                bounds.y + bounds.height / 2f, pulse, 24);
+        }
         particles.render(shapeRenderer);
+        drawInkVeil();
         endShapes();
+    }
+
+    private void drawDepthAtmosphere() {
+        int stage = difficulty.level();
+        float darkness = (stage - 1) * 0.055f;
+        if (darkness > 0f) {
+            shapeRenderer.setColor(0.005f, 0.015f, 0.075f, darkness);
+            shapeRenderer.rect(0f, 0f, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
+        }
+
+        int moteCount = 7 + stage * 4;
+        float riseSpeed = 28f + stage * 13f;
+        for (int i = 0; i < moteCount; i++) {
+            float x = (i * 193f + 47f) % GameConfig.WORLD_WIDTH;
+            float y = (i * 109f + ambientTime * riseSpeed)
+                % (GameConfig.WORLD_HEIGHT + 40f) - 20f;
+            float radius = 1.5f + (i % 3);
+            shapeRenderer.setColor(0.25f, 0.72f, 0.82f, 0.1f + stage * 0.025f);
+            shapeRenderer.circle(x, y, radius, 8);
+        }
+
+        if (descentMotionTimer > 0f) {
+            float alpha = Math.min(0.46f, descentMotionTimer * 0.16f);
+            for (int i = 0; i < 14; i++) {
+                float x = (i * 101f + 35f) % GameConfig.WORLD_WIDTH;
+                float y = (i * 71f + ambientTime * 260f)
+                    % (GameConfig.WORLD_HEIGHT + 120f) - 60f;
+                shapeRenderer.setColor(0.38f, 0.82f, 0.94f, alpha);
+                shapeRenderer.rect(x, y, 2.5f, 58f + (i % 4) * 17f);
+            }
+        }
+    }
+
+    private void drawInkVeil() {
+        if (inkVeilTimer <= 0f) {
+            return;
+        }
+        float alpha = Math.min(0.78f, 0.34f + inkVeilTimer * 0.11f);
+        shapeRenderer.setColor(0.012f, 0.002f, 0.025f, alpha);
+        shapeRenderer.rect(0f, 0f, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
+        for (int i = 0; i < 11; i++) {
+            float x = (i * 157f + 83f) % GameConfig.WORLD_WIDTH;
+            float y = (i * 211f + 61f) % GameConfig.WORLD_HEIGHT;
+            float radius = 95f + (i % 4) * 34f
+                + MathUtils.sin(ambientTime * 1.8f + i) * 16f;
+            shapeRenderer.setColor(0.055f, 0.005f, 0.09f, alpha * 0.72f);
+            shapeRenderer.circle(x, y, radius, 24);
+        }
     }
 
     private void drawUiShapes() {
@@ -686,7 +1107,7 @@ public class GameScreen extends BaseScreen {
         beginFilledShapes();
         shapeRenderer.setColor(0.01f, 0.04f, 0.09f, 0.78f);
         shapeRenderer.rect(16f, 616f, 300f, 88f);
-        shapeRenderer.rect(974f, 640f, 290f, 64f);
+        shapeRenderer.rect(958f, 548f, 306f, 156f);
 
         shapeRenderer.setColor(0.12f, 0.15f, 0.18f, 0.95f);
         shapeRenderer.rect(24f, 626f, 276f, 22f);
@@ -694,6 +1115,11 @@ public class GameScreen extends BaseScreen {
         float green = Math.min(1f, oxygenRatio * 2f);
         shapeRenderer.setColor(red, green, 0.08f, 1f);
         shapeRenderer.rect(24f, 626f, 276f * oxygenRatio, 22f);
+
+        shapeRenderer.setColor(0.08f, 0.13f, 0.2f, 0.95f);
+        shapeRenderer.rect(974f, 558f, 274f, 7f);
+        shapeRenderer.setColor(0.16f, 0.78f, 0.92f, 1f);
+        shapeRenderer.rect(974f, 558f, 274f * runDirector.stageProgress(), 7f);
 
         if (boss != null) {
             shapeRenderer.setColor(0.01f, 0.02f, 0.08f, 0.9f);
@@ -725,6 +1151,12 @@ public class GameScreen extends BaseScreen {
                 game.input().pointerPressed(TOUCH_FIRE_BUTTON) ? 0.96f : 0.76f);
             shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
                 TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
+            if (dashCharges > 0) {
+                shapeRenderer.setColor(0.08f, 0.38f, 0.28f,
+                    game.input().pointerPressed(TOUCH_DASH_BUTTON) ? 0.98f : 0.82f);
+                shapeRenderer.rect(TOUCH_DASH_BUTTON.x, TOUCH_DASH_BUTTON.y,
+                    TOUCH_DASH_BUTTON.width, TOUCH_DASH_BUTTON.height);
+            }
             shapeRenderer.setColor(0.01f, 0.08f, 0.15f, 0.8f);
             shapeRenderer.rect(TOUCH_PAUSE_BUTTON.x, TOUCH_PAUSE_BUTTON.y,
                 TOUCH_PAUSE_BUTTON.width, TOUCH_PAUSE_BUTTON.height);
@@ -734,6 +1166,16 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.setColor(0.01f, 0.04f, 0.09f, 0.84f);
             float tutorialY = game.input().isMobile() ? tutorialPanelY() : 18f;
             shapeRenderer.rect(220f, tutorialY, 840f, 78f);
+        }
+
+        if (bannerTimer > 0f && !bannerSubtitle.isEmpty()
+            && !paused && !gameOver && !choosingUpgrade) {
+            float alpha = Math.min(0.94f, bannerTimer * 1.4f);
+            shapeRenderer.setColor(0.005f, 0.035f, 0.09f, alpha);
+            shapeRenderer.rect(310f, 432f, 660f, 128f);
+            shapeRenderer.setColor(0.12f, 0.8f, 0.95f, alpha);
+            shapeRenderer.rect(310f, 552f, 660f, 8f);
+            shapeRenderer.rect(310f, 432f, 660f, 4f);
         }
 
         if (choosingUpgrade) {
@@ -783,6 +1225,12 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.setColor(Color.LIGHT_GRAY);
             shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
                 TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
+            if (dashCharges > 0) {
+                shapeRenderer.setColor(Color.LIME);
+                shapeRenderer.rect(TOUCH_DASH_BUTTON.x, TOUCH_DASH_BUTTON.y,
+                    TOUCH_DASH_BUTTON.width, TOUCH_DASH_BUTTON.height);
+            }
+            shapeRenderer.setColor(Color.LIGHT_GRAY);
             shapeRenderer.rect(TOUCH_PAUSE_BUTTON.x, TOUCH_PAUSE_BUTTON.y,
                 TOUCH_PAUSE_BUTTON.width, TOUCH_PAUSE_BUTTON.height);
         }
@@ -811,37 +1259,56 @@ public class GameScreen extends BaseScreen {
         smallFont.setColor(Color.WHITE);
         smallFont.draw(batch, "SCORE  " + session.getDisplayScore(), 26f, 694f);
         smallFont.draw(batch, "BEST   " + highScore, 26f, 668f);
-        smallFont.draw(batch, "OXYGEN " + Math.round(session.getOxygen()) + "%", 78f, 645f);
-        smallFont.draw(batch, "DEPTH LEVEL  " + difficulty.level(), 996f, 692f);
-        smallFont.draw(batch, String.format(Locale.ROOT, "CURRENT  x%.2f",
-            difficulty.enemySpeedMultiplier()), 996f, 666f);
+        smallFont.draw(batch, "OXYGEN " + Math.round(session.getOxygen()) + " / "
+            + Math.round(session.getMaxOxygen()), 54f, 645f);
+        smallFont.draw(batch, difficulty.name(), 976f, 692f);
+        smallFont.draw(batch, "BELOW  " + runDirector.displayDepthMeters() + " M", 976f, 640f);
+        smallFont.draw(batch, "DIST  " + formatDistance(runDirector.displayMeters()), 976f, 615f);
+        smallFont.draw(batch, "NEXT  " + formatDistance(runDirector.nextMilestoneMeters()), 976f, 590f);
+
+        float powerStatusY = 600f;
+        if (dashCharges > 0) {
+            smallFont.setColor(Color.LIME);
+            smallFont.draw(batch, dashStatusText(), 24f, powerStatusY);
+            powerStatusY -= 26f;
+        }
+        String activePower = activePowerText();
+        if (!activePower.isEmpty()) {
+            smallFont.setColor(Color.GOLD);
+            smallFont.draw(batch, activePower, 24f, powerStatusY);
+            powerStatusY -= 26f;
+        }
+        if (difficulty.level() == GameBalance.stageCount() && !gameOver) {
+            smallFont.setColor(Color.SCARLET);
+            smallFont.draw(batch, "ANY HIT IS FATAL", 24f, powerStatusY);
+        }
 
         EnemyFish boss = activeBoss();
         if (boss != null) {
-            drawCentered(smallFont, "ABYSS LEVIATHAN", 695f, BOSS_TEXT_COLOR);
+            drawCentered(smallFont, "ABYSSAL OCTOPUS", 695f, BOSS_TEXT_COLOR);
         }
 
         if (session.getCombo() > 1) {
             mediumFont.setColor(Color.YELLOW);
             mediumFont.draw(batch, String.format(Locale.ROOT, "COMBO x%.2f",
-                session.getComboMultiplier()), 1000f, 615f);
+                session.getComboMultiplier()), 1000f, 542f);
         }
 
         if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
-            if (game.input().isMobile()) {
+            if (game.input().usingController()) {
+                drawCentered(smallFont, "[A] / STICK UP SWIM  |  [X / B / RB] FIRE", 76f, Color.WHITE);
+                drawCentered(smallFont, "[LB] DASH WHEN READY  |  [START] PAUSE  |  [Y] HELP",
+                    47f, Color.LIGHT_GRAY);
+            } else if (game.input().usingTouch()) {
                 float tutorialY = tutorialPanelY();
                 drawCentered(smallFont, "HOLD SWIM TO RISE  |  TAP FIRE TO SHOOT",
                     tutorialY + 58f, Color.WHITE);
-                drawCentered(smallFont, "PAUSE IS AT THE TOP RIGHT  |  LEVEL UP FOR UPGRADES",
+                drawCentered(smallFont, "TAP DASH WHEN READY  |  PAUSE IS AT THE TOP RIGHT",
                     tutorialY + 29f, Color.LIGHT_GRAY);
-            } else if (game.input().hasController()) {
-                drawCentered(smallFont, "A / STICK UP TO SWIM  |  X / B / RB TO FIRE", 76f, Color.WHITE);
-                drawCentered(smallFont, "START PAUSE  |  Y HELP  |  LEVEL UP FOR UPGRADES",
-                    47f, Color.LIGHT_GRAY);
             } else {
                 drawCentered(smallFont, "SPACE / W / UP OR LEFT MOUSE TO SWIM  |  Z / X OR RIGHT MOUSE FIRE",
                     76f, Color.WHITE);
-                drawCentered(smallFont, "P / ESC PAUSE  |  T HELP  |  LEVEL UP FOR UPGRADES",
+                drawCentered(smallFont, "[C] DASH WHEN READY  |  [P / ESC] PAUSE  |  [T] HELP",
                     47f, Color.LIGHT_GRAY);
             }
         }
@@ -851,21 +1318,34 @@ public class GameScreen extends BaseScreen {
                 TOUCH_SWIM_BUTTON.y + 74f, Color.WHITE);
             drawCenteredAt(mediumFont, "FIRE", TOUCH_FIRE_BUTTON.x + TOUCH_FIRE_BUTTON.width / 2f,
                 TOUCH_FIRE_BUTTON.y + 74f, Color.WHITE);
+            if (dashCharges > 0) {
+                drawCenteredAt(mediumFont, "DASH x" + dashCharges,
+                    TOUCH_DASH_BUTTON.x + TOUCH_DASH_BUTTON.width / 2f,
+                    TOUCH_DASH_BUTTON.y + 52f, Color.WHITE);
+            }
             drawCenteredAt(smallFont, "II", TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width / 2f,
                 TOUCH_PAUSE_BUTTON.y + 44f, Color.WHITE);
         }
 
         if (bannerTimer > 0f && !paused && !gameOver && !choosingUpgrade) {
             float alpha = Math.min(1f, bannerTimer * 1.5f);
-            mediumFont.setColor(0.45f, 0.92f, 1f, alpha);
-            drawCenteredWithCurrentColor(mediumFont, bannerText, 535f);
+            if (bannerSubtitle.isEmpty()) {
+                mediumFont.setColor(0.45f, 0.92f, 1f, alpha);
+                drawCenteredWithCurrentColor(mediumFont, bannerText, 535f);
+            } else {
+                BitmapFont bannerTitleFont = bannerText.length() > 20 ? mediumFont : largeFont;
+                bannerTitleFont.setColor(0.45f, 0.92f, 1f, alpha);
+                drawCenteredWithCurrentColor(bannerTitleFont, bannerText, 520f);
+                smallFont.setColor(1f, 1f, 1f, alpha);
+                drawCenteredWithCurrentColor(smallFont, bannerSubtitle, 470f);
+            }
         }
         if (bossWarningTimer > 0f && !gameOver) {
             float alpha = DisplaySettings.flashEffectsEnabled()
                 ? 0.65f + MathUtils.sin(bossWarningTimer * 18f) * 0.35f
                 : 1f;
             largeFont.setColor(1f, 0.2f, 0.18f, alpha);
-            drawCenteredWithCurrentColor(largeFont, "LEVIATHAN APPROACHES", 560f);
+            drawCenteredWithCurrentColor(largeFont, "ABYSSAL OCTOPUS AWAKENS", 560f);
         }
 
         if (choosingUpgrade) {
@@ -881,11 +1361,11 @@ public class GameScreen extends BaseScreen {
 
     private void drawUpgradeSelection() {
         drawCentered(largeFont, "CHOOSE AN UPGRADE", 625f, Color.WHITE);
-        String hint = game.input().isMobile()
+        String hint = game.input().usingController()
+            ? "GAMEPAD  D-PAD CHOOSE  |  [A] INSTALL"
+            : game.input().usingTouch()
             ? "TAP A CARD TO INSTALL"
-            : game.input().hasController()
-            ? "D-PAD TO CHOOSE  |  A TO INSTALL"
-            : "LEFT / RIGHT OR 1-3  |  ENTER OR CLICK TO INSTALL";
+            : "KEYBOARD  ARROWS / WASD OR 1-3 CHOOSE  |  [ENTER / SPACE] INSTALL";
         drawCentered(smallFont, hint, 580f, Color.LIGHT_GRAY);
 
         for (int i = 0; i < upgradeChoices.size(); i++) {
@@ -910,9 +1390,10 @@ public class GameScreen extends BaseScreen {
             String prefix = i == selectedPauseIndex ? ">  " : "   ";
             drawCentered(mediumFont, prefix + PAUSE_OPTIONS[i], startY - i * 62f, color);
         }
-        String hint = game.input().isMobile() ? "TAP AN OPTION"
-            : game.input().hasController() ? "D-PAD + A  |  B / START RESUME"
-            : "ARROWS + ENTER  |  ESC RESUME";
+        String hint = game.input().usingController()
+            ? "GAMEPAD  D-PAD CHOOSE  |  [A] SELECT  |  [B / START] RESUME"
+            : game.input().usingTouch() ? "TAP AN OPTION"
+            : "KEYBOARD  ARROWS / W-S CHOOSE  |  [ENTER / SPACE] SELECT  |  [ESC] RESUME";
         drawCentered(smallFont, hint, 195f, Color.LIGHT_GRAY);
     }
 
@@ -920,11 +1401,17 @@ public class GameScreen extends BaseScreen {
         drawCentered(largeFont, victory ? "ABYSS CONQUERED" : "DIVE OVER", 485f,
             victory ? Color.CYAN : Color.WHITE);
         drawCentered(mediumFont, "SCORE  " + session.getDisplayScore(), 385f, Color.YELLOW);
-        drawCentered(smallFont, "BEST  " + highScore, 340f, Color.LIGHT_GRAY);
-        String retry = game.input().isMobile() ? "TAP TO DIVE AGAIN"
-            : game.input().hasController() ? "A TO DIVE AGAIN" : "ENTER / R OR CLICK TO DIVE AGAIN";
-        String menu = game.input().isMobile() ? "TAP TO RETURN TO MENU"
-            : game.input().hasController() ? "B TO RETURN TO MENU" : "ESC OR CLICK TO RETURN TO MENU";
+        drawCentered(smallFont, "DISTANCE  " + formatDistance(runDirector.displayMeters()),
+            348f, Color.CYAN);
+        drawCentered(smallFont, "+" + earnedPearls + " PEARLS  |  WALLET "
+            + progression.pearls(), 316f, Color.GOLD);
+        drawCentered(smallFont, "BEST SCORE  " + highScore, 286f, Color.LIGHT_GRAY);
+        String retry = game.input().usingController() ? "[A] DIVE AGAIN"
+            : game.input().usingTouch() ? "TAP TO DIVE AGAIN"
+            : "[ENTER / SPACE / R] OR CLICK TO DIVE AGAIN";
+        String menu = game.input().usingController() ? "[B] RETURN TO MENU"
+            : game.input().usingTouch() ? "TAP TO RETURN TO MENU"
+            : "[ESC] OR CLICK TO RETURN TO MENU";
         drawCentered(smallFont, retry, 267f, Color.WHITE);
         drawCentered(smallFont, menu, 220f, Color.LIGHT_GRAY);
     }
@@ -958,6 +1445,8 @@ public class GameScreen extends BaseScreen {
         TOUCH_SWIM_BUTTON.set(32f + safeLeft, 28f + safeBottom, 230f, 120f);
         TOUCH_FIRE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 262f,
             28f + safeBottom, 230f, 120f);
+        TOUCH_DASH_BUTTON.set((GameConfig.WORLD_WIDTH - 220f) / 2f,
+            28f + safeBottom, 220f, 76f);
         TOUCH_PAUSE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 98f,
             GameConfig.WORLD_HEIGHT - safeTop - 172f, 66f, 66f);
     }
@@ -984,28 +1473,47 @@ public class GameScreen extends BaseScreen {
     public void resetGame() {
         saveHighScore();
         session.reset();
+        runDirector = new RunDirector();
         enemies.clear();
         harpoons.clear();
         oxygenTanks.clear();
+        hazards.clear();
+        enemyProjectiles.clear();
+        powerUpPickups.clear();
+        activePowerUps.clear();
         particles.clear();
         diver = new Diver();
-        difficulty = session.getDifficulty();
+        difficulty = runDirector.difficulty();
+        background.setDepthStage(difficulty.level(), difficulty.scrollSpeedMultiplier());
         enemySpawnTimer = 0.65f;
         oxygenTankSpawnTimer = 0f;
+        hazardSpawnTimer = 0f;
+        powerUpSpawnTimer = 0f;
         shootCooldownTimer = 0f;
-        invulnerabilityTimer = 0f;
+        invulnerabilityTimer = progression.startingShieldSeconds();
+        if (invulnerabilityTimer > 0f) {
+            activePowerUps.put(PowerUpType.PRESSURE_SHIELD, invulnerabilityTimer);
+        }
+        safetyTimer = CELEBRATION_DURATION;
         breathTimer = 0f;
         tutorialTimer = 0f;
-        bannerTimer = BANNER_DURATION;
-        bannerText = "DEPTH LEVEL 1";
+        bannerTimer = CELEBRATION_DURATION;
+        bannerText = difficulty.name();
+        bannerSubtitle = "DESCENDING TO " + runDirector.displayDepthMeters() + " M";
         bossWarningTimer = 0f;
         hitStopTimer = 0f;
         shakeTimer = 0f;
         shakeMagnitude = 0f;
         bubbleTimer = 0f;
         damageFlashTimer = 0f;
+        inkVeilTimer = 0f;
+        descentMotionTimer = CELEBRATION_DURATION + 1.2f;
+        ambientTime = 0f;
         selectedPauseIndex = 0;
         selectedUpgradeIndex = 0;
+        nextRunUpgradeIndex = 0;
+        earnedPearls = 0;
+        dashCharges = 0;
         upgradeChoices = Collections.emptyList();
         paused = false;
         gameOver = false;
@@ -1013,6 +1521,8 @@ public class GameScreen extends BaseScreen {
         choosingUpgrade = false;
         bossSpawned = false;
         victory = false;
+        finalePending = false;
+        progressionRewardGranted = false;
         captureSwimmingUp = false;
         centerCamera();
         AudioManager.playBackgroundMusic();

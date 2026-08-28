@@ -11,8 +11,8 @@ import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 
 public class MainMenuScreen extends BaseScreen {
-    private static final String[] DESKTOP_MENU_OPTIONS = {"PLAY", "OPTIONS", "EXIT"};
-    private static final String[] MOBILE_MENU_OPTIONS = {"PLAY", "OPTIONS"};
+    private static final String[] DESKTOP_MENU_OPTIONS = {"PLAY", "DIVE SHOP", "OPTIONS", "EXIT"};
+    private static final String[] MOBILE_MENU_OPTIONS = {"PLAY", "DIVE SHOP", "OPTIONS"};
     private static final float TRANSITION_DURATION = 0.45f;
     private static final Color ACCENT_COLOR = new Color(0.55f, 0.9f, 1f, 1f);
 
@@ -64,7 +64,7 @@ public class MainMenuScreen extends BaseScreen {
 
         beginFilledShapes();
         shapeRenderer.setColor(0.01f, 0.05f, 0.11f, 0.78f);
-        shapeRenderer.rect(405f, 205f, 470f, 300f);
+        shapeRenderer.rect(405f, 175f, 470f, 330f);
         shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
         shapeRenderer.rect(405f, 500f, 470f, 5f);
         endShapes();
@@ -124,14 +124,18 @@ public class MainMenuScreen extends BaseScreen {
 
     private boolean activateSelected() {
         AudioManager.playConfirm();
-        switch (selectedIndex) {
-            case 0 -> transitioning = true;
-            case 1 -> {
+        switch (menuOptions[selectedIndex]) {
+            case "PLAY" -> transitioning = true;
+            case "DIVE SHOP" -> {
+                game.showStore();
+                return true;
+            }
+            case "OPTIONS" -> {
                 game.openOptions();
                 return true;
             }
-            case 2 -> com.badlogic.gdx.Gdx.app.exit();
-            default -> throw new IllegalStateException("Unknown menu option: " + selectedIndex);
+            case "EXIT" -> com.badlogic.gdx.Gdx.app.exit();
+            default -> throw new IllegalStateException("Unknown menu option: " + menuOptions[selectedIndex]);
         }
         return false;
     }
@@ -142,13 +146,13 @@ public class MainMenuScreen extends BaseScreen {
     }
 
     private String inputHint() {
-        if (game.input().isMobile()) {
+        if (game.input().usingController()) {
+            return "GAMEPAD  D-PAD / STICK NAVIGATE  |  [A] SELECT  |  [B] EXIT";
+        }
+        if (game.input().usingTouch()) {
             return "TAP AN OPTION TO SELECT";
         }
-        if (game.input().hasController()) {
-            return "D-PAD / STICK TO NAVIGATE  |  A TO SELECT";
-        }
-        return "ARROWS / MOUSE TO NAVIGATE  |  ENTER TO SELECT";
+        return "KEYBOARD  ARROWS / W-S NAVIGATE  |  [ENTER / SPACE] SELECT  |  [ESC] EXIT";
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {

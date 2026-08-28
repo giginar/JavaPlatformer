@@ -100,6 +100,7 @@ public final class Lwjgl3Launcher {
                 case "--debug" -> System.setProperty(DEBUG_PROPERTY, "true");
                 case "--autostart" -> System.setProperty("deepdive.autostart", "true");
                 case "--open-options" -> System.setProperty("deepdive.openOptions", "true");
+                case "--open-store" -> System.setProperty("deepdive.openStore", "true");
                 case "--capture-exit" -> System.setProperty("deepdive.capture.exit", "true");
                 case "--capture-autoplay" -> System.setProperty("deepdive.capture.autoplay", "true");
                 case "--capture-boss" -> System.setProperty("deepdive.capture.boss", "true");
@@ -117,6 +118,20 @@ public final class Lwjgl3Launcher {
     }
 
     private static void applyValueArgument(String argument) {
+        if (argument.regionMatches(true, 0, "--stage-duration=", 0, 17)) {
+            try {
+                float seconds = Float.parseFloat(argument.substring(17));
+                if (seconds >= 5f && seconds <= 600f) {
+                    System.setProperty("deepdive.stageDurationSeconds", Float.toString(seconds));
+                    return;
+                }
+            } catch (NumberFormatException ignored) {
+                // The warning below also covers non-numeric values.
+            }
+            System.err.println("Ignoring invalid stage duration: " + argument);
+            return;
+        }
+
         if (argument.regionMatches(true, 0, "--capture=", 0, 10)) {
             String outputPath = argument.substring(10).trim();
             if (!outputPath.isEmpty()) {

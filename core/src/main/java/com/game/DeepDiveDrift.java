@@ -15,6 +15,7 @@ import com.game.manager.GameAssets;
 import com.game.screen.GameScreen;
 import com.game.screen.MainMenuScreen;
 import com.game.screen.OptionsScreen;
+import com.game.screen.StoreScreen;
 import com.game.settings.DisplaySettings;
 
 import java.util.ArrayDeque;
@@ -34,7 +35,9 @@ public class DeepDiveDrift extends Game {
         GameAssets.initialize();
         FontManager.initialize();
         AudioManager.initialize();
-        if (Boolean.getBoolean("deepdive.autostart")) {
+        if (Boolean.getBoolean("deepdive.openStore")) {
+            showStore();
+        } else if (Boolean.getBoolean("deepdive.autostart")) {
             startNewGame();
         } else {
             showMainMenu();
@@ -92,6 +95,10 @@ public class DeepDiveDrift extends Game {
 
     public void startNewGame() {
         replaceScreen(new GameScreen(this));
+    }
+
+    public void showStore() {
+        replaceScreen(new StoreScreen(this));
     }
 
     public void openOptions() {

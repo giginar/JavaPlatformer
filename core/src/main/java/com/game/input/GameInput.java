@@ -21,6 +21,7 @@ public final class GameInput {
     private final boolean[] pointerDown = new boolean[MAX_POINTERS];
     private final boolean[] pointerJustDown = new boolean[MAX_POINTERS];
     private final boolean[] pointerInsideViewport = new boolean[MAX_POINTERS];
+    private final InputDeviceTracker inputDeviceTracker = new InputDeviceTracker();
 
     private Controller controller;
     private boolean controllerUp;
@@ -33,6 +34,7 @@ public final class GameInput {
     private boolean controllerHelp;
     private boolean controllerSwim;
     private boolean controllerShoot;
+    private boolean controllerDash;
 
     private boolean previousControllerUp;
     private boolean previousControllerDown;
@@ -43,6 +45,7 @@ public final class GameInput {
     private boolean previousControllerPause;
     private boolean previousControllerHelp;
     private boolean previousControllerShoot;
+    private boolean previousControllerDash;
 
     public GameInput() {
         for (int i = 0; i < pointerPositions.length; i++) {
@@ -54,6 +57,7 @@ public final class GameInput {
     public void update(Viewport viewport) {
         updatePointers(viewport);
         updateController();
+        updateActiveInputDevice();
     }
 
     public boolean menuUpJustPressed() {
@@ -110,6 +114,11 @@ public final class GameInput {
         return keyboard || mouse || controllerShoot && !previousControllerShoot;
     }
 
+    public boolean dashJustPressed() {
+        return keyJustPressed(Input.Keys.C)
+            || controllerDash && !previousControllerDash;
+    }
+
     public boolean pointerJustPressed(Rectangle bounds) {
         for (int i = 0; i < MAX_POINTERS; i++) {
             if (pointerJustDown[i] && pointerInsideViewport[i] && bounds.contains(pointerPositions[i])) {
@@ -144,6 +153,16 @@ public final class GameInput {
         return controller != null && controller.isConnected();
     }
 
+    /** True only when a connected controller supplied the most recent input. */
+    public boolean usingController() {
+        return hasController() && inputDeviceTracker.is(InputDeviceTracker.Device.CONTROLLER);
+    }
+
+    /** True when touch supplied the most recent input (the default on mobile). */
+    public boolean usingTouch() {
+        return inputDeviceTracker.is(InputDeviceTracker.Device.TOUCH);
+    }
+
     public void vibrateController(int durationMillis, float strength) {
         if (hasController() && controller.canVibrate()) {
             controller.startVibration(durationMillis, strength);
@@ -155,12 +174,14 @@ public final class GameInput {
         int screenY = viewport.getScreenY();
         int screenWidth = viewport.getScreenWidth();
         int screenHeight = viewport.getScreenHeight();
+        boolean mouseJustPressed = !isMobile()
+            && Gdx.input.isButtonJustPressed(Input.Buttons.LEFT);
 
         for (int i = 0; i < MAX_POINTERS; i++) {
             boolean wasDown = pointerDown[i];
             boolean isDown = Gdx.input.isTouched(i);
             pointerDown[i] = isDown;
-            pointerJustDown[i] = isDown && !wasDown;
+            pointerJustDown[i] = (isDown && !wasDown) || (i == 0 && mouseJustPressed);
 
             float localX = Gdx.input.getX(i) - screenX;
             float localY = Gdx.graphics.getHeight() - Gdx.input.getY(i) - screenY;
@@ -183,6 +204,7 @@ public final class GameInput {
         previousControllerPause = controllerPause;
         previousControllerHelp = controllerHelp;
         previousControllerShoot = controllerShoot;
+        previousControllerDash = controllerDash;
 
         selectController();
         if (controller == null) {
@@ -196,6 +218,7 @@ public final class GameInput {
             controllerHelp = false;
             controllerSwim = false;
             controllerShoot = false;
+            controllerDash = false;
             return;
         }
 
@@ -213,6 +236,39 @@ public final class GameInput {
         controllerSwim = controllerUp || button(mapping.buttonA);
         controllerShoot = button(mapping.buttonX) || button(mapping.buttonB)
             || button(mapping.buttonR1) || button(mapping.buttonR2);
+        controllerDash = button(mapping.buttonL1);
+    }
+
+    private void updateActiveInputDevice() {
+        boolean mobile = isMobile();
+        boolean pointerActive = false;
+        for (boolean justDown : pointerJustDown) {
+            if (justDown) {
+                pointerActive = true;
+                break;
+            }
+        }
+
+        boolean mouseActive = !mobile && (pointerActive
+            || Gdx.input.getDeltaX() != 0 || Gdx.input.getDeltaY() != 0
+            || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)
+            || Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)
+            || Gdx.input.isButtonJustPressed(Input.Buttons.MIDDLE));
+        boolean keyboardMouseActive = Gdx.input.isKeyJustPressed(Input.Keys.ANY_KEY)
+            || mouseActive;
+        boolean controllerActive = controllerUp && !previousControllerUp
+            || controllerDown && !previousControllerDown
+            || controllerLeft && !previousControllerLeft
+            || controllerRight && !previousControllerRight
+            || controllerConfirm && !previousControllerConfirm
+            || controllerBack && !previousControllerBack
+            || controllerPause && !previousControllerPause
+            || controllerHelp && !previousControllerHelp
+            || controllerShoot && !previousControllerShoot
+            || controllerDash && !previousControllerDash;
+
+        inputDeviceTracker.update(mobile, keyboardMouseActive,
+            controllerActive, mobile && pointerActive);
     }
 
     private void selectController() {

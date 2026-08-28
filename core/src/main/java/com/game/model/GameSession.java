@@ -12,14 +12,20 @@ public final class GameSession {
     private int combo;
     private float comboTimer;
     private final UpgradeLoadout upgrades;
+    private final float maxOxygen;
 
     public GameSession() {
+        this(MAX_OXYGEN);
+    }
+
+    public GameSession(float maxOxygen) {
+        this.maxOxygen = Math.max(MAX_OXYGEN, maxOxygen);
         upgrades = new UpgradeLoadout();
         reset();
     }
 
     public void reset() {
-        oxygen = MAX_OXYGEN;
+        oxygen = maxOxygen;
         score = 0f;
         combo = 0;
         comboTimer = 0f;
@@ -48,12 +54,12 @@ public final class GameSession {
         comboTimer = COMBO_WINDOW;
         int reward = GameBalance.killReward(baseScore, combo);
         score += reward;
-        oxygen = Math.min(MAX_OXYGEN, oxygen + KILL_OXYGEN_REWARD);
+        oxygen = Math.min(maxOxygen, oxygen + KILL_OXYGEN_REWARD);
         return reward;
     }
 
     public void collectOxygen(float amount) {
-        oxygen = Math.min(MAX_OXYGEN, oxygen + Math.max(0f, amount));
+        oxygen = Math.min(maxOxygen, oxygen + Math.max(0f, amount));
     }
 
     public void takeDamage(float amount) {
@@ -99,7 +105,11 @@ public final class GameSession {
     }
 
     public float getOxygenRatio() {
-        return oxygen / MAX_OXYGEN;
+        return oxygen / maxOxygen;
+    }
+
+    public float getMaxOxygen() {
+        return maxOxygen;
     }
 
     public float getScore() {
@@ -116,10 +126,6 @@ public final class GameSession {
 
     public float getComboMultiplier() {
         return GameBalance.comboMultiplier(combo);
-    }
-
-    public GameBalance.Difficulty getDifficulty() {
-        return GameBalance.difficultyFor(score);
     }
 
     public boolean isOutOfOxygen() {

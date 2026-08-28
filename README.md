@@ -1,6 +1,6 @@
 # DeepDive Drift
 
-DeepDive Drift, libGDX ile geliştirilen hızlı tempolu bir su altı hayatta kalma oyunudur. Dalgıcın yüksekliğini kontrol et, zıpkınla avlan, derinlik yükseltmelerini seç ve Abyss Leviathan’a ulaş.
+DeepDive Drift, libGDX ile geliştirilen hızlı tempolu bir su altı hayatta kalma oyunudur. Dalgıcın yüksekliğini kontrol et, zıpkınla avlan, derinlik yükseltmelerini seç ve Abyssal Octopus’a ulaş.
 
 ## Desteklenen hedefler
 
@@ -26,7 +26,8 @@ Dokunmatik düğmeler ekranın güvenli alanlarına göre yerleşir. Menü, ayar
 - Oksijen zamanla azalır; tüpler ve avlar oksijen kazandırır.
 - Art arda avlar en fazla `x3` puan çarpanına ulaşan combo oluşturur.
 - `1000`, `2500` ve `5000` puanda bir yükseltme seçilir.
-- `6500` puanda Abyss Leviathan savaşı başlar.
+- Beş derinlik bölgesinin sonunda Abyssal Octopus savaşı başlar.
+- Beşinci bölgede kalkanla engellenmeyen herhangi bir hasar koşuyu anında bitirir.
 - Ekran sarsıntısı ve flaş efektleri ayarlardan ayrı ayrı kapatılabilir.
 - Skor, oksijen ve hareket hesapları FPS’den bağımsızdır.
 
