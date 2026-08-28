@@ -63,6 +63,13 @@ Betik masaüstü JAR'ını derler, gerekli WiX araçlarını doğrulanmış proj
 indirir ve kurulumu `lwjgl3/target/installer` altında oluşturur. Üretilen tek EXE
 dosyası başka bir Windows bilgisayara doğrudan gönderilebilir.
 
+Installer sürümü otomatik olarak `major.minor.build` biçiminde üretilir. `major`,
+`minor` ve başlangıç build değeri kök `pom.xml` sürümünden; kalan build numarası
+Git commit sayısından gelir. Örneğin proje sürümü `1.0.0` ve 26 commit için sürüm
+`1.0.26`, çıktı adı da `DeepDive Drift-1.0.26.exe` olur. Böylece her yeni commit
+installer sürümünü artırır. Geçici olarak belirli bir sürüm üretmek gerekirse
+`-Version 2.1.15` parametresiyle otomatik sürüm geçersiz kılınabilir.
+
 ## Google Play paketi
 
 Android derlemesi için Android SDK Platform 36 ve Build Tools 36.0.0 gerekir. SDK yolu `local.properties` içindeki `sdk.dir` ile veya `ANDROID_SDK_ROOT` ortam değişkeniyle belirtilir.

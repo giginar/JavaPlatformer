@@ -7,25 +7,37 @@ $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $desktopTargetPath = Join-Path $projectRootPath 'lwjgl3\target'
 $mavenWrapperPath = Join-Path $projectRootPath 'mvnw.cmd'
 $pomPath = Join-Path $projectRootPath 'pom.xml'
+$versionScriptPath = Join-Path $PSScriptRoot 'get-project-version.ps1'
+
+[xml]$projectPom = Get-Content -LiteralPath $pomPath -Raw
+$mavenVersion = ([string]$projectPom.project.version).Trim()
 
 if (-not $Version) {
-    [xml]$projectPom = Get-Content -LiteralPath $pomPath -Raw
-    $Version = [string]$projectPom.project.version
+    $Version = (& $versionScriptPath -ProjectRootPath $projectRootPath).Trim()
 }
-if ($Version -notmatch '^\d+(\.\d+){1,3}$') {
-    throw "jpackage requires a numeric Windows version, got: $Version"
+$Version = $Version.Trim()
+if ($Version -notmatch '^\d+\.\d+(\.\d+)?$') {
+    throw "The Windows installer version must use major.minor or major.minor.build format, got: $Version"
+}
+$versionParts = @($Version.Split('.') | ForEach-Object { [int]$_ })
+$windowsBuildVersion = if ($versionParts.Count -eq 3) { $versionParts[2] } else { 0 }
+if ($versionParts[0] -gt 255 -or $versionParts[1] -gt 255 -or $windowsBuildVersion -gt 65535) {
+    throw "The Windows installer version exceeds the 255.255.65535 limit: $Version"
 }
 
-& $mavenWrapperPath -B -ntp -pl lwjgl3 -am clean package
+Write-Host "Building Windows installer version $Version..."
+
+& $mavenWrapperPath -f $pomPath -B -ntp -pl lwjgl3 -am clean package
 if ($LASTEXITCODE -ne 0) {
     throw "Desktop build failed with exit code $LASTEXITCODE"
 }
 
-$desktopJarName = "DeepDiveDrift-$Version.jar"
-$desktopJarPath = Join-Path $desktopTargetPath $desktopJarName
+$builtJarName = "DeepDiveDrift-$mavenVersion.jar"
+$desktopJarPath = Join-Path $desktopTargetPath $builtJarName
 if (-not (Test-Path -LiteralPath $desktopJarPath)) {
     throw "Desktop JAR is missing: $desktopJarPath"
 }
+$packagedJarName = "DeepDiveDrift-$Version.jar"
 
 $toolsCachePath = Join-Path $projectRootPath '.mvn\tools'
 $wixArchivePath = Join-Path $toolsCachePath 'wix314-binaries.zip'
@@ -62,7 +74,7 @@ if (-not $candlePath -or -not $lightPath) {
 $inputPath = Join-Path $desktopTargetPath 'jpackage-input'
 $installerPath = Join-Path $desktopTargetPath 'installer'
 New-Item -ItemType Directory -Path $inputPath, $installerPath -Force | Out-Null
-Copy-Item -LiteralPath $desktopJarPath -Destination (Join-Path $inputPath $desktopJarName) -Force
+Copy-Item -LiteralPath $desktopJarPath -Destination (Join-Path $inputPath $packagedJarName) -Force
 
 $jpackageCommand = Get-Command 'jpackage.exe' -ErrorAction Stop
 $originalPath = $env:Path
@@ -72,7 +84,7 @@ try {
         '--type', 'exe',
         '--dest', $installerPath,
         '--input', $inputPath,
-        '--main-jar', $desktopJarName,
+        '--main-jar', $packagedJarName,
         '--main-class', 'com.game.diver.lwjgl3.Lwjgl3Launcher',
         '--name', 'DeepDive Drift',
         '--app-version', $Version,
@@ -95,11 +107,11 @@ try {
     $env:Path = $originalPath
 }
 
-$installer = Get-ChildItem -LiteralPath $installerPath -Filter '*.exe' |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if (-not $installer) {
-    throw "Windows installer was not created below $installerPath"
+$installerPath = Join-Path $installerPath "DeepDive Drift-$Version.exe"
+if (-not (Test-Path -LiteralPath $installerPath)) {
+    throw "Windows installer was not created: $installerPath"
 }
+$installer = Get-Item -LiteralPath $installerPath
 
 $installerSha256 = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash
 Write-Host 'Windows installer is ready:'
