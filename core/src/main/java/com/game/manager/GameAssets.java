@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Texture;
 public final class GameAssets {
     public static final String BACKGROUND = "background.png";
     public static final String DIVER = "diver.png";
+    public static final String DIVER_GREEN = "diver_green.png";
+    public static final String DIVER_RED = "diver_red.png";
     public static final String HARPOON = "harpoon.png";
     public static final String OXYGEN_TANK = "oxygen_tank.png";
     public static final String SMALL_FISH = "enemy_small.png";
@@ -17,6 +19,8 @@ public final class GameAssets {
     private static final String[] TEXTURES = {
         BACKGROUND,
         DIVER,
+        DIVER_GREEN,
+        DIVER_RED,
         HARPOON,
         OXYGEN_TANK,
         SMALL_FISH,

@@ -35,6 +35,7 @@ import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 import com.game.model.GameBalance;
 import com.game.model.GameSession;
+import com.game.model.DiverSuit;
 import com.game.model.PowerUpType;
 import com.game.model.ProgressionStore;
 import com.game.model.RunDirector;
@@ -97,6 +98,7 @@ public class GameScreen extends BaseScreen {
     private final Random random;
     private final Preferences preferences;
     private final ProgressionStore progression;
+    private final DiverSuit equippedSuit;
     private final Rectangle interactiveRow = new Rectangle();
 
     private Diver diver;
@@ -160,7 +162,9 @@ public class GameScreen extends BaseScreen {
         random = new Random();
         preferences = Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME);
         progression = new ProgressionStore(preferences);
-        session = new GameSession(progression.startingMaxOxygen());
+        equippedSuit = progression.selectedSuit();
+        session = new GameSession(
+            progression.startingMaxOxygen() + equippedSuit.oxygenBonus());
         highScore = preferences.getInteger("highScore", 0);
         resetGame();
         if (Boolean.getBoolean("deepdive.capture.boss")) {
@@ -388,7 +392,8 @@ public class GameScreen extends BaseScreen {
         boolean swimmingUp = game.input().swimPressed()
             || game.input().pointerPressed(TOUCH_SWIM_BUTTON)
             || CAPTURE_AUTOPLAY && captureSwimmingUp;
-        diver.update(delta, swimmingUp, session.getAgilityMultiplier());
+        diver.update(delta, swimmingUp,
+            session.getAgilityMultiplier() * equippedSuit.agilityMultiplier());
         updateDiverBubbles(delta, swimmingUp);
         background.update(delta);
 
@@ -573,7 +578,7 @@ public class GameScreen extends BaseScreen {
             session.getHarpoonHitCount() + progression.startingHarpoonBonus()
                 + (overdrive ? 2 : 0)));
         shootCooldownTimer = GameBalance.harpoonCooldown(
-            session.getShootCooldownMultiplier(), overdrive);
+            session.getShootCooldownMultiplier(), overdrive) * equippedSuit.reloadMultiplier();
         particles.spawnImpact(diver.getX() + 56f, diver.getY() + 30f, false);
         AudioManager.playShoot();
     }
@@ -960,7 +965,8 @@ public class GameScreen extends BaseScreen {
     }
 
     private float activeMagnetRange() {
-        float range = BASE_MAGNET_RANGE + progression.magnetBonusRange();
+        float range = BASE_MAGNET_RANGE + progression.magnetBonusRange()
+            + equippedSuit.magnetBonusRange();
         if (isPowerActive(PowerUpType.MAGNETIC_CURRENT)) {
             range += 260f;
         }
@@ -1268,6 +1274,9 @@ public class GameScreen extends BaseScreen {
         smallFont.draw(batch, "OXYGEN " + Math.round(session.getOxygen()) + " / "
             + Math.round(session.getMaxOxygen()), 54f, 645f);
         smallFont.draw(batch, difficulty.name(), 976f, 692f);
+        smallFont.setColor(suitUiColor());
+        smallFont.draw(batch, equippedSuit.title(), 976f, 666f);
+        smallFont.setColor(Color.WHITE);
         smallFont.draw(batch, "BELOW  " + runDirector.displayDepthMeters() + " M", 976f, 640f);
         smallFont.draw(batch, "DIST  " + formatDistance(runDirector.displayMeters()), 976f, 615f);
         smallFont.draw(batch, "NEXT  " + formatDistance(runDirector.nextMilestoneMeters()), 976f, 590f);
@@ -1488,7 +1497,7 @@ public class GameScreen extends BaseScreen {
         powerUpPickups.clear();
         activePowerUps.clear();
         particles.clear();
-        diver = new Diver();
+        diver = new Diver(equippedSuit);
         difficulty = runDirector.difficulty();
         background.setDepthStage(difficulty.level(), difficulty.scrollSpeedMultiplier());
         enemySpawnTimer = 0.65f;
@@ -1545,5 +1554,14 @@ public class GameScreen extends BaseScreen {
     public void dispose() {
         saveHighScore();
         super.dispose();
+    }
+
+    private Color suitUiColor() {
+        return switch (equippedSuit) {
+            case TIDELINE_BLUE -> Color.CYAN;
+            case SALVAGE_GREEN -> Color.LIME;
+            case RESCUE_RED -> Color.SCARLET;
+            case ABYSS_BLACK -> Color.LIGHT_GRAY;
+        };
     }
 }

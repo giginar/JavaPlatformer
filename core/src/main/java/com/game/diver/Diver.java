@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.game.GameConfig;
 import com.game.manager.GameAssets;
+import com.game.model.DiverSuit;
 
 public class Diver {
 
@@ -15,6 +16,7 @@ public class Diver {
     private final Vector2 velocity;
     private final Rectangle bounds;
     private final Sprite sprite;
+    private final DiverSuit suit;
     private float animationTime;
 
     private static final float GRAVITY = -360f;
@@ -26,10 +28,15 @@ public class Diver {
     public static final float HEIGHT = 64f;
 
     public Diver() {
+        this(DiverSuit.TIDELINE_BLUE);
+    }
+
+    public Diver(DiverSuit suit) {
+        this.suit = suit;
         position = new Vector2(110f, GameConfig.WORLD_HEIGHT / 2f - HEIGHT / 2f);
         velocity = new Vector2();
         bounds = new Rectangle();
-        Texture texture = GameAssets.texture(GameAssets.DIVER);
+        Texture texture = GameAssets.texture(suit.texturePath());
         sprite = new Sprite(texture);
         sprite.setSize(WIDTH, HEIGHT);
         sprite.setOriginCenter();
@@ -65,7 +72,11 @@ public class Diver {
         float breathing = MathUtils.sin(animationTime * 4f) * 0.025f;
         sprite.setScale(1f + breathing, 1f - breathing * 0.6f);
         boolean dimmed = invulnerabilityTimer > 0f && ((int) (invulnerabilityTimer * 14f) % 2 == 0);
-        sprite.setColor(1f, 1f, 1f, dimmed ? 0.3f : 1f);
+        if (suit == DiverSuit.ABYSS_BLACK) {
+            sprite.setColor(0.52f, 0.54f, 0.62f, dimmed ? 0.3f : 1f);
+        } else {
+            sprite.setColor(1f, 1f, 1f, dimmed ? 0.3f : 1f);
+        }
         sprite.draw(batch);
     }
 

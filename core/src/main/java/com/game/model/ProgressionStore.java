@@ -5,6 +5,7 @@ import com.badlogic.gdx.Preferences;
 /** Persistent pearl wallet and permanent pre-dive equipment upgrades. */
 public final class ProgressionStore {
     private static final String PEARLS_KEY = "progression.pearls";
+    private static final String SELECTED_SUIT_KEY = "progression.suit.selected";
     private final Preferences preferences;
 
     public ProgressionStore(Preferences preferences) {
@@ -63,7 +64,46 @@ public final class ProgressionStore {
         return level(PermanentUpgrade.TWIN_LAUNCHER);
     }
 
+    public boolean isSuitUnlocked(DiverSuit suit) {
+        return suit == DiverSuit.TIDELINE_BLUE
+            || preferences.getBoolean(suitKey(suit), false);
+    }
+
+    public DiverSuit selectedSuit() {
+        String saved = preferences.getString(SELECTED_SUIT_KEY, DiverSuit.TIDELINE_BLUE.name());
+        try {
+            DiverSuit suit = DiverSuit.valueOf(saved);
+            return isSuitUnlocked(suit) ? suit : DiverSuit.TIDELINE_BLUE;
+        } catch (IllegalArgumentException ignored) {
+            return DiverSuit.TIDELINE_BLUE;
+        }
+    }
+
+    public boolean purchaseSuit(DiverSuit suit) {
+        if (isSuitUnlocked(suit) || pearls() < suit.cost()) {
+            return false;
+        }
+        preferences.putInteger(PEARLS_KEY, pearls() - suit.cost());
+        preferences.putBoolean(suitKey(suit), true);
+        preferences.putString(SELECTED_SUIT_KEY, suit.name());
+        preferences.flush();
+        return true;
+    }
+
+    public boolean selectSuit(DiverSuit suit) {
+        if (!isSuitUnlocked(suit)) {
+            return false;
+        }
+        preferences.putString(SELECTED_SUIT_KEY, suit.name());
+        preferences.flush();
+        return true;
+    }
+
     private static String levelKey(PermanentUpgrade upgrade) {
         return "progression.level." + upgrade.name();
+    }
+
+    private static String suitKey(DiverSuit suit) {
+        return "progression.suit.unlocked." + suit.name();
     }
 }
