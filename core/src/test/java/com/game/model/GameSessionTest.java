@@ -89,4 +89,18 @@ class GameSessionTest {
         assertEquals(0, session.getUpgradeLevel(UpgradeType.OXYGEN_EFFICIENCY));
         assertEquals(GameSession.MAX_OXYGEN, session.getOxygen(), 0.001f);
     }
+
+    @Test
+    void difficultyScalesOxygenDrainAndRunUpgradeEffects() {
+        GameSession session = new GameSession(100f, 0.75f, 1.12f);
+        session.applyUpgrade(UpgradeType.OXYGEN_EFFICIENCY);
+        session.applyUpgrade(UpgradeType.AGILE_DIVER);
+        session.applyUpgrade(UpgradeType.RAPID_FIRE);
+
+        session.update(1f);
+
+        assertEquals(95.03f, session.getOxygen(), 0.001f);
+        assertEquals(1.09f, session.getAgilityMultiplier(), 0.001f);
+        assertEquals(0.865f, session.getShootCooldownMultiplier(), 0.001f);
+    }
 }

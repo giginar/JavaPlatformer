@@ -33,17 +33,22 @@ import com.game.hazards.SeaMine;
 import com.game.hazards.ThermalVent;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.model.Achievement;
+import com.game.model.AchievementStore;
+import com.game.model.ChallengeModifier;
 import com.game.model.GameBalance;
 import com.game.model.GameSession;
 import com.game.model.DiverSuit;
 import com.game.model.PowerUpType;
 import com.game.model.ProgressionStore;
 import com.game.model.RunDirector;
+import com.game.model.RunSettings;
 import com.game.model.RunUpgradeSchedule;
 import com.game.model.UpgradeType;
 import com.game.settings.DisplaySettings;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Iterator;
@@ -58,6 +63,7 @@ public class GameScreen extends BaseScreen {
     private static final boolean CAPTURE_AUTOPLAY = Boolean.getBoolean("deepdive.capture.autoplay");
     private static final Color BOSS_TEXT_COLOR = new Color(0.9f, 0.55f, 1f, 1f);
     private static final Color UPGRADE_TEXT_COLOR = new Color(0.45f, 0.92f, 1f, 1f);
+    private static final float ACHIEVEMENT_POPUP_DURATION = 4f;
 
     private static final float MAX_FRAME_DELTA = 1f / 15f;
     private static final float OXYGEN_TANK_SPAWN_INTERVAL = 8f;
@@ -99,6 +105,9 @@ public class GameScreen extends BaseScreen {
     private final Preferences preferences;
     private final ProgressionStore progression;
     private final DiverSuit equippedSuit;
+    private final RunSettings runSettings;
+    private final AchievementStore achievementStore;
+    private final ArrayDeque<Achievement> achievementQueue;
     private final Rectangle interactiveRow = new Rectangle();
 
     private Diver diver;
@@ -107,6 +116,7 @@ public class GameScreen extends BaseScreen {
     private List<UpgradeType> upgradeChoices = Collections.emptyList();
     private String bannerText = "";
     private String bannerSubtitle = "";
+    private Achievement displayedAchievement;
     private float enemySpawnTimer;
     private float oxygenTankSpawnTimer;
     private float hazardSpawnTimer;
@@ -126,12 +136,22 @@ public class GameScreen extends BaseScreen {
     private float inkVeilTimer;
     private float descentMotionTimer;
     private float ambientTime;
+    private float achievementPopupTimer;
+    private float unarmedBossSurvivalTimer;
     private int selectedPauseIndex;
     private int selectedUpgradeIndex;
     private int highScore;
     private int nextRunUpgradeIndex;
     private int earnedPearls;
     private int dashCharges;
+    private int stageShotsFired;
+    private int runShotsFired;
+    private int stageCollections;
+    private int runCollections;
+    private int stagePowerUses;
+    private int runPowerUses;
+    private int stageDamageEvents;
+    private int runDamageEvents;
     private boolean highScoreDirty;
     private boolean paused;
     private boolean gameOver;
@@ -142,9 +162,15 @@ public class GameScreen extends BaseScreen {
     private boolean finalePending;
     private boolean progressionRewardGranted;
     private boolean captureSwimmingUp;
+    private boolean finalStageAchievementRecorded;
 
     public GameScreen(DeepDiveDrift game) {
+        this(game, RunSettings.standard());
+    }
+
+    public GameScreen(DeepDiveDrift game, RunSettings runSettings) {
         super(game);
+        this.runSettings = runSettings == null ? RunSettings.standard() : runSettings;
         smallFont = FontManager.getSmallFont();
         mediumFont = FontManager.getMediumFont();
         largeFont = FontManager.getLargeFont();
@@ -158,13 +184,19 @@ public class GameScreen extends BaseScreen {
         enemySpawnBuffer = new ArrayList<>();
         powerUpPickups = new ArrayList<>();
         activePowerUps = new EnumMap<>(PowerUpType.class);
+        achievementQueue = new ArrayDeque<>();
         particles = new ParticleSystem();
         random = new Random();
         preferences = Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME);
         progression = new ProgressionStore(preferences);
+        achievementStore = new AchievementStore(preferences);
         equippedSuit = progression.selectedSuit();
-        session = new GameSession(
-            progression.startingMaxOxygen() + equippedSuit.oxygenBonus());
+        float startingOxygen = loadoutBonusesEnabled()
+            ? progression.startingMaxOxygen() + equippedSuit.oxygenBonus()
+            : GameSession.MAX_OXYGEN;
+        session = new GameSession(startingOxygen,
+            this.runSettings.difficulty().upgradeEffectMultiplier(),
+            this.runSettings.difficulty().oxygenDrainMultiplier());
         highScore = preferences.getInteger("highScore", 0);
         resetGame();
         if (Boolean.getBoolean("deepdive.capture.boss")) {
@@ -184,6 +216,7 @@ public class GameScreen extends BaseScreen {
         prepareFrame(0f, 0.04f, 0.12f);
         layoutTouchControls();
         updateInput();
+        updateAchievementPopup(frameDelta);
 
         if (handleInput()) {
             return;
@@ -370,6 +403,9 @@ public class GameScreen extends BaseScreen {
         updateTimers(delta);
         RunDirector.UpdateResult runUpdate = runDirector.update(delta);
         updateRunProgression(runUpdate);
+        queueAchievements(achievementStore.recordRunProgress(
+            runDirector.distanceMeters(), session.getScore(),
+            runShotsFired == 0, runCollections == 0));
         if (updateRunUpgradeProgression()) {
             return;
         }
@@ -381,6 +417,9 @@ public class GameScreen extends BaseScreen {
         float threatDelta = isPowerActive(PowerUpType.TIME_BUBBLE) ? delta * 0.45f : delta;
         spawnEntities(threatDelta);
         shootIfRequested();
+        if (updateUnarmedBossEndurance(delta)) {
+            return;
+        }
 
         if (CAPTURE_AUTOPLAY) {
             if (diver.getY() < 250f) {
@@ -413,6 +452,7 @@ public class GameScreen extends BaseScreen {
             }
             EnemyFish spawnedEnemy = enemy.pollSpawnedEnemy();
             if (spawnedEnemy != null) {
+                applyEnemySpeed(spawnedEnemy);
                 enemySpawnBuffer.add(spawnedEnemy);
             }
             EnvironmentalHazard spawnedHazard = enemy.pollHazard();
@@ -492,8 +532,9 @@ public class GameScreen extends BaseScreen {
     private void updateRunProgression(RunDirector.UpdateResult update) {
         GameBalance.Difficulty nextDifficulty = runDirector.difficulty();
         if (update.stageChanged()) {
+            recordCompletedStage(nextDifficulty.level() - 1);
             difficulty = nextDifficulty;
-            enemySpawnTimer = Math.min(enemySpawnTimer, difficulty.spawnInterval());
+            enemySpawnTimer = Math.min(enemySpawnTimer, adjustedEnemySpawnInterval());
             background.setDepthStage(difficulty.level(), difficulty.scrollSpeedMultiplier());
             descentMotionTimer = CELEBRATION_DURATION + 1.2f;
             String stageSubtitle = difficulty.level() == GameBalance.stageCount()
@@ -508,13 +549,18 @@ public class GameScreen extends BaseScreen {
             beginCelebration(distance + " REACHED", "NEW DIVE MILESTONE");
         }
         if (update.finaleReady() && !finalePending) {
+            if (!finalStageAchievementRecorded) {
+                recordCompletedStage(GameBalance.stageCount());
+                finalStageAchievementRecorded = true;
+            }
             finalePending = true;
             beginCelebration("THE ABYSS OPENS", "COLOSSAL OCTOPUS SIGNAL DETECTED");
         }
     }
 
     private boolean updateRunUpgradeProgression() {
-        if (safetyTimer > 0f
+        if (runSettings.has(ChallengeModifier.NO_UPGRADES)
+            || safetyTimer > 0f
             || session.getScore() < RunUpgradeSchedule.scoreForSelection(nextRunUpgradeIndex)) {
             return false;
         }
@@ -539,32 +585,41 @@ public class GameScreen extends BaseScreen {
     private void spawnEntities(float delta) {
         if (!hasActiveBoss() && safetyTimer <= 0f && !finalePending) {
             enemySpawnTimer += delta;
-            if (enemySpawnTimer >= difficulty.spawnInterval()) {
-                enemySpawnTimer -= difficulty.spawnInterval();
+            float enemyInterval = adjustedEnemySpawnInterval();
+            if (enemySpawnTimer >= enemyInterval) {
+                enemySpawnTimer -= enemyInterval;
                 spawnEncounter();
             }
 
             hazardSpawnTimer += delta;
-            if (hazardSpawnTimer >= difficulty.hazardInterval()) {
-                hazardSpawnTimer -= difficulty.hazardInterval();
+            float hazardInterval = adjustedHazardSpawnInterval();
+            if (hazardSpawnTimer >= hazardInterval) {
+                hazardSpawnTimer -= hazardInterval;
                 spawnHazard();
             }
         }
 
-        oxygenTankSpawnTimer += delta;
-        if (oxygenTankSpawnTimer >= OXYGEN_TANK_SPAWN_INTERVAL) {
-            oxygenTankSpawnTimer -= OXYGEN_TANK_SPAWN_INTERVAL;
-            oxygenTanks.add(new OxygenTank(GameConfig.WORLD_WIDTH, randomY()));
+        if (!runSettings.has(ChallengeModifier.NO_OXYGEN_PICKUPS)) {
+            oxygenTankSpawnTimer += delta;
+            if (oxygenTankSpawnTimer >= OXYGEN_TANK_SPAWN_INTERVAL) {
+                oxygenTankSpawnTimer -= OXYGEN_TANK_SPAWN_INTERVAL;
+                oxygenTanks.add(new OxygenTank(GameConfig.WORLD_WIDTH, randomY()));
+            }
         }
 
-        powerUpSpawnTimer += delta;
-        if (!hasActiveBoss() && powerUpSpawnTimer >= POWER_UP_SPAWN_INTERVAL) {
-            powerUpSpawnTimer -= POWER_UP_SPAWN_INTERVAL;
-            spawnPowerUp();
+        if (!runSettings.has(ChallengeModifier.NO_POWER_UPS)) {
+            powerUpSpawnTimer += delta;
+            if (!hasActiveBoss() && powerUpSpawnTimer >= POWER_UP_SPAWN_INTERVAL) {
+                powerUpSpawnTimer -= POWER_UP_SPAWN_INTERVAL;
+                spawnPowerUp();
+            }
         }
     }
 
     private void shootIfRequested() {
+        if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
+            return;
+        }
         boolean shootPressed = game.input().shootJustPressed()
             || game.input().pointerJustPressed(TOUCH_FIRE_BUTTON)
             || CAPTURE_AUTOPLAY;
@@ -574,11 +629,16 @@ public class GameScreen extends BaseScreen {
             return;
         }
 
+        int permanentHarpoonBonus = loadoutBonusesEnabled()
+            ? progression.startingHarpoonBonus() : 0;
         harpoons.add(new Harpoon(diver.getX() + 50f, diver.getY() + 26f,
-            session.getHarpoonHitCount() + progression.startingHarpoonBonus()
+            session.getHarpoonHitCount() + permanentHarpoonBonus
                 + (overdrive ? 2 : 0)));
+        stageShotsFired++;
+        runShotsFired++;
         shootCooldownTimer = GameBalance.harpoonCooldown(
-            session.getShootCooldownMultiplier(), overdrive) * equippedSuit.reloadMultiplier();
+            session.getShootCooldownMultiplier(), overdrive)
+            * (loadoutBonusesEnabled() ? equippedSuit.reloadMultiplier() : 1f);
         particles.spawnImpact(diver.getX() + 56f, diver.getY() + 30f, false);
         AudioManager.playShoot();
     }
@@ -596,7 +656,9 @@ public class GameScreen extends BaseScreen {
                 }
                 if (roll < 22) {
                     hazards.add(new FallingDebris(GameConfig.WORLD_WIDTH - 90f,
-                        RunDirector.BASE_SCROLL_SPEED_WORLD_UNITS));
+                        RunDirector.BASE_SCROLL_SPEED_WORLD_UNITS
+                            * difficulty.scrollSpeedMultiplier()
+                            * runSettings.difficulty().enemySpeedMultiplier()));
                 }
             }
             case 3 -> {
@@ -638,13 +700,19 @@ public class GameScreen extends BaseScreen {
     }
 
     private void addEnemy(EnemyFish enemy) {
-        enemy.setSpeedMultiplier(difficulty.enemySpeedMultiplier());
+        applyEnemySpeed(enemy);
         enemies.add(enemy);
+    }
+
+    private void applyEnemySpeed(EnemyFish enemy) {
+        enemy.setSpeedMultiplier(difficulty.enemySpeedMultiplier()
+            * runSettings.difficulty().enemySpeedMultiplier());
     }
 
     private void spawnHazard() {
         float speed = RunDirector.BASE_SCROLL_SPEED_WORLD_UNITS
-            * difficulty.scrollSpeedMultiplier();
+            * difficulty.scrollSpeedMultiplier()
+            * runSettings.difficulty().enemySpeedMultiplier();
         int roll = random.nextInt(100);
         EnvironmentalHazard hazard = switch (difficulty.level()) {
             case 1 -> new ReefBarrier(random.nextBoolean(), MathUtils.random(115f, 195f), speed);
@@ -698,6 +766,12 @@ public class GameScreen extends BaseScreen {
         hazards.clear();
         enemyProjectiles.clear();
         enemies.add(new AbyssalOctopus());
+        if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
+            bannerText = "ENDURANCE FINALE";
+            bannerSubtitle = "SURVIVE THE OCTOPUS FOR "
+                + Math.round(GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS) + "s";
+            bannerTimer = POWER_UP_BANNER_DURATION;
+        }
         triggerShake(13f, 0.65f);
         AudioManager.playBreath();
     }
@@ -732,6 +806,8 @@ public class GameScreen extends BaseScreen {
                 if (enemy.isDead()) {
                     enemyIterator.remove();
                     session.awardKill(enemy.getScoreValue());
+                    queueAchievements(achievementStore.recordKill(
+                        session.getCombo(), enemy.isBoss()));
                     particles.spawnExplosion(bounds.x + bounds.width / 2f,
                         bounds.y + bounds.height / 2f, enemy.isBoss() ? 1.8f : 0.75f);
                     triggerHitFeedback(enemy.isBoss() ? 18f : 7f, enemy.isBoss() ? 0.18f : 0.065f);
@@ -749,6 +825,9 @@ public class GameScreen extends BaseScreen {
             OxygenTank tank = iterator.next();
             if (tank.getBounds().overlaps(diver.getBounds())) {
                 session.collectOxygen(BASE_OXYGEN_PICKUP + session.getOxygenPickupBonus());
+                stageCollections++;
+                runCollections++;
+                queueAchievements(achievementStore.recordOxygenPickup());
                 Rectangle bounds = tank.getBounds();
                 particles.spawnOxygenBurst(bounds.x + bounds.width / 2f,
                     bounds.y + bounds.height / 2f);
@@ -810,6 +889,9 @@ public class GameScreen extends BaseScreen {
                 continue;
             }
             iterator.remove();
+            stageCollections++;
+            runCollections++;
+            queueAchievements(achievementStore.recordPowerUpPickup());
             activatePowerUp(pickup.type());
         }
     }
@@ -818,6 +900,8 @@ public class GameScreen extends BaseScreen {
         if (!type.activatesOnPickup()) {
             dashCharges = Math.min(MAX_DASH_CHARGES, dashCharges + 1);
         } else {
+            stagePowerUses++;
+            runPowerUses++;
             activePowerUps.put(type, type.duration());
         }
         if (type == PowerUpType.PRESSURE_SHIELD) {
@@ -833,6 +917,8 @@ public class GameScreen extends BaseScreen {
 
     private void useDashCharge() {
         dashCharges--;
+        stagePowerUses++;
+        runPowerUses++;
         PowerUpType type = PowerUpType.TORPEDO_DASH;
         activePowerUps.put(type, type.duration());
         invulnerabilityTimer = Math.max(invulnerabilityTimer, type.duration());
@@ -852,8 +938,11 @@ public class GameScreen extends BaseScreen {
         if (damage <= 0f) {
             return;
         }
+        float scaledDamage = damage * runSettings.difficulty().damageMultiplier();
         session.takeDamage(GameBalance.playerDamageForStage(
-            difficulty.level(), damage, session.getOxygen()));
+            difficulty.level(), scaledDamage, session.getOxygen()));
+        stageDamageEvents++;
+        runDamageEvents++;
         invulnerabilityTimer = INVULNERABILITY_DURATION;
         damageFlashTimer = 0.25f;
         Rectangle diverBounds = diver.getBounds();
@@ -905,8 +994,14 @@ public class GameScreen extends BaseScreen {
         paused = false;
         choosingUpgrade = false;
         if (!progressionRewardGranted) {
-            earnedPearls = progression.awardDistance(runDirector.distanceMeters());
+            earnedPearls = progression.awardDistance(runDirector.distanceMeters(),
+                runSettings.rewardMultiplier(), loadoutBonusesEnabled());
             progressionRewardGranted = true;
+        }
+        if (won) {
+            queueAchievements(achievementStore.recordVictory(runSettings,
+                runShotsFired == 0, runCollections == 0,
+                runPowerUses == 0, runDamageEvents == 0));
         }
         refreshHighScore();
         saveHighScore();
@@ -965,12 +1060,67 @@ public class GameScreen extends BaseScreen {
     }
 
     private float activeMagnetRange() {
-        float range = BASE_MAGNET_RANGE + progression.magnetBonusRange()
-            + equippedSuit.magnetBonusRange();
+        float range = BASE_MAGNET_RANGE;
+        if (loadoutBonusesEnabled()) {
+            range += progression.magnetBonusRange() + equippedSuit.magnetBonusRange();
+        }
         if (isPowerActive(PowerUpType.MAGNETIC_CURRENT)) {
             range += 260f;
         }
         return range;
+    }
+
+    private float adjustedEnemySpawnInterval() {
+        return difficulty.spawnInterval()
+            * runSettings.difficulty().spawnIntervalMultiplier();
+    }
+
+    private float adjustedHazardSpawnInterval() {
+        return difficulty.hazardInterval()
+            * runSettings.difficulty().spawnIntervalMultiplier();
+    }
+
+    private boolean loadoutBonusesEnabled() {
+        return !runSettings.has(ChallengeModifier.NO_UPGRADES);
+    }
+
+    private void recordCompletedStage(int completedStage) {
+        queueAchievements(achievementStore.recordStageComplete(completedStage, runSettings,
+            stageShotsFired == 0, stageCollections == 0,
+            stagePowerUses == 0, stageDamageEvents == 0));
+        stageShotsFired = 0;
+        stageCollections = 0;
+        stagePowerUses = 0;
+        stageDamageEvents = 0;
+    }
+
+    private void queueAchievements(List<Achievement> unlocked) {
+        if (unlocked.isEmpty()) {
+            return;
+        }
+        achievementQueue.addAll(unlocked);
+        if (displayedAchievement == null) {
+            showNextAchievement();
+        }
+    }
+
+    private void updateAchievementPopup(float delta) {
+        if (displayedAchievement == null) {
+            return;
+        }
+        achievementPopupTimer = Math.max(0f, achievementPopupTimer - delta);
+        if (achievementPopupTimer == 0f) {
+            displayedAchievement = null;
+            showNextAchievement();
+        }
+    }
+
+    private void showNextAchievement() {
+        displayedAchievement = achievementQueue.poll();
+        if (displayedAchievement != null) {
+            achievementPopupTimer = ACHIEVEMENT_POPUP_DURATION;
+            AudioManager.playConfirm();
+        }
     }
 
     private String activePowerText() {
@@ -1013,6 +1163,26 @@ public class GameScreen extends BaseScreen {
 
     private boolean hasActiveBoss() {
         return activeBoss() != null;
+    }
+
+    private boolean updateUnarmedBossEndurance(float delta) {
+        if (!runSettings.has(ChallengeModifier.NO_WEAPON) || !hasActiveBoss()) {
+            return false;
+        }
+        unarmedBossSurvivalTimer += delta;
+        if (unarmedBossSurvivalTimer < GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS) {
+            return false;
+        }
+        endGame(true);
+        return true;
+    }
+
+    private float bossProgressRatio(EnemyFish boss) {
+        if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
+            return MathUtils.clamp(unarmedBossSurvivalTimer
+                / GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS, 0f, 1f);
+        }
+        return boss.getHealthRatio();
     }
 
     private EnemyFish activeBoss() {
@@ -1139,7 +1309,7 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.setColor(0.2f, 0.05f, 0.25f, 1f);
             shapeRenderer.rect(405f, 660f, 470f, 16f);
             shapeRenderer.setColor(0.75f, 0.16f, 0.95f, 1f);
-            shapeRenderer.rect(405f, 660f, 470f * boss.getHealthRatio(), 16f);
+            shapeRenderer.rect(405f, 660f, 470f * bossProgressRatio(boss), 16f);
         }
 
         if (oxygenRatio < 0.25f && !gameOver && DisplaySettings.flashEffectsEnabled()) {
@@ -1159,8 +1329,12 @@ public class GameScreen extends BaseScreen {
                 game.input().pointerPressed(TOUCH_SWIM_BUTTON) ? 0.92f : 0.72f);
             shapeRenderer.rect(TOUCH_SWIM_BUTTON.x, TOUCH_SWIM_BUTTON.y,
                 TOUCH_SWIM_BUTTON.width, TOUCH_SWIM_BUTTON.height);
-            shapeRenderer.setColor(0.16f, 0.24f, 0.3f,
-                game.input().pointerPressed(TOUCH_FIRE_BUTTON) ? 0.96f : 0.76f);
+            boolean weaponDisabled = runSettings.has(ChallengeModifier.NO_WEAPON);
+            shapeRenderer.setColor(weaponDisabled ? 0.07f : 0.16f,
+                weaponDisabled ? 0.08f : 0.24f,
+                weaponDisabled ? 0.1f : 0.3f,
+                weaponDisabled ? 0.72f
+                    : game.input().pointerPressed(TOUCH_FIRE_BUTTON) ? 0.96f : 0.76f);
             shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
                 TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
             if (dashCharges > 0) {
@@ -1215,6 +1389,13 @@ public class GameScreen extends BaseScreen {
                     GAME_OVER_MENU_BUTTON.width, GAME_OVER_MENU_BUTTON.height);
             }
         }
+
+        if (displayedAchievement != null) {
+            shapeRenderer.setColor(0.015f, 0.055f, 0.1f, 0.97f);
+            shapeRenderer.rect(390f, 570f, 500f, 62f);
+            shapeRenderer.setColor(Color.GOLD);
+            shapeRenderer.rect(390f, 627f, 500f, 5f);
+        }
         endShapes();
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
@@ -1235,6 +1416,9 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.rect(TOUCH_SWIM_BUTTON.x, TOUCH_SWIM_BUTTON.y,
                 TOUCH_SWIM_BUTTON.width, TOUCH_SWIM_BUTTON.height);
             shapeRenderer.setColor(Color.LIGHT_GRAY);
+            if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
+                shapeRenderer.setColor(Color.DARK_GRAY);
+            }
             shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
                 TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
             if (dashCharges > 0) {
@@ -1275,7 +1459,8 @@ public class GameScreen extends BaseScreen {
             + Math.round(session.getMaxOxygen()), 54f, 645f);
         smallFont.draw(batch, difficulty.name(), 976f, 692f);
         smallFont.setColor(suitUiColor());
-        smallFont.draw(batch, equippedSuit.title(), 976f, 666f);
+        smallFont.draw(batch, runSettings.difficulty().title() + "  |  "
+            + equippedSuit.title(), 976f, 666f);
         smallFont.setColor(Color.WHITE);
         smallFont.draw(batch, "BELOW  " + runDirector.displayDepthMeters() + " M", 976f, 640f);
         smallFont.draw(batch, "DIST  " + formatDistance(runDirector.displayMeters()), 976f, 615f);
@@ -1296,11 +1481,22 @@ public class GameScreen extends BaseScreen {
         if (difficulty.level() == GameBalance.stageCount() && !gameOver) {
             smallFont.setColor(Color.SCARLET);
             smallFont.draw(batch, "ANY HIT IS FATAL", 24f, powerStatusY);
+            powerStatusY -= 26f;
+        }
+        if (runSettings.isChallengeRun() && !gameOver) {
+            smallFont.setColor(Color.YELLOW);
+            smallFont.draw(batch, "CHALLENGE x" + runSettings.modifiers().size()
+                + "  |  REWARD x" + String.format(Locale.ROOT, "%.2f",
+                runSettings.rewardMultiplier()), 24f, powerStatusY);
         }
 
         EnemyFish boss = activeBoss();
         if (boss != null) {
-            drawCentered(smallFont, "ABYSSAL OCTOPUS", 695f, BOSS_TEXT_COLOR);
+            String bossText = runSettings.has(ChallengeModifier.NO_WEAPON)
+                ? "SURVIVE OCTOPUS  " + Math.max(0, Math.round(
+                    GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS - unarmedBossSurvivalTimer)) + "s"
+                : "ABYSSAL OCTOPUS";
+            drawCentered(smallFont, bossText, 695f, BOSS_TEXT_COLOR);
         }
 
         if (session.getCombo() > 1) {
@@ -1310,7 +1506,12 @@ public class GameScreen extends BaseScreen {
         }
 
         if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
-            if (game.input().usingController()) {
+            if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
+                drawCentered(smallFont, "NO HARPOON CHALLENGE  |  SURVIVE BY MOVEMENT ALONE",
+                    game.input().usingTouch() ? tutorialPanelY() + 58f : 76f, Color.YELLOW);
+                drawCentered(smallFont, "AVOID THE SEABED  |  DASH IF AVAILABLE  |  PAUSE FOR OPTIONS",
+                    game.input().usingTouch() ? tutorialPanelY() + 29f : 47f, Color.LIGHT_GRAY);
+            } else if (game.input().usingController()) {
                 drawCentered(smallFont, "[A] / STICK UP SWIM  |  [X / B / RB] FIRE", 76f, Color.WHITE);
                 drawCentered(smallFont, "AVOID THE SEABED  |  [LB] DASH  |  [START] PAUSE  |  [Y] HELP",
                     47f, Color.LIGHT_GRAY);
@@ -1331,7 +1532,9 @@ public class GameScreen extends BaseScreen {
         if (game.input().isMobile() && !paused && !gameOver && !choosingUpgrade) {
             drawCenteredAt(mediumFont, "SWIM", TOUCH_SWIM_BUTTON.x + TOUCH_SWIM_BUTTON.width / 2f,
                 TOUCH_SWIM_BUTTON.y + 74f, Color.WHITE);
-            drawCenteredAt(mediumFont, "FIRE", TOUCH_FIRE_BUTTON.x + TOUCH_FIRE_BUTTON.width / 2f,
+            drawCenteredAt(mediumFont,
+                runSettings.has(ChallengeModifier.NO_WEAPON) ? "LOCKED" : "FIRE",
+                TOUCH_FIRE_BUTTON.x + TOUCH_FIRE_BUTTON.width / 2f,
                 TOUCH_FIRE_BUTTON.y + 74f, Color.WHITE);
             if (dashCharges > 0) {
                 drawCenteredAt(mediumFont, "DASH x" + dashCharges,
@@ -1362,6 +1565,10 @@ public class GameScreen extends BaseScreen {
             largeFont.setColor(1f, 0.2f, 0.18f, alpha);
             drawCenteredWithCurrentColor(largeFont, "ABYSSAL OCTOPUS AWAKENS", 560f);
         }
+        if (displayedAchievement != null) {
+            drawCentered(smallFont, "ACHIEVEMENT UNLOCKED", 617f, Color.GOLD);
+            drawCentered(mediumFont, displayedAchievement.title(), 588f, Color.WHITE);
+        }
 
         if (choosingUpgrade) {
             drawUpgradeSelection();
@@ -1388,13 +1595,25 @@ public class GameScreen extends BaseScreen {
             float centerX = 260f + i * 380f;
             Color color = i == selectedUpgradeIndex ? Color.YELLOW : Color.WHITE;
             drawCenteredAt(mediumFont, type.title(), centerX, 465f, color);
-            drawCenteredAt(smallFont, type.description(), centerX, 382f, Color.LIGHT_GRAY);
+            drawCenteredAt(smallFont, scaledUpgradeDescription(type), centerX, 382f,
+                Color.LIGHT_GRAY);
             int currentLevel = session.getUpgradeLevel(type);
             drawCenteredAt(smallFont, "LEVEL " + currentLevel + "  >  " + (currentLevel + 1),
                 centerX, 300f, UPGRADE_TEXT_COLOR);
             drawCenteredAt(largeFont, Integer.toString(i + 1), centerX, 225f,
                 i == selectedUpgradeIndex ? Color.YELLOW : Color.DARK_GRAY);
         }
+    }
+
+    private String scaledUpgradeDescription(UpgradeType type) {
+        float scale = runSettings.difficulty().upgradeEffectMultiplier();
+        return switch (type) {
+            case RAPID_FIRE -> "Harpoon cooldown -" + Math.round(18f * scale) + "%";
+            case PIERCING_HARPOON -> type.description();
+            case OXYGEN_EFFICIENCY -> "Oxygen drain -" + Math.round(15f * scale) + "%";
+            case LARGE_TANKS -> "Oxygen pickups restore +" + Math.round(10f * scale);
+            case AGILE_DIVER -> "Swimming agility +" + Math.round(12f * scale) + "%";
+        };
     }
 
     private void drawPauseMenu() {
@@ -1420,7 +1639,10 @@ public class GameScreen extends BaseScreen {
             348f, Color.CYAN);
         drawCentered(smallFont, "+" + earnedPearls + " PEARLS  |  WALLET "
             + progression.pearls(), 316f, Color.GOLD);
-        drawCentered(smallFont, "BEST SCORE  " + highScore, 286f, Color.LIGHT_GRAY);
+        drawCentered(smallFont, "BEST " + highScore + "  |  "
+            + runSettings.difficulty().title() + "  |  REWARD x"
+            + String.format(Locale.ROOT, "%.2f", runSettings.rewardMultiplier()),
+            286f, runSettings.isChallengeRun() ? Color.YELLOW : Color.LIGHT_GRAY);
         String retry = game.input().usingController() ? "[A] DIVE AGAIN"
             : game.input().usingTouch() ? "TAP TO DIVE AGAIN"
             : "[ENTER / SPACE / R] OR CLICK TO DIVE AGAIN";
@@ -1505,7 +1727,8 @@ public class GameScreen extends BaseScreen {
         hazardSpawnTimer = 0f;
         powerUpSpawnTimer = 0f;
         shootCooldownTimer = 0f;
-        invulnerabilityTimer = progression.startingShieldSeconds();
+        invulnerabilityTimer = loadoutBonusesEnabled()
+            ? progression.startingShieldSeconds() : 0f;
         if (invulnerabilityTimer > 0f) {
             activePowerUps.put(PowerUpType.PRESSURE_SHIELD, invulnerabilityTimer);
         }
@@ -1514,7 +1737,8 @@ public class GameScreen extends BaseScreen {
         tutorialTimer = 0f;
         bannerTimer = CELEBRATION_DURATION;
         bannerText = difficulty.name();
-        bannerSubtitle = "DESCENDING TO " + runDirector.displayDepthMeters() + " M";
+        bannerSubtitle = runSettings.difficulty().title() + "  |  DESCENDING TO "
+            + runDirector.displayDepthMeters() + " M";
         bossWarningTimer = 0f;
         hitStopTimer = 0f;
         shakeTimer = 0f;
@@ -1529,6 +1753,18 @@ public class GameScreen extends BaseScreen {
         nextRunUpgradeIndex = 0;
         earnedPearls = 0;
         dashCharges = 0;
+        stageShotsFired = 0;
+        runShotsFired = 0;
+        stageCollections = 0;
+        runCollections = 0;
+        stagePowerUses = 0;
+        runPowerUses = 0;
+        stageDamageEvents = 0;
+        runDamageEvents = 0;
+        achievementPopupTimer = 0f;
+        unarmedBossSurvivalTimer = 0f;
+        displayedAchievement = null;
+        achievementQueue.clear();
         upgradeChoices = Collections.emptyList();
         paused = false;
         gameOver = false;
@@ -1539,6 +1775,7 @@ public class GameScreen extends BaseScreen {
         finalePending = false;
         progressionRewardGranted = false;
         captureSwimmingUp = false;
+        finalStageAchievementRecorded = false;
         centerCamera();
         AudioManager.playBackgroundMusic();
     }

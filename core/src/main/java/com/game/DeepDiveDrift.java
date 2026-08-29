@@ -13,10 +13,13 @@ import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 import com.game.manager.GameAssets;
 import com.game.screen.GameScreen;
+import com.game.screen.AchievementScreen;
+import com.game.screen.DiveSetupScreen;
 import com.game.screen.MainMenuScreen;
 import com.game.screen.OptionsScreen;
 import com.game.screen.StoreScreen;
 import com.game.settings.DisplaySettings;
+import com.game.model.RunSettings;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -35,7 +38,11 @@ public class DeepDiveDrift extends Game {
         GameAssets.initialize();
         FontManager.initialize();
         AudioManager.initialize();
-        if (Boolean.getBoolean("deepdive.openStore")) {
+        if (Boolean.getBoolean("deepdive.openAchievements")) {
+            showAchievements();
+        } else if (Boolean.getBoolean("deepdive.openSetup")) {
+            showDiveSetup();
+        } else if (Boolean.getBoolean("deepdive.openStore")) {
             showStore();
         } else if (Boolean.getBoolean("deepdive.autostart")) {
             startNewGame();
@@ -94,7 +101,19 @@ public class DeepDiveDrift extends Game {
     }
 
     public void startNewGame() {
-        replaceScreen(new GameScreen(this));
+        startNewGame(RunSettings.standard());
+    }
+
+    public void startNewGame(RunSettings settings) {
+        replaceScreen(new GameScreen(this, settings));
+    }
+
+    public void showDiveSetup() {
+        replaceScreen(new DiveSetupScreen(this));
+    }
+
+    public void showAchievements() {
+        replaceScreen(new AchievementScreen(this));
     }
 
     public void showStore() {

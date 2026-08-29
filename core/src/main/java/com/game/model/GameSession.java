@@ -13,13 +13,22 @@ public final class GameSession {
     private float comboTimer;
     private final UpgradeLoadout upgrades;
     private final float maxOxygen;
+    private final float upgradeEffectMultiplier;
+    private final float oxygenDrainMultiplier;
 
     public GameSession() {
-        this(MAX_OXYGEN);
+        this(MAX_OXYGEN, 1f, 1f);
     }
 
     public GameSession(float maxOxygen) {
+        this(maxOxygen, 1f, 1f);
+    }
+
+    public GameSession(float maxOxygen, float upgradeEffectMultiplier,
+                       float oxygenDrainMultiplier) {
         this.maxOxygen = Math.max(MAX_OXYGEN, maxOxygen);
+        this.upgradeEffectMultiplier = Math.max(0f, upgradeEffectMultiplier);
+        this.oxygenDrainMultiplier = Math.max(0f, oxygenDrainMultiplier);
         upgrades = new UpgradeLoadout();
         reset();
     }
@@ -38,7 +47,8 @@ public final class GameSession {
         }
 
         oxygen = Math.max(0f,
-            oxygen - OXYGEN_DRAIN_PER_SECOND * upgrades.oxygenDrainMultiplier() * delta);
+            oxygen - OXYGEN_DRAIN_PER_SECOND * scaledMultiplier(
+                upgrades.oxygenDrainMultiplier()) * oxygenDrainMultiplier * delta);
         score += SURVIVAL_SCORE_PER_SECOND * delta;
 
         if (comboTimer > 0f) {
@@ -81,19 +91,20 @@ public final class GameSession {
     }
 
     public float getShootCooldownMultiplier() {
-        return upgrades.shootCooldownMultiplier();
+        return scaledMultiplier(upgrades.shootCooldownMultiplier());
     }
 
     public int getHarpoonHitCount() {
-        return upgrades.harpoonHitCount();
+        int bonusHits = upgrades.harpoonHitCount() - 1;
+        return 1 + Math.max(0, Math.round(bonusHits * upgradeEffectMultiplier));
     }
 
     public float getOxygenPickupBonus() {
-        return upgrades.oxygenPickupBonus();
+        return upgrades.oxygenPickupBonus() * upgradeEffectMultiplier;
     }
 
     public float getAgilityMultiplier() {
-        return upgrades.agilityMultiplier();
+        return scaledMultiplier(upgrades.agilityMultiplier());
     }
 
     public void addScore(float amount) {
@@ -130,5 +141,9 @@ public final class GameSession {
 
     public boolean isOutOfOxygen() {
         return oxygen <= 0f;
+    }
+
+    private float scaledMultiplier(float multiplier) {
+        return 1f + (multiplier - 1f) * upgradeEffectMultiplier;
     }
 }

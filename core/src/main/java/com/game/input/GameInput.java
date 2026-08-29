@@ -81,8 +81,15 @@ public final class GameInput {
     }
 
     public boolean confirmJustPressed() {
-        return keyJustPressed(Input.Keys.ENTER, Input.Keys.SPACE)
-            || controllerConfirm && !previousControllerConfirm;
+        return keyboardConfirmJustPressed() || controllerConfirmJustPressed();
+    }
+
+    public boolean keyboardConfirmJustPressed() {
+        return keyJustPressed(Input.Keys.ENTER, Input.Keys.SPACE);
+    }
+
+    public boolean controllerConfirmJustPressed() {
+        return controllerConfirm && !previousControllerConfirm;
     }
 
     public boolean backJustPressed() {

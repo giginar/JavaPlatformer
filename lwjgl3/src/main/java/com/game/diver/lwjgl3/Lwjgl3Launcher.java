@@ -82,13 +82,22 @@ public final class Lwjgl3Launcher {
     }
 
     private static Graphics.DisplayMode findFullscreenMode(Graphics.DisplayMode fallback) {
-        Graphics.DisplayMode selected = null;
         int requestedWidth = DisplaySettingsStore.windowWidth();
         int requestedHeight = DisplaySettingsStore.windowHeight();
+        if (fallback.width == requestedWidth && fallback.height == requestedHeight) {
+            return fallback;
+        }
+
+        Graphics.DisplayMode selected = null;
+        int closestRefreshRate = Integer.MAX_VALUE;
         for (Graphics.DisplayMode candidate : Lwjgl3ApplicationConfiguration.getDisplayModes()) {
             if (candidate.width == requestedWidth && candidate.height == requestedHeight
-                && (selected == null || candidate.refreshRate > selected.refreshRate)) {
+                && (selected == null
+                || Math.abs(candidate.refreshRate - fallback.refreshRate) < closestRefreshRate
+                || Math.abs(candidate.refreshRate - fallback.refreshRate) == closestRefreshRate
+                && candidate.bitsPerPixel > selected.bitsPerPixel)) {
                 selected = candidate;
+                closestRefreshRate = Math.abs(candidate.refreshRate - fallback.refreshRate);
             }
         }
         return selected == null ? fallback : selected;
@@ -101,6 +110,9 @@ public final class Lwjgl3Launcher {
                 case "--autostart" -> System.setProperty("deepdive.autostart", "true");
                 case "--open-options" -> System.setProperty("deepdive.openOptions", "true");
                 case "--open-store" -> System.setProperty("deepdive.openStore", "true");
+                case "--open-setup" -> System.setProperty("deepdive.openSetup", "true");
+                case "--open-achievements" ->
+                    System.setProperty("deepdive.openAchievements", "true");
                 case "--open-suits" -> {
                     System.setProperty("deepdive.openStore", "true");
                     System.setProperty("deepdive.openSuits", "true");

@@ -59,9 +59,6 @@ public final class DisplaySettings {
         if (!displayConfigurationSupported) {
             return;
         }
-        if (windowMode == WindowMode.WINDOWED && !Gdx.graphics.isFullscreen()) {
-            captureCurrentWindowSize();
-        }
         windowMode = windowMode.next(direction);
         DisplaySettingsStore.setWindowMode(windowMode);
         applyWindowMode();
@@ -206,21 +203,52 @@ public final class DisplaySettings {
     }
 
     private static void applyFullscreenResolution() {
+        Graphics.DisplayMode desktopMode = Gdx.graphics.getDisplayMode();
+        Graphics.DisplayMode selected = selectFullscreenMode(desktopMode,
+            Gdx.graphics.getDisplayModes(), windowWidth, windowHeight);
+        if (selected == null) {
+            selected = desktopMode;
+        }
+        boolean fullscreenApplied = Gdx.graphics.setFullscreenMode(selected);
+        if (!fullscreenApplied && selected != desktopMode) {
+            selected = desktopMode;
+            fullscreenApplied = Gdx.graphics.setFullscreenMode(selected);
+        }
+        if (!fullscreenApplied) {
+            windowMode = WindowMode.BORDERLESS;
+            DisplaySettingsStore.setWindowMode(windowMode);
+            Gdx.graphics.setUndecorated(true);
+            Gdx.graphics.setWindowedMode(desktopMode.width, desktopMode.height);
+            selected = desktopMode;
+        }
+        windowWidth = selected.width;
+        windowHeight = selected.height;
+        resolutionIndex = findClosestResolution(windowWidth, windowHeight);
+        DisplaySettingsStore.setWindowSize(windowWidth, windowHeight);
+    }
+
+    private static Graphics.DisplayMode selectFullscreenMode(
+        Graphics.DisplayMode desktopMode, Graphics.DisplayMode[] modes,
+        int requestedWidth, int requestedHeight) {
+        if (desktopMode.width == requestedWidth && desktopMode.height == requestedHeight) {
+            return desktopMode;
+        }
+
         Graphics.DisplayMode selected = null;
-        for (Graphics.DisplayMode candidate : Gdx.graphics.getDisplayModes()) {
-            if (candidate.width == windowWidth && candidate.height == windowHeight
-                && (selected == null || candidate.refreshRate > selected.refreshRate)) {
+        int closestRefreshRate = Integer.MAX_VALUE;
+        for (Graphics.DisplayMode candidate : modes) {
+            if (candidate.width != requestedWidth || candidate.height != requestedHeight) {
+                continue;
+            }
+            int refreshDifference = Math.abs(candidate.refreshRate - desktopMode.refreshRate);
+            if (selected == null || refreshDifference < closestRefreshRate
+                || refreshDifference == closestRefreshRate
+                && candidate.bitsPerPixel > selected.bitsPerPixel) {
                 selected = candidate;
+                closestRefreshRate = refreshDifference;
             }
         }
-        if (selected == null) {
-            selected = Gdx.graphics.getDisplayMode();
-            windowWidth = selected.width;
-            windowHeight = selected.height;
-            resolutionIndex = findClosestResolution(windowWidth, windowHeight);
-            DisplaySettingsStore.setWindowSize(windowWidth, windowHeight);
-        }
-        Gdx.graphics.setFullscreenMode(selected);
+        return selected;
     }
 
     private static int findClosestResolution(int width, int height) {

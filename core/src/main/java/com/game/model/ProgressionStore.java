@@ -38,8 +38,15 @@ public final class ProgressionStore {
     }
 
     public int awardDistance(float meters) {
+        return awardDistance(meters, 1f, true);
+    }
+
+    public int awardDistance(float meters, float runMultiplier, boolean permanentBonusesEnabled) {
         int baseReward = Math.max(0, (int) (meters / 100f));
-        float multiplier = 1f + level(PermanentUpgrade.SALVAGE_MAP) * 0.15f;
+        float salvageMultiplier = permanentBonusesEnabled
+            ? 1f + level(PermanentUpgrade.SALVAGE_MAP) * 0.15f
+            : 1f;
+        float multiplier = Math.max(0f, runMultiplier) * salvageMultiplier;
         int reward = Math.round(baseReward * multiplier);
         if (reward > 0) {
             preferences.putInteger(PEARLS_KEY, pearls() + reward);

@@ -11,8 +11,12 @@ import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 
 public class MainMenuScreen extends BaseScreen {
-    private static final String[] DESKTOP_MENU_OPTIONS = {"PLAY", "DIVE SHOP", "OPTIONS", "EXIT"};
-    private static final String[] MOBILE_MENU_OPTIONS = {"PLAY", "DIVE SHOP", "OPTIONS"};
+    private static final String[] DESKTOP_MENU_OPTIONS = {
+        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "OPTIONS", "EXIT"
+    };
+    private static final String[] MOBILE_MENU_OPTIONS = {
+        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "OPTIONS"
+    };
     private static final float TRANSITION_DURATION = 0.45f;
     private static final Color ACCENT_COLOR = new Color(0.55f, 0.9f, 1f, 1f);
 
@@ -64,7 +68,7 @@ public class MainMenuScreen extends BaseScreen {
 
         beginFilledShapes();
         shapeRenderer.setColor(0.01f, 0.05f, 0.11f, 0.78f);
-        shapeRenderer.rect(405f, 175f, 470f, 330f);
+        shapeRenderer.rect(405f, 112f, 470f, 393f);
         shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
         shapeRenderer.rect(405f, 500f, 470f, 5f);
         endShapes();
@@ -90,7 +94,7 @@ public class MainMenuScreen extends BaseScreen {
             endShapes();
 
             if (transitionAlpha >= 1f) {
-                game.startNewGame();
+                game.showDiveSetup();
             }
         }
     }
@@ -128,6 +132,10 @@ public class MainMenuScreen extends BaseScreen {
             case "PLAY" -> transitioning = true;
             case "DIVE SHOP" -> {
                 game.showStore();
+                return true;
+            }
+            case "ACHIEVEMENTS" -> {
+                game.showAchievements();
                 return true;
             }
             case "OPTIONS" -> {
