@@ -41,7 +41,7 @@ Proje Maven 3.9.16 Wrapper ve Java 21 kullanır. Yerel Maven kurulumu gerekmez:
 java -jar .\lwjgl3\target\DeepDiveDrift-1.0.0.jar
 ```
 
-İkinci komut masaüstü için bütün bağımlılıkları ve varlıkları içeren çalıştırılabilir JAR üretir. Sürüm tek noktadan, kök `pom.xml` içindeki `<version>` alanından yönetilir.
+İkinci komut masaüstü için bütün bağımlılıkları ve varlıkları içeren çalıştırılabilir JAR üretir. Maven temel sürümü kök `pom.xml` içindeki `<version>` alanından yönetilir. Windows kurulum dosyası ve Android APK/AAB sürümleri, bu temel sürüme Git commit sayısını ekleyen ortak `scripts/get-project-version.ps1` betiğinden gelir.
 
 Doğrulanmış CC0/OFL kaynaklardan oyun, ikon ve mağaza görsellerini yeniden üretmek için:
 
@@ -70,6 +70,39 @@ Git commit sayısından gelir. Örneğin proje sürümü `1.0.0` ve 26 commit i�
 installer sürümünü artırır. Geçici olarak belirli bir sürüm üretmek gerekirse
 `-Version 2.1.15` parametresiyle otomatik sürüm geçersiz kılınabilir.
 
+## Android telefonda deneme
+
+Telefona kopyalanıp kurulabilecek APK'yı üretmek ve doğrulamak için:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-test.ps1
+```
+
+Çıktı: `android/target/store/google-play/DeepDiveDrift-1.0.34-universal.apk` (34 commit için).
+APK ve AAB dosya adları ile Android'deki `versionName`, Windows kurulumuyla aynı
+otomatik sürümü kullanır: `1.0.34`, sonraki committe `1.0.35`.
+Google Play'in sayısal `versionCode` değeri de otomatik hesaplanır:
+`pom.xml` içindeki `android.version-code` başlangıç değeri + Git commit sayısı
+(34 commit için `1 + 34 = 35`). Commit olmadan tekrar derleme sürümü artırmaz.
+Dosyayı telefona kopyalayıp açarak kurabilirsiniz. Bu test için Google Play hesabı gerekmez.
+
+USB hata ayıklaması açık bir telefona mevcut APK'yı yükleyip oyunu açmak için:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-test.ps1 -SkipBuild -Install
+```
+
+Kod değişikliğinden sonra yeniden derlemek için `-SkipBuild` parametresini kaldırın.
+Birden fazla cihaz bağlıysa `-DeviceId SERI_NUMARASI` ekleyin.
+Kurulum, sorun giderme, telefon testleri ve Play Console adımları:
+[Android test ve Google Play rehberi](store/google-play/ANDROID_TEST_TR.md).
+
+Android paketlemesi `android/BundleConfig.json` ile ses dosyalarını APK içinde
+sıkıştırmadan saklar. libGDX'in Android ses yükleyicisi bunu gerektirir;
+derleme ve doğrulama betikleri son APK'daki ses dosyalarını da denetler.
+Aynı committen tekrar üretilen APK'ları ayırt etmek için yanında `.apk.sha256` dosyası oluşur.
+Kurulumdan sonra anında kapanma durumunda [cihaz hata kaydını alma adımlarını](store/google-play/ANDROID_TEST_TR.md#sorun-giderme) izleyin.
+
 ## Google Play paketi
 
 Android derlemesi için Android SDK Platform 36 ve Build Tools 36.0.0 gerekir. SDK yolu `local.properties` içindeki `sdk.dir` ile veya `ANDROID_SDK_ROOT` ortam değişkeniyle belirtilir.
@@ -91,6 +124,17 @@ Copy-Item keystore.properties.example keystore.properties
 ```
 
 `keystore.properties` ve `upload-keystore.jks` Git tarafından yok sayılır. Anahtarın güvenli bir yedeğini saklayın.
+
+Google Play'e göndermeden önce imzayı zorunlu tutan doğrulamayı çalıştırın:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-release.ps1 -SkipBuild -RequireSignedBundle
+```
+
+Bu komut imzasız AAB için hata verir; APK/AAB içindeki sürüm bilgilerini de ortak
+sürüm hesabıyla karşılaştırır. Her yeni Play yüklemesini yeni bir committen üretin;
+`android.version-code` başlangıç değerini normal sürümlerde elle artırmak gerekmez.
+Paket doğrulaması, gerçek cihaz testi ve Play Console incelemesinin yerine geçmez.
 
 ## Steam paketleri
 

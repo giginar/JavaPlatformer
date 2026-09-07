@@ -1,5 +1,6 @@
 param(
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$RequireSignedBundle
 )
 
 $ErrorActionPreference = 'Stop'
@@ -7,9 +8,16 @@ $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $androidTargetPath = Join-Path $projectRootPath 'android\target'
 $releasePath = Join-Path $androidTargetPath 'store\google-play'
 $mavenWrapper = Join-Path $projectRootPath 'mvnw.cmd'
+$pomPath = Join-Path $projectRootPath 'pom.xml'
+[xml]$projectPom = Get-Content -LiteralPath $pomPath -Raw
+$androidVersion = & (Join-Path $PSScriptRoot 'get-project-version.ps1') -ProjectRootPath $projectRootPath -Android
+$version = $androidVersion.Version
+$versionCode = $androidVersion.VersionCode
+$buildToolsVersion = [string]$projectPom.project.properties.'android.build-tools'
+$bundletoolVersion = [string]$projectPom.project.properties.'bundletool.version'
 
 if (-not $SkipBuild) {
-    & $mavenWrapper -B -ntp -Pandroid-release -pl android -am package
+    & $mavenWrapper -f $pomPath -B -ntp -Pandroid-release -pl android -am clean package
     if ($LASTEXITCODE -ne 0) {
         throw "Android release build failed with exit code $LASTEXITCODE"
     }
@@ -49,16 +57,33 @@ if (-not $sdkDirectory -and $env:ANDROID_HOME) {
 if (-not $sdkDirectory) {
     throw 'Android SDK path is missing. Set sdk.dir in local.properties or ANDROID_SDK_ROOT.'
 }
+if (-not [System.IO.Path]::IsPathRooted($sdkDirectory)) {
+    $sdkDirectory = Join-Path $projectRootPath $sdkDirectory
+}
 $sdkDirectory = [System.IO.Path]::GetFullPath($sdkDirectory)
-$zipalignPath = Join-Path $sdkDirectory 'build-tools\36.0.0\zipalign.exe'
-$apksignerPath = Join-Path $sdkDirectory 'build-tools\36.0.0\apksigner.bat'
-$releaseApk = Get-ChildItem -LiteralPath $releasePath -Filter '*-universal.apk' |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
-$releaseBundle = Get-ChildItem -LiteralPath $releasePath -Filter '*.aab' |
+$zipalignPath = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\zipalign.exe"
+$apksignerPath = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\apksigner.bat"
+$aapt2Path = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\aapt2.exe"
+$releaseApk = Get-Item -LiteralPath (Join-Path $releasePath "DeepDiveDrift-$version-universal.apk") -ErrorAction SilentlyContinue
+$bundleNames = @("DeepDiveDrift-$version-google-play.aab", "DeepDiveDrift-$version-google-play-unsigned.aab")
+$releaseBundle = Get-ChildItem -LiteralPath $releasePath -Filter '*.aab' -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -in $bundleNames } |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if (-not $releaseApk -or -not $releaseBundle) {
     throw "Release APK or AAB is missing below $releasePath"
+}
+
+$apkBadging = (& $aapt2Path dump badging $releaseApk.FullName | Out-String)
+if ($LASTEXITCODE -ne 0) { throw 'Unable to read the APK version metadata' }
+$expectedApkVersion = "versionCode='$versionCode' versionName='$([regex]::Escape($version))'"
+if ($apkBadging -notmatch $expectedApkVersion) {
+    throw "APK version does not match $version (versionCode $versionCode). Rebuild the Android package."
+}
+
+& java.exe (Join-Path $PSScriptRoot 'VerifyAndroidAudio.java') $releaseApk.FullName (Join-Path $projectRootPath 'assets')
+if ($LASTEXITCODE -ne 0) {
+    throw 'APK audio assets must be present and uncompressed for Android playback'
 }
 
 & $zipalignPath -c -P 16 -v 4 $releaseApk.FullName | Out-Null
@@ -70,14 +95,22 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Universal test APK signature verification failed'
 }
 
-$bundletoolPath = Get-ChildItem -LiteralPath (Join-Path $projectRootPath '.mvn\tools') `
-    -Filter 'bundletool-all-*.jar' | Sort-Object Name -Descending | Select-Object -First 1
+$bundletoolPath = Get-Item -LiteralPath (Join-Path $projectRootPath ".mvn\tools\bundletool-all-$bundletoolVersion.jar") -ErrorAction SilentlyContinue
 if (-not $bundletoolPath) {
     throw 'bundletool is missing; run the Android Maven release build first'
 }
-& java.exe -jar $bundletoolPath.FullName validate "--bundle=$($releaseBundle.FullName)"
+& java.exe -jar $bundletoolPath.FullName validate "--bundle=$($releaseBundle.FullName)" | Out-Null
 if ($LASTEXITCODE -ne 0) {
     throw 'bundletool validation failed'
+}
+
+$bundleManifestText = (& java.exe -jar $bundletoolPath.FullName dump manifest "--bundle=$($releaseBundle.FullName)" --module=base | Out-String)
+if ($LASTEXITCODE -ne 0) { throw 'Unable to read the AAB version metadata' }
+[xml]$bundleManifest = $bundleManifestText
+$androidNamespace = 'http://schemas.android.com/apk/res/android'
+if ($bundleManifest.manifest.GetAttribute('versionName', $androidNamespace) -ne $version -or
+    $bundleManifest.manifest.GetAttribute('versionCode', $androidNamespace) -ne [string]$versionCode) {
+    throw "AAB version does not match $version (versionCode $versionCode). Rebuild the Android package."
 }
 
 function Get-ElfLoadAlignments([string]$Path) {
@@ -167,13 +200,18 @@ try {
     }
 }
 
-$signatureOutput = (& jarsigner.exe -verify -verbose $releaseBundle.FullName 2>&1 | Out-String)
-$isSigned = $signatureOutput -notmatch 'jar is unsigned'
-if ((Test-Path -LiteralPath (Join-Path $projectRootPath 'keystore.properties')) -and -not $isSigned) {
-    throw 'keystore.properties exists, but the release AAB is unsigned'
+$signatureOutput = (& jarsigner.exe '-J-Duser.language=en' '-J-Duser.country=US' -verify -verbose $releaseBundle.FullName 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0) {
+    throw 'AAB signature verification failed'
+}
+$isSigned = $signatureOutput -match '(?m)^jar verified\.'
+if (($RequireSignedBundle -or (Test-Path -LiteralPath (Join-Path $projectRootPath 'keystore.properties'))) -and -not $isSigned) {
+    throw 'Google Play requires an upload-key signed AAB. Create the upload keystore, configure keystore.properties, and rebuild. The local test APK can still be installed.'
 }
 
 Write-Host 'Android verification passed:'
+Write-Host "  APK and AAB version: $version (versionCode $versionCode)"
+Write-Host '  Audio assets: present and uncompressed for Android openFd'
 Write-Host '  Bundletool schema: valid'
 Write-Host '  APK ZIP alignment: 16 KB compatible'
 Write-Host '  Universal APK signature: valid local debug key'

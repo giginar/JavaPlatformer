@@ -1,11 +1,5 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$Version,
-
-    [Parameter(Mandatory = $true)]
-    [int]$VersionCode,
-
-    [Parameter(Mandatory = $true)]
     [int]$MinSdk,
 
     [Parameter(Mandatory = $true)]
@@ -26,6 +20,10 @@ $dependencyPath = Join-Path $targetPath 'android-dependencies'
 $workPath = Join-Path $targetPath 'android-work'
 $outputPath = Join-Path $targetPath 'store\google-play'
 $toolsCachePath = Join-Path $projectRootPath '.mvn\tools'
+$androidVersion = & (Join-Path $PSScriptRoot 'get-project-version.ps1') -ProjectRootPath $projectRootPath -Android
+$Version = $androidVersion.Version
+$VersionCode = $androidVersion.VersionCode
+Write-Host "Building Android version $Version (versionCode $VersionCode)..."
 
 function Invoke-ExternalTool {
     param(
@@ -312,9 +310,13 @@ if ($actualBundletoolSha256 -ne $bundletoolSha256) {
 }
 
 $unsignedBundlePath = Join-Path $workPath "DeepDiveDrift-$Version-google-play-unsigned.aab"
+$bundleConfigPath = Join-Path $androidPath 'BundleConfig.json'
+# Android MediaPlayer/SoundPool use AssetManager.openFd, which requires STORED audio.
+# Store this rule in the AAB so Google Play's generated APKs also preserve it.
 Invoke-ExternalTool -FilePath $javaPath -Arguments @(
     '-jar', $bundletoolPath, 'build-bundle',
-    "--modules=$baseModuleArchivePath", "--output=$unsignedBundlePath", '--overwrite'
+    "--modules=$baseModuleArchivePath", "--output=$unsignedBundlePath",
+    "--config=$bundleConfigPath", '--overwrite'
 )
 
 $keystorePropertiesPath = Join-Path $projectRootPath 'keystore.properties'
@@ -379,6 +381,13 @@ Copy-Item -LiteralPath (Join-Path $universalApkPath 'universal.apk') -Destinatio
 Invoke-ExternalTool -FilePath $zipalignPath -Arguments @(
     '-c', '-P', '16', '-v', '4', $releaseApkPath
 )
+Invoke-ExternalTool -FilePath $javaPath -Arguments @(
+    (Join-Path $PSScriptRoot 'VerifyAndroidAudio.java'), $releaseApkPath,
+    (Join-Path $projectRootPath 'assets')
+)
+$apkSha256 = (Get-FileHash -LiteralPath $releaseApkPath -Algorithm SHA256).Hash.ToLowerInvariant()
+Set-Content -LiteralPath "$releaseApkPath.sha256" -Encoding ASCII `
+    -Value "$apkSha256  $([System.IO.Path]::GetFileName($releaseApkPath))"
 
 Write-Host 'Android release package is ready:'
 Write-Host "  AAB: $releaseBundlePath"

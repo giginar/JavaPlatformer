@@ -1,0 +1,14 @@
+{
+  "compression": {
+    "uncompressedGlob": [
+      "assets/**.mp3",
+      "assets/**.wav",
+      "assets/**.ogg",
+      "assets/**.m4a",
+      "assets/**.aac",
+      "assets/**.flac",
+      "assets/**.mid",
+      "assets/**.midi"
+    ]
+  }
+}

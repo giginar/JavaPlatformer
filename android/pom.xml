@@ -280,10 +280,6 @@
                                         <argument>Bypass</argument>
                                         <argument>-File</argument>
                                         <argument>${maven.multiModuleProjectDirectory}/scripts/build-android-release.ps1</argument>
-                                        <argument>-Version</argument>
-                                        <argument>${project.version}</argument>
-                                        <argument>-VersionCode</argument>
-                                        <argument>${android.version-code}</argument>
                                         <argument>-MinSdk</argument>
                                         <argument>${android.min-sdk}</argument>
                                         <argument>-TargetSdk</argument>

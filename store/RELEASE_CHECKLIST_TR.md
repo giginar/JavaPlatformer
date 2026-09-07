@@ -2,7 +2,7 @@
 
 ## Ortak
 
-- [x] Sürüm numarası `1.0.0`, Android version code `1`
+- [x] Windows ve Android için ortak otomatik sürüm; 34 commit için `1.0.34`, Android version code `35`
 - [x] Otomatik birim testleri
 - [x] Klavye, fare, gamepad ve dokunmatik girişleri
 - [x] Çevrimdışı çalışma; reklam, analitik ve hesap SDK’sı yok
@@ -16,6 +16,7 @@
 - [x] Paket adı: `com.game.diver.deepdivedrift`
 - [x] `targetSdk 36`, dört ABI ve AAB üretimi
 - [x] APK ZIP hizalaması ve dört ABI için 16 KB ELF uyumluluğu doğrulandı
+- [x] Android ses dosyaları sıkıştırılmadan paketleniyor; evrensel APK ve örnek ARM64 split üzerinde doğrulandı
 - [x] Veri güvenliği ve mağaza metni taslakları
 - [x] 512×512 ikon ve 1024×500 özellik görseli üretildi
 - [ ] Google Play geliştirici hesabı ve kimlik doğrulaması

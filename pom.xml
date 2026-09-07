@@ -33,6 +33,7 @@
         <android.target-sdk>36</android.target-sdk>
         <android.min-sdk>21</android.min-sdk>
         <android.build-tools>36.0.0</android.build-tools>
+        <!-- Android update counter = this base value + Git commit count. -->
         <android.version-code>1</android.version-code>
         <bundletool.version>1.18.3</bundletool.version>
         <maven.compiler.version>3.14.1</maven.compiler.version>

@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$ProjectRootPath = ''
+    [string]$ProjectRootPath = '',
+    [switch]$Android
 )
 
 Set-StrictMode -Version Latest
@@ -53,4 +54,19 @@ if ($LASTEXITCODE -eq 0 -and $workingTreeChanges) {
     Write-Warning 'The working tree has uncommitted changes; the version identifies HEAD, not those changes.'
 }
 
-Write-Output "$major.$minor.$build"
+$version = "$major.$minor.$build"
+if ($Android) {
+    # Keep Android's update counter independent of changes to the base semantic version.
+    $baseVersionCodeText = [string]$projectPom.project.properties.'android.version-code'
+    if ($baseVersionCodeText -notmatch '^\d+$') {
+        throw 'android.version-code must be a positive integer in pom.xml.'
+    }
+    $baseVersionCode = [long]$baseVersionCodeText
+    $versionCode = $baseVersionCode + [long]$commitCountText
+    if ($baseVersionCode -lt 1 -or $versionCode -gt 2100000000) {
+        throw "The Android version code must be between 1 and 2100000000, got: $versionCode"
+    }
+    Write-Output ([pscustomobject]@{ Version = $version; VersionCode = [int]$versionCode })
+} else {
+    Write-Output $version
+}
