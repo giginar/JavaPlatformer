@@ -74,6 +74,10 @@ yerel test APK'sından Play sürümüne doğrudan güncelleme mümkün olmayabil
 
 ## Telefonda denenecekler
 
+- İlk açılışta ses seçimi gelene kadar müzik ve efektler sessiz kalıyor mu? **PLAY SILENTLY** seçimi yeniden açılışta hatırlanıyor mu?
+- Ana menüde **SOUND** ile tüm sesler anında kapanıyor mu? **− / +** ile seviye değişiyor ve sesi yeniden açınca önceki seviye geri geliyor mu?
+- Büyütülen **PAUSE** düğmesine rahatça dokunulabiliyor mu? Üstteki oyun bilgileri okunabiliyor mu?
+- %50 büyütülen dalgıç ve ince kenar çizgisi, koyu kostüm dahil, arka plandan rahatça ayırt edilebiliyor mu? Yüzme ve ateş sırasında görsel hizalama doğru mu?
 - Ana menü, dalış hazırlığı, ayarlar, oyun içi mağaza ve başarımlar dokunmayla kullanılabiliyor mu?
 - Yüzme düğmesini basılı tutarken diğer parmakla ateş edilebiliyor mu? Çentik ve sistem hareket alanları düğmeleri kapatıyor mu?
 - Duraklatma, devam etme ve Android geri düğmesi doğru çalışıyor mu?

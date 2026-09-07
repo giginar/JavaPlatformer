@@ -18,6 +18,7 @@ import com.game.screen.DiveSetupScreen;
 import com.game.screen.MainMenuScreen;
 import com.game.screen.OptionsScreen;
 import com.game.screen.StoreScreen;
+import com.game.screen.SoundChoiceScreen;
 import com.game.settings.DisplaySettings;
 import com.game.model.RunSettings;
 
@@ -38,6 +39,10 @@ public class DeepDiveDrift extends Game {
         GameAssets.initialize();
         FontManager.initialize();
         AudioManager.initialize();
+        if (AudioManager.needsStartupSoundChoice()) {
+            setScreen(new SoundChoiceScreen(this));
+            return;
+        }
         if (Boolean.getBoolean("deepdive.openAchievements")) {
             showAchievements();
         } else if (Boolean.getBoolean("deepdive.openSetup")) {

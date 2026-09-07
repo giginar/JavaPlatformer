@@ -1,5 +1,6 @@
 package com.game.manager;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
@@ -13,6 +14,10 @@ public class AudioManager {
 
     private static boolean musicOn = true;
     private static boolean sfxOn = true;
+    private static float masterVolume = 1f;
+    private static float lastAudibleVolume = 1f;
+    private static boolean soundChoicePending;
+    private static Sound[] soundEffects;
 
     private static boolean initialized = false;
     private static Preferences prefs;
@@ -24,10 +29,17 @@ public class AudioManager {
 
         musicOn = prefs.getBoolean("musicOn", true);
         sfxOn = prefs.getBoolean("sfxOn", true);
+        masterVolume = clampVolume(prefs.getFloat("masterVolume", 1f));
+        lastAudibleVolume = masterVolume > 0f ? masterVolume
+            : Math.max(0.25f, clampVolume(prefs.getFloat("lastAudibleVolume", 1f)));
+        Application.ApplicationType platform = Gdx.app.getType();
+        soundChoicePending = (platform == Application.ApplicationType.Android
+            || platform == Application.ApplicationType.iOS)
+            && !prefs.getBoolean("startupSoundChosen", false);
 
         backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("underwater.mp3"));
         backgroundMusic.setLooping(true);
-        backgroundMusic.setVolume(0.3f);
+        backgroundMusic.setVolume(0.3f * effectiveVolume());
 
         shootSound = Gdx.audio.newSound(Gdx.files.internal("shoot.wav"));
         hitSound = Gdx.audio.newSound(Gdx.files.internal("hit.wav"));
@@ -36,16 +48,19 @@ public class AudioManager {
         breathSound = Gdx.audio.newSound(Gdx.files.internal("breath.mp3"));
         selectSound = Gdx.audio.newSound(Gdx.files.internal("select.wav"));
         confirmSound = Gdx.audio.newSound(Gdx.files.internal("confirm.wav"));
+        soundEffects = new Sound[] {
+            shootSound, hitSound, oxygenSound, gameoverSound, breathSound, selectSound, confirmSound
+        };
 
         initialized = true;
-        if (musicOn) backgroundMusic.play();
+        playBackgroundMusic();
     }
 
 
     public static void playBackgroundMusic() {
-        if (musicOn && backgroundMusic != null && !backgroundMusic.isPlaying()) {
+        if (musicOn && effectiveVolume() > 0f && backgroundMusic != null && !backgroundMusic.isPlaying()) {
             backgroundMusic.setLooping(true);
-            backgroundMusic.setVolume(0.3f);
+            backgroundMusic.setVolume(0.3f * effectiveVolume());
             backgroundMusic.play();
         }
     }
@@ -53,19 +68,68 @@ public class AudioManager {
     public static void updateMusicState(boolean enabled) {
         musicOn = enabled;
         saveBoolean("musicOn", enabled);
-        if (backgroundMusic == null) {
-            return;
-        }
-        if (enabled && !backgroundMusic.isPlaying()) {
-            backgroundMusic.play();
-        } else if (!enabled) {
-            backgroundMusic.pause();
-        }
+        applyMusicVolume();
     }
 
     public static void updateSfxState(boolean enabled) {
         sfxOn = enabled;
         saveBoolean("sfxOn", enabled);
+        if (!enabled) stopSoundEffects();
+    }
+
+    public static boolean needsStartupSoundChoice() {
+        return soundChoicePending;
+    }
+
+    public static void chooseStartupSound(boolean enabled) {
+        soundChoicePending = false;
+        prefs.putBoolean("startupSoundChosen", true);
+        setMasterVolume(enabled ? lastAudibleVolume : 0f);
+    }
+
+    public static float getMasterVolume() {
+        return masterVolume;
+    }
+
+    public static void toggleMute() {
+        setMasterVolume(masterVolume > 0f ? 0f : lastAudibleVolume);
+    }
+
+    public static void setMasterVolume(float volume) {
+        masterVolume = clampVolume(volume);
+        if (masterVolume > 0f) lastAudibleVolume = masterVolume;
+        if (prefs != null) {
+            prefs.putFloat("masterVolume", masterVolume);
+            prefs.putFloat("lastAudibleVolume", lastAudibleVolume);
+            prefs.flush();
+        }
+        stopSoundEffects();
+        applyMusicVolume();
+    }
+
+    private static void applyMusicVolume() {
+        if (backgroundMusic == null) return;
+        backgroundMusic.setVolume(0.3f * effectiveVolume());
+        if (!musicOn || effectiveVolume() == 0f) {
+            backgroundMusic.pause();
+        } else {
+            playBackgroundMusic();
+        }
+    }
+
+    private static float effectiveVolume() {
+        return soundChoicePending ? 0f : masterVolume;
+    }
+
+    private static float clampVolume(float volume) {
+        return Float.isNaN(volume) || Float.isInfinite(volume) ? 0f
+            : Math.max(0f, Math.min(1f, volume));
+    }
+
+    private static void stopSoundEffects() {
+        if (soundEffects != null) {
+            for (Sound sound : soundEffects) sound.stop();
+        }
     }
 
     public static void playShoot() {
@@ -132,6 +196,8 @@ public class AudioManager {
         breathSound = null;
         selectSound = null;
         confirmSound = null;
+        soundEffects = null;
+        soundChoicePending = false;
         prefs = null;
         initialized = false;
     }
@@ -141,8 +207,8 @@ public class AudioManager {
     }
 
     private static void play(Sound sound) {
-        if (initialized && sfxOn && sound != null) {
-            sound.play();
+        if (initialized && sfxOn && effectiveVolume() > 0f && sound != null) {
+            sound.play(effectiveVolume());
         }
     }
 

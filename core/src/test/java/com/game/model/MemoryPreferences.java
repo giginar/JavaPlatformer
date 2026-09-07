@@ -5,7 +5,7 @@ import com.badlogic.gdx.Preferences;
 import java.util.HashMap;
 import java.util.Map;
 
-final class MemoryPreferences implements Preferences {
+public final class MemoryPreferences implements Preferences {
     private final Map<String, Object> values = new HashMap<>();
 
     @Override

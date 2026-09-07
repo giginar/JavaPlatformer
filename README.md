@@ -21,8 +21,24 @@ Apple/iOS ve macOS bu sürüm çalışmasının kapsamına dahil değildir.
 
 Dokunmatik düğmeler ekranın güvenli alanlarına göre yerleşir. Menü, ayarlar, yükseltme seçimi, duraklatma ve sonuç ekranlarının tamamı dokunmatik ve gamepad ile kullanılabilir.
 
+Telefondaki duraklatma düğmesi, daha büyük dokunma alanı ve belirgin `PAUSE` simgesiyle
+sağ üstteki oyun bilgilerinin altında bulunur.
+
+## Hızlı ses kontrolü
+
+Telefonda ilk açılışta, ana menüden önce **PLAY SILENTLY / ENABLE SOUND** seçimi gösterilir.
+Seçim yapılana kadar müzik ve ses efektleri çalmaz. Tercih cihazda hatırlanır;
+sessiz oynamayı seçtiyseniz sonraki açılış da sessiz olur.
+
+Ana menüdeki **SOUND** satırına dokunarak tüm oyun seslerini susturabilir veya önceki
+ses seviyesine dönebilirsiniz. **− / +** düğmeleri müzik ve efektlerin ortak sesini
+yüzde 25'lik adımlarla değiştirir. Klavye/gamepad ile SOUND satırını seçip sol/sağ ile
+seviyeyi değiştirebilir, seçim tuşuyla susturabilirsiniz. OPTIONS içindeki müzik ve
+efekt tercihleri ayrıca korunur.
+
 ## Oynanış
 
+- Dalgıç görseli %50 büyütüldü; ince, açık renkli kenar çizgisi koyu arka planlarda takibi kolaylaştırır. Kamera görüş alanı, yüzme hareketi ve çarpışma alanı aynı kalır.
 - Oksijen zamanla azalır; tüpler ve avlar oksijen kazandırır.
 - Art arda avlar en fazla `x3` puan çarpanına ulaşan combo oluşturur.
 - `1000`, `2500` ve `5000` puanda bir yükseltme seçilir.

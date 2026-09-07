@@ -3,6 +3,7 @@ package com.game.diver;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -23,6 +24,8 @@ public class Diver {
     private static final float SWIM_VELOCITY = 230f;
     private static final float MAX_FALL_SPEED = -280f;
     private static final float HITBOX_PADDING = 8f;
+    // Enlarge the artwork around its center without changing movement or collision bounds.
+    private static final float VISUAL_SCALE = 1.5f;
 
     public static final float WIDTH = 64f;
     public static final float HEIGHT = 64f;
@@ -70,14 +73,28 @@ public class Diver {
         sprite.setPosition(position.x, position.y);
         sprite.setRotation(MathUtils.clamp(velocity.y * 0.045f, -12f, 10f));
         float breathing = MathUtils.sin(animationTime * 4f) * 0.025f;
-        sprite.setScale(1f + breathing, 1f - breathing * 0.6f);
+        sprite.setScale(VISUAL_SCALE * (1f + breathing),
+            VISUAL_SCALE * (1f - breathing * 0.6f));
         boolean dimmed = invulnerabilityTimer > 0f && ((int) (invulnerabilityTimer * 14f) % 2 == 0);
         if (suit == DiverSuit.ABYSS_BLACK) {
             sprite.setColor(0.52f, 0.54f, 0.62f, dimmed ? 0.3f : 1f);
         } else {
             sprite.setColor(1f, 1f, 1f, dimmed ? 0.3f : 1f);
         }
-        sprite.draw(batch);
+        ShaderProgram outlineShader = GameAssets.diverOutlineShader();
+        if (outlineShader == null) {
+            sprite.draw(batch);
+            return;
+        }
+        ShaderProgram previousShader = batch.getShader();
+        batch.setShader(outlineShader);
+        try {
+            outlineShader.setUniformf("u_texelSize", 1f / sprite.getTexture().getWidth(),
+                1f / sprite.getTexture().getHeight());
+            sprite.draw(batch);
+        } finally {
+            batch.setShader(previousShader);
+        }
     }
 
     public float getX() {

@@ -82,7 +82,10 @@ public class GameScreen extends BaseScreen {
     private static final Rectangle TOUCH_SWIM_BUTTON = new Rectangle(32f, 28f, 230f, 120f);
     private static final Rectangle TOUCH_FIRE_BUTTON = new Rectangle(1018f, 28f, 230f, 120f);
     private static final Rectangle TOUCH_DASH_BUTTON = new Rectangle(530f, 28f, 220f, 76f);
-    private static final Rectangle TOUCH_PAUSE_BUTTON = new Rectangle(1182f, 548f, 66f, 66f);
+    private static final float TOUCH_PAUSE_WIDTH = 112f;
+    private static final float TOUCH_PAUSE_HEIGHT = 96f;
+    private static final Rectangle TOUCH_PAUSE_BUTTON = new Rectangle(1136f, 464f,
+        TOUCH_PAUSE_WIDTH, TOUCH_PAUSE_HEIGHT);
     private static final Rectangle GAME_OVER_RETRY_BUTTON = new Rectangle(405f, 236f, 470f, 48f);
     private static final Rectangle GAME_OVER_MENU_BUTTON = new Rectangle(405f, 194f, 470f, 38f);
 
@@ -1346,6 +1349,10 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.setColor(0.01f, 0.08f, 0.15f, 0.8f);
             shapeRenderer.rect(TOUCH_PAUSE_BUTTON.x, TOUCH_PAUSE_BUTTON.y,
                 TOUCH_PAUSE_BUTTON.width, TOUCH_PAUSE_BUTTON.height);
+            shapeRenderer.setColor(Color.WHITE);
+            float pauseCenterX = TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width / 2f;
+            shapeRenderer.rect(pauseCenterX - 19f, TOUCH_PAUSE_BUTTON.y + 44f, 12f, 34f);
+            shapeRenderer.rect(pauseCenterX + 7f, TOUCH_PAUSE_BUTTON.y + 44f, 12f, 34f);
         }
 
         if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
@@ -1541,8 +1548,8 @@ public class GameScreen extends BaseScreen {
                     TOUCH_DASH_BUTTON.x + TOUCH_DASH_BUTTON.width / 2f,
                     TOUCH_DASH_BUTTON.y + 52f, Color.WHITE);
             }
-            drawCenteredAt(smallFont, "II", TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width / 2f,
-                TOUCH_PAUSE_BUTTON.y + 44f, Color.WHITE);
+            drawCenteredAt(smallFont, "PAUSE", TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width / 2f,
+                TOUCH_PAUSE_BUTTON.y + 28f, Color.WHITE);
         }
 
         if (bannerTimer > 0f && !paused && !gameOver && !choosingUpgrade) {
@@ -1684,8 +1691,8 @@ public class GameScreen extends BaseScreen {
             28f + safeBottom, 230f, 120f);
         TOUCH_DASH_BUTTON.set((GameConfig.WORLD_WIDTH - 220f) / 2f,
             28f + safeBottom, 220f, 76f);
-        TOUCH_PAUSE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 98f,
-            GameConfig.WORLD_HEIGHT - safeTop - 172f, 66f, 66f);
+        TOUCH_PAUSE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 32f - TOUCH_PAUSE_WIDTH,
+            GameConfig.WORLD_HEIGHT - safeTop - 256f, TOUCH_PAUSE_WIDTH, TOUCH_PAUSE_HEIGHT);
     }
 
     private float tutorialPanelY() {

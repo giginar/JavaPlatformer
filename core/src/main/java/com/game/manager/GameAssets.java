@@ -1,7 +1,9 @@
 package com.game.manager;
 
 import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 
 public final class GameAssets {
     public static final String BACKGROUND = "background.png";
@@ -31,6 +33,7 @@ public final class GameAssets {
     };
 
     private static AssetManager manager;
+    private static ShaderProgram diverOutlineShader;
 
     private GameAssets() {
     }
@@ -51,6 +54,16 @@ public final class GameAssets {
                 Texture texture = newManager.get(path, Texture.class);
                 texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
             }
+            ShaderProgram outlineShader = new ShaderProgram(
+                Gdx.files.internal("shaders/diver-outline.vert"),
+                Gdx.files.internal("shaders/diver-outline.frag"));
+            if (outlineShader.isCompiled()) {
+                diverOutlineShader = outlineShader;
+            } else {
+                // This cosmetic effect must not prevent play on a device with a shader issue.
+                Gdx.app.error("GameAssets", "Diver outline unavailable: " + outlineShader.getLog());
+                outlineShader.dispose();
+            }
             manager = newManager;
         } catch (RuntimeException exception) {
             newManager.dispose();
@@ -65,11 +78,19 @@ public final class GameAssets {
         return manager.get(path, Texture.class);
     }
 
+    public static ShaderProgram diverOutlineShader() {
+        return diverOutlineShader;
+    }
+
     public static void dispose() {
         if (manager == null) {
             return;
         }
         manager.dispose();
         manager = null;
+        if (diverOutlineShader != null) {
+            diverOutlineShader.dispose();
+            diverOutlineShader = null;
+        }
     }
 }
