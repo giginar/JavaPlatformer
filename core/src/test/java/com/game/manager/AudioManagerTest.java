@@ -108,6 +108,8 @@ class AudioManagerTest {
 
         assertFalse(AudioManager.needsStartupSoundChoice());
         assertEquals(0f, AudioManager.getMasterVolume());
+        assertFalse(AudioManager.isMusicEnabled());
+        assertFalse(AudioManager.isSfxEnabled());
         assertEquals(0, musicStarts);
         assertEquals(0, effectStarts);
     }
@@ -149,27 +151,148 @@ class AudioManagerTest {
         AudioManager.playConfirm();
 
         assertFalse(musicPlaying);
+        assertFalse(AudioManager.isMusicEnabled());
+        assertFalse(AudioManager.isSfxEnabled());
         assertEquals(0f, musicVolume);
         assertEquals(1, effectStarts);
         assertTrue(effectStops > previousStops);
         AudioManager.toggleMute();
         assertTrue(musicPlaying);
+        assertTrue(AudioManager.isMusicEnabled());
+        assertTrue(AudioManager.isSfxEnabled());
         assertEquals(0.5f, AudioManager.getMasterVolume());
         assertEquals(0.15f, musicVolume, 0.0001f);
     }
 
     @Test
-    void globalVolumePreservesSeparateMusicAndEffectsPreferences() {
+    void adjustingAudibleVolumePreservesSeparateMusicAndEffectsPreferences() {
         preferences.putBoolean("startupSoundChosen", true);
         preferences.putBoolean("musicOn", false);
-        preferences.putBoolean("sfxOn", false);
+        preferences.putBoolean("sfxOn", true);
         AudioManager.initialize();
-        AudioManager.toggleMute();
-        AudioManager.toggleMute();
+        AudioManager.setMasterVolume(0.5f);
         AudioManager.playShoot();
 
         assertEquals(0, musicStarts);
+        assertEquals(1, effectStarts);
+        assertEquals(0.5f, effectVolume);
+        assertFalse(AudioManager.isMusicEnabled());
+        assertTrue(AudioManager.isSfxEnabled());
+    }
+
+    @Test
+    void settingVolumeToZeroTurnsOffAndSavesBothOptionsAcrossLaunches() {
+        preferences.putBoolean("startupSoundChosen", true);
+        AudioManager.initialize();
+        AudioManager.setMasterVolume(0.25f);
+        AudioManager.setMasterVolume(0f);
+
+        assertFalse(AudioManager.isMusicEnabled());
+        assertFalse(AudioManager.isSfxEnabled());
+        assertFalse(preferences.getBoolean("musicOn"));
+        assertFalse(preferences.getBoolean("sfxOn"));
+        AudioManager.dispose();
+        AudioManager.initialize();
+        assertEquals(0f, AudioManager.getMasterVolume());
+        assertFalse(AudioManager.isMusicEnabled());
+        assertFalse(AudioManager.isSfxEnabled());
+
+        AudioManager.setMasterVolume(0.25f);
+        AudioManager.playShoot();
+        assertTrue(AudioManager.isMusicEnabled());
+        assertTrue(AudioManager.isSfxEnabled());
+        assertTrue(musicPlaying);
+        assertEquals(0.25f, effectVolume);
+        assertTrue(preferences.getBoolean("musicOn"));
+        assertTrue(preferences.getBoolean("sfxOn"));
+    }
+
+    @Test
+    void enablingOnlyMusicFromOptionsRestoresVolumeWithoutEnablingEffects() {
+        preferences.putBoolean("startupSoundChosen", true);
+        preferences.putFloat("masterVolume", 0.5f);
+        AudioManager.initialize();
+        AudioManager.toggleMute();
+        AudioManager.toggleMusic();
+        AudioManager.playShoot();
+
+        assertEquals(0.5f, AudioManager.getMasterVolume());
+        assertEquals(0.5f, preferences.getFloat("masterVolume"));
+        assertTrue(AudioManager.isMusicEnabled());
+        assertFalse(AudioManager.isSfxEnabled());
+        assertTrue(musicPlaying);
+        assertEquals(0.15f, musicVolume, 0.0001f);
         assertEquals(0, effectStarts);
+    }
+
+    @Test
+    void enablingOnlyEffectsFromOptionsRestoresVolumeWithoutEnablingMusic() {
+        preferences.putBoolean("startupSoundChosen", true);
+        preferences.putFloat("masterVolume", 0f);
+        preferences.putFloat("lastAudibleVolume", 0.75f);
+        AudioManager.initialize();
+        AudioManager.toggleSfx();
+        AudioManager.playShoot();
+
+        assertEquals(0.75f, AudioManager.getMasterVolume());
+        assertFalse(AudioManager.isMusicEnabled());
+        assertTrue(AudioManager.isSfxEnabled());
+        assertFalse(musicPlaying);
+        assertEquals(0.75f, effectVolume);
+        AudioManager.dispose();
+        AudioManager.initialize();
+        assertEquals(0.75f, AudioManager.getMasterVolume());
+        assertFalse(AudioManager.isMusicEnabled());
+        assertTrue(AudioManager.isSfxEnabled());
+    }
+
+    @Test
+    void disablingBothOptionsMutesTheMainMenuAndRetainsTheLastVolume() {
+        preferences.putBoolean("startupSoundChosen", true);
+        preferences.putFloat("masterVolume", 0.5f);
+        AudioManager.initialize();
+        AudioManager.toggleMusic();
+        assertEquals(0.5f, AudioManager.getMasterVolume());
+        AudioManager.toggleSfx();
+        AudioManager.playShoot();
+
+        assertEquals(0f, AudioManager.getMasterVolume());
+        assertEquals(0f, preferences.getFloat("masterVolume"));
+        assertEquals(0.5f, preferences.getFloat("lastAudibleVolume"));
+        assertFalse(musicPlaying);
+        assertEquals(0, effectStarts);
+        AudioManager.toggleMute();
+        assertEquals(0.5f, AudioManager.getMasterVolume());
+        assertTrue(AudioManager.isMusicEnabled());
+        assertTrue(AudioManager.isSfxEnabled());
+    }
+
+    @Test
+    void oldMutedPreferencesAreReconciledWithOptionsOnLaunch() {
+        preferences.putBoolean("startupSoundChosen", true);
+        preferences.putFloat("masterVolume", 0f);
+        preferences.putBoolean("musicOn", true);
+        preferences.putBoolean("sfxOn", true);
+        AudioManager.initialize();
+
+        assertFalse(AudioManager.isMusicEnabled());
+        assertFalse(AudioManager.isSfxEnabled());
+        assertFalse(preferences.getBoolean("musicOn"));
+        assertFalse(preferences.getBoolean("sfxOn"));
+        assertFalse(musicPlaying);
+    }
+
+    @Test
+    void oldDisabledChannelsAreReconciledWithTheMainMenuOnLaunch() {
+        preferences.putBoolean("startupSoundChosen", true);
+        preferences.putFloat("masterVolume", 0.75f);
+        preferences.putBoolean("musicOn", false);
+        preferences.putBoolean("sfxOn", false);
+        AudioManager.initialize();
+
+        assertEquals(0f, AudioManager.getMasterVolume());
+        assertEquals(0f, preferences.getFloat("masterVolume"));
+        assertEquals(0.75f, preferences.getFloat("lastAudibleVolume"));
         assertFalse(AudioManager.isMusicEnabled());
         assertFalse(AudioManager.isSfxEnabled());
     }

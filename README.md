@@ -33,8 +33,14 @@ sessiz oynamayı seçtiyseniz sonraki açılış da sessiz olur.
 Ana menüdeki **SOUND** satırına dokunarak tüm oyun seslerini susturabilir veya önceki
 ses seviyesine dönebilirsiniz. **− / +** düğmeleri müzik ve efektlerin ortak sesini
 yüzde 25'lik adımlarla değiştirir. Klavye/gamepad ile SOUND satırını seçip sol/sağ ile
-seviyeyi değiştirebilir, seçim tuşuyla susturabilirsiniz. OPTIONS içindeki müzik ve
-efekt tercihleri ayrıca korunur.
+seviyeyi değiştirebilir, seçim tuşuyla susturabilirsiniz.
+
+Ana menüde ses sıfıra indirildiğinde veya susturulduğunda OPTIONS içindeki **MUSIC**
+ve **SOUND EFFECTS** de **OFF** olur. Ana menüden ses tekrar açıldığında ikisi de açılır.
+OPTIONS'tan yalnızca birini açmak, son ses seviyesini geri getirerek sadece o ses türünü
+etkinleştirir; ikisini de kapatmak ana menüyü **SOUND OFF** durumuna getirir. Ses açıkken
+seviyeyi değiştirmek, müzik ve efektlerin ayrı seçimlerini korur. Bu ayarlar sonraki
+açılışta da hatırlanır.
 
 ## Oynanış
 

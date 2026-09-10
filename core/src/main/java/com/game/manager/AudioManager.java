@@ -32,6 +32,14 @@ public class AudioManager {
         masterVolume = clampVolume(prefs.getFloat("masterVolume", 1f));
         lastAudibleVolume = masterVolume > 0f ? masterVolume
             : Math.max(0.25f, clampVolume(prefs.getFloat("lastAudibleVolume", 1f)));
+        // Reconcile preferences saved before the menu and channel switches were linked.
+        if (masterVolume == 0f) {
+            musicOn = false;
+            sfxOn = false;
+        } else if (!musicOn && !sfxOn) {
+            masterVolume = 0f;
+        }
+        saveSettings();
         Application.ApplicationType platform = Gdx.app.getType();
         soundChoicePending = (platform == Application.ApplicationType.Android
             || platform == Application.ApplicationType.iOS)
@@ -67,14 +75,17 @@ public class AudioManager {
 
     public static void updateMusicState(boolean enabled) {
         musicOn = enabled;
-        saveBoolean("musicOn", enabled);
+        syncMasterVolumeWithChannels();
+        saveSettings();
         applyMusicVolume();
     }
 
     public static void updateSfxState(boolean enabled) {
         sfxOn = enabled;
-        saveBoolean("sfxOn", enabled);
+        syncMasterVolumeWithChannels();
+        saveSettings();
         if (!enabled) stopSoundEffects();
+        applyMusicVolume();
     }
 
     public static boolean needsStartupSoundChoice() {
@@ -96,15 +107,29 @@ public class AudioManager {
     }
 
     public static void setMasterVolume(float volume) {
+        boolean wasMuted = masterVolume == 0f;
         masterVolume = clampVolume(volume);
-        if (masterVolume > 0f) lastAudibleVolume = masterVolume;
-        if (prefs != null) {
-            prefs.putFloat("masterVolume", masterVolume);
-            prefs.putFloat("lastAudibleVolume", lastAudibleVolume);
-            prefs.flush();
+        if (masterVolume == 0f) {
+            musicOn = false;
+            sfxOn = false;
+        } else {
+            lastAudibleVolume = masterVolume;
+            if (wasMuted) {
+                musicOn = true;
+                sfxOn = true;
+            }
         }
+        saveSettings();
         stopSoundEffects();
         applyMusicVolume();
+    }
+
+    private static void syncMasterVolumeWithChannels() {
+        if (!musicOn && !sfxOn) {
+            masterVolume = 0f;
+        } else if (masterVolume == 0f) {
+            masterVolume = lastAudibleVolume;
+        }
     }
 
     private static void applyMusicVolume() {
@@ -212,9 +237,12 @@ public class AudioManager {
         }
     }
 
-    private static void saveBoolean(String key, boolean value) {
+    private static void saveSettings() {
         if (prefs != null) {
-            prefs.putBoolean(key, value);
+            prefs.putBoolean("musicOn", musicOn);
+            prefs.putBoolean("sfxOn", sfxOn);
+            prefs.putFloat("masterVolume", masterVolume);
+            prefs.putFloat("lastAudibleVolume", lastAudibleVolume);
             prefs.flush();
         }
     }
