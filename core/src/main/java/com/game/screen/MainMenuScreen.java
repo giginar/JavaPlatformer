@@ -72,18 +72,14 @@ public class MainMenuScreen extends BaseScreen {
         batch.end();
 
         beginFilledShapes();
-        shapeRenderer.setColor(0.01f, 0.05f, 0.11f, 0.78f);
-        shapeRenderer.rect(405f, 94f, 470f, 450f);
-        shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
-        shapeRenderer.rect(405f, 539f, 470f, 5f);
         shapeRenderer.setColor(0.05f, 0.24f, 0.32f, 1f);
         shapeRenderer.rect(VOLUME_DOWN.x, VOLUME_DOWN.y, VOLUME_DOWN.width, VOLUME_DOWN.height);
         shapeRenderer.rect(VOLUME_UP.x, VOLUME_UP.y, VOLUME_UP.width, VOLUME_UP.height);
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "DEEP DIVE DRIFT", 610f, Color.WHITE);
-        drawCentered(smallFont, "SURVIVE THE ABYSS", 557f, ACCENT_COLOR);
+        drawCentered(largeFont, "DEEP DIVE DRIFT", 644f, Color.WHITE);
+        drawCentered(smallFont, "SURVIVE THE ABYSS", 580f, ACCENT_COLOR);
 
         for (int i = 0; i < menuOptions.length; i++) {
             Color color = i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY;
