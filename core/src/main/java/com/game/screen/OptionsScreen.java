@@ -19,6 +19,7 @@ public class OptionsScreen extends BaseScreen {
         Option.SOUND_EFFECTS,
         Option.SCREEN_SHAKE,
         Option.FLASH_EFFECTS,
+        Option.CONTROLS,
         Option.BACK
     };
 
@@ -60,36 +61,30 @@ public class OptionsScreen extends BaseScreen {
         shapeRenderer.rect(250f, 55f, 780f, 610f);
         shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
         shapeRenderer.rect(250f, 660f, 780f, 5f);
+        for (int i = 0; i < options.length; i++) {
+            rowBounds(i);
+            drawUiButton(optionRow, i == selectedIndex);
+        }
         endShapes();
 
         batch.begin();
         drawCentered(largeFont, "OPTIONS", 625f, Color.WHITE);
 
-        float startY = optionStartY();
-        float spacing = optionSpacing();
         for (int i = 0; i < options.length; i++) {
             Color color = i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY;
             String prefix = i == selectedIndex ? ">  " : "   ";
-            drawCentered(mediumFont, prefix + optionLabel(options[i]), startY - i * spacing, color);
+            rowBounds(i);
+            drawUiButtonLabel(mediumFont, prefix + optionLabel(options[i]), optionRow, color);
         }
 
-        String hint;
-        String backHint = game.input().usingController() ? "[B] BACK"
-            : game.input().usingTouch() ? "TAP BACK" : "[ESC] BACK";
         if (options[selectedIndex] == Option.RESOLUTION
             && DisplaySettings.windowMode() == WindowMode.BORDERLESS) {
-            hint = "BORDERLESS MODE USES THE DESKTOP RESOLUTION  |  " + backHint;
+            drawCentered(smallFont, "BORDERLESS MODE USES THE DESKTOP RESOLUTION",
+                34f, Color.LIGHT_GRAY);
         } else if (DisplaySettings.restartRequired()) {
-            hint = "CHANGE SETTING  |  " + backHint
-                + "  |  ANTIALIASING APPLIES AFTER RESTART";
-        } else if (game.input().usingController()) {
-            hint = "GAMEPAD  D-PAD CHANGE  |  [A] SELECT  |  [B] BACK";
-        } else if (game.input().usingTouch()) {
-            hint = "TAP A SETTING TO CHANGE IT  |  TAP BACK TO RETURN";
-        } else {
-            hint = "KEYBOARD  ARROWS / WASD OR CLICK CHANGE  |  [ENTER / SPACE] SELECT  |  [ESC] BACK";
+            drawCentered(smallFont, "ANTIALIASING APPLIES AFTER RESTART",
+                34f, Color.LIGHT_GRAY);
         }
-        drawCentered(smallFont, hint, 34f, Color.LIGHT_GRAY);
         batch.end();
     }
 
@@ -100,15 +95,9 @@ public class OptionsScreen extends BaseScreen {
                 selectedIndex = i;
                 AudioManager.playSelect();
             }
-            if (game.input().pointerJustPressed(optionRow)) {
+            if (game.input().buttonJustReleased(optionRow)) {
                 selectedIndex = i;
-                if (options[i] == Option.BACK) {
-                    AudioManager.playConfirm();
-                    game.closeOverlay();
-                    return true;
-                }
-                changeSelectedOption(1);
-                return false;
+                return activateSelectedOption();
             }
         }
 
@@ -123,17 +112,27 @@ public class OptionsScreen extends BaseScreen {
         } else if (game.input().menuRightJustPressed()) {
             changeSelectedOption(1);
         } else if (game.input().confirmJustPressed()) {
-            if (options[selectedIndex] == Option.BACK) {
-                AudioManager.playConfirm();
-                game.closeOverlay();
-                return true;
-            }
-            changeSelectedOption(1);
+            return activateSelectedOption();
         } else if (game.input().backJustPressed()) {
             AudioManager.playSelect();
             game.closeOverlay();
             return true;
         }
+        return false;
+    }
+
+    private boolean activateSelectedOption() {
+        if (options[selectedIndex] == Option.BACK) {
+            AudioManager.playConfirm();
+            game.closeOverlay();
+            return true;
+        }
+        if (options[selectedIndex] == Option.CONTROLS) {
+            AudioManager.playConfirm();
+            game.openControls();
+            return true;
+        }
+        changeSelectedOption(1);
         return false;
     }
 
@@ -152,7 +151,7 @@ public class OptionsScreen extends BaseScreen {
             case ANTIALIASING -> DisplaySettings.toggleMsaa();
             case SCREEN_SHAKE -> DisplaySettings.toggleScreenShake();
             case FLASH_EFFECTS -> DisplaySettings.toggleFlashEffects();
-            case BACK -> {
+            case CONTROLS, BACK -> {
                 return;
             }
         }
@@ -174,13 +173,13 @@ public class OptionsScreen extends BaseScreen {
                 + (DisplaySettings.desiredMsaaSamples() >= 4 ? "4X MSAA" : "OFF");
             case SCREEN_SHAKE -> option.label + ":  " + onOff(DisplaySettings.screenShakeEnabled());
             case FLASH_EFFECTS -> option.label + ":  " + onOff(DisplaySettings.flashEffectsEnabled());
-            case BACK -> option.label;
+            case CONTROLS, BACK -> option.label;
         };
     }
 
     private Rectangle rowBounds(int index) {
         float baseline = optionStartY() - index * optionSpacing();
-        return optionRow.set(250f, baseline - 34f, 780f, 42f);
+        return optionRow.set(270f, baseline - 30f, 740f, 38f);
     }
 
     private float optionStartY() {
@@ -188,7 +187,7 @@ public class OptionsScreen extends BaseScreen {
     }
 
     private float optionSpacing() {
-        return options.length <= MOBILE_OPTIONS.length ? 72f : 46f;
+        return options.length <= MOBILE_OPTIONS.length ? 72f : 42f;
     }
 
     private String onOff(boolean enabled) {
@@ -211,6 +210,7 @@ public class OptionsScreen extends BaseScreen {
         ANTIALIASING("ANTIALIASING"),
         SCREEN_SHAKE("SCREEN SHAKE"),
         FLASH_EFFECTS("FLASH EFFECTS"),
+        CONTROLS("CONTROLS"),
         BACK("BACK");
 
         private final String label;

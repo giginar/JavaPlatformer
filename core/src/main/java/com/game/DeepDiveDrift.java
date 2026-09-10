@@ -17,6 +17,7 @@ import com.game.screen.AchievementScreen;
 import com.game.screen.DiveSetupScreen;
 import com.game.screen.MainMenuScreen;
 import com.game.screen.OptionsScreen;
+import com.game.screen.ControlsScreen;
 import com.game.screen.StoreScreen;
 import com.game.screen.SoundChoiceScreen;
 import com.game.settings.DisplaySettings;
@@ -126,11 +127,19 @@ public class DeepDiveDrift extends Game {
     }
 
     public void openOptions() {
+        openOverlay(new OptionsScreen(this));
+    }
+
+    public void openControls() {
+        openOverlay(new ControlsScreen(this));
+    }
+
+    private void openOverlay(Screen overlay) {
         Screen current = getScreen();
         if (current != null) {
             suspendedScreens.push(current);
         }
-        setScreen(new OptionsScreen(this));
+        setScreen(overlay);
     }
 
     public void closeOverlay() {

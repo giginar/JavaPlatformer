@@ -71,14 +71,8 @@ public final class DiveSetupScreen extends BaseScreen {
         shapeRenderer.rect(135f, 635f, 1010f, 5f);
         drawDifficultyShapes();
         drawChallengeShapes();
-        shapeRenderer.setColor(selectedControl == 5
-            ? new Color(0.08f, 0.48f, 0.42f, 0.98f)
-            : new Color(0.03f, 0.25f, 0.27f, 0.96f));
-        shapeRenderer.rect(startButton.x, startButton.y, startButton.width, startButton.height);
-        shapeRenderer.setColor(selectedControl == 6
-            ? new Color(0.08f, 0.38f, 0.45f, 0.98f)
-            : new Color(0.02f, 0.15f, 0.22f, 0.96f));
-        shapeRenderer.rect(backButton.x, backButton.y, backButton.width, backButton.height);
+        drawUiButton(startButton, selectedControl == 5);
+        drawUiButton(backButton, selectedControl == 6);
         endShapes();
 
         batch.begin();
@@ -99,10 +93,8 @@ public final class DiveSetupScreen extends BaseScreen {
             drawCentered(smallFont, "TOTAL LOCKDOWN ACTIVE  |  SPECIAL ACHIEVEMENTS AVAILABLE",
                 87f, Color.SCARLET);
         }
-        drawCentered(mediumFont, "START DIVE", 62f, Color.WHITE);
-        drawCenteredAt(smallFont, "BACK", backButton.x + backButton.width / 2f,
-            60f, Color.LIGHT_GRAY);
-        drawCentered(smallFont, inputHint(), 20f, Color.LIGHT_GRAY);
+        drawUiButtonLabel(mediumFont, "START DIVE", startButton, Color.WHITE);
+        drawUiButtonLabel(smallFont, "BACK", backButton, Color.LIGHT_GRAY);
         batch.end();
     }
 
@@ -114,10 +106,11 @@ public final class DiveSetupScreen extends BaseScreen {
             shapeRenderer.setColor(active
                 ? new Color(0.06f, 0.32f, 0.39f, 0.98f)
                 : new Color(0.015f, 0.09f, 0.15f, 0.94f));
-            shapeRenderer.rect(interactive.x, interactive.y, interactive.width, interactive.height);
+            drawUiButton(interactive, shapeRenderer.getColor(), active);
             if (active) {
                 shapeRenderer.setColor(difficultyColor(option));
-                shapeRenderer.rect(interactive.x, interactive.y, interactive.width, 5f);
+                shapeRenderer.rect(interactive.x, interactive.y + interactive.height - 2f,
+                    interactive.width, 2f);
             }
         }
     }
@@ -131,7 +124,7 @@ public final class DiveSetupScreen extends BaseScreen {
                 : enabled
                 ? new Color(0.08f, 0.2f, 0.23f, 0.96f)
                 : new Color(0.015f, 0.075f, 0.13f, 0.94f));
-            shapeRenderer.rect(interactive.x, interactive.y, interactive.width, interactive.height);
+            drawUiButton(interactive, shapeRenderer.getColor(), selectedControl == i + 1);
             shapeRenderer.setColor(enabled ? Color.SCARLET : Color.DARK_GRAY);
             shapeRenderer.rect(interactive.x, interactive.y, 7f, interactive.height);
         }
@@ -140,7 +133,7 @@ public final class DiveSetupScreen extends BaseScreen {
     private boolean handleInput() {
         for (int i = 0; i < DIFFICULTIES.length; i++) {
             difficultyBounds(i);
-            if (game.input().pointerJustPressed(interactive)) {
+            if (game.input().buttonJustReleased(interactive)) {
                 selectedControl = 0;
                 setDifficulty(DIFFICULTIES[i]);
                 return false;
@@ -148,17 +141,17 @@ public final class DiveSetupScreen extends BaseScreen {
         }
         for (int i = 0; i < MODIFIERS.length; i++) {
             modifierBounds(i);
-            if (game.input().pointerJustPressed(interactive)) {
+            if (game.input().buttonJustReleased(interactive)) {
                 selectedControl = i + 1;
                 toggleModifier(MODIFIERS[i]);
                 return false;
             }
         }
-        if (game.input().pointerJustPressed(startButton)) {
+        if (game.input().buttonJustReleased(startButton)) {
             startDive();
             return true;
         }
-        if (game.input().pointerJustPressed(backButton) || game.input().backJustPressed()) {
+        if (game.input().buttonJustReleased(backButton) || game.input().backJustPressed()) {
             game.showMainMenu();
             AudioManager.playSelect();
             return true;
@@ -245,11 +238,21 @@ public final class DiveSetupScreen extends BaseScreen {
             difficultyBounds(i);
             drawCenteredAt(mediumFont, option.title(), interactive.x + interactive.width / 2f,
                 552f, difficulty == option ? Color.YELLOW : difficultyColor(option));
-            drawCenteredAt(smallFont, difficultyDetail(option, 0),
+            drawDifficultyDetail(difficultyDetail(option, 0),
                 interactive.x + interactive.width / 2f, 522f, Color.LIGHT_GRAY);
-            drawCenteredAt(smallFont, difficultyDetail(option, 1),
-                interactive.x + interactive.width / 2f, 502f, Color.GRAY);
+            drawDifficultyDetail(difficultyDetail(option, 1),
+                interactive.x + interactive.width / 2f, 502f, Color.LIGHT_GRAY);
         }
+    }
+
+    private void drawDifficultyDetail(String text, float centerX, float y, Color color) {
+        float scaleX = smallFont.getData().scaleX;
+        float scaleY = smallFont.getData().scaleY;
+        layout.setText(smallFont, text);
+        float ratio = Math.min(1f, 264f / layout.width);
+        smallFont.getData().setScale(scaleX * ratio, scaleY * ratio);
+        drawCenteredAt(smallFont, text, centerX, y, color);
+        smallFont.getData().setScale(scaleX, scaleY);
     }
 
     private void drawChallenges() {
@@ -266,7 +269,7 @@ public final class DiveSetupScreen extends BaseScreen {
     }
 
     private Rectangle difficultyBounds(int index) {
-        return interactive.set(175f + index * 310f, 500f, 290f, 70f);
+        return interactive.set(175f + index * 310f, 480f, 290f, 96f);
     }
 
     private Rectangle modifierBounds(int index) {
@@ -290,16 +293,6 @@ public final class DiveSetupScreen extends BaseScreen {
             case HARD -> line == 0 ? "SPEED +22%  DAMAGE +30%"
                 : "UPGRADES -25%  AIR -12%";
         };
-    }
-
-    private String inputHint() {
-        if (game.input().usingController()) {
-            return "D-PAD CHOOSE  |  LEFT/RIGHT CHANGE  |  [A] TOGGLE/START  |  [B] BACK";
-        }
-        if (game.input().usingTouch()) {
-            return "TAP DIFFICULTY, RULES AND START";
-        }
-        return "ARROWS / W-A-S-D CONFIGURE  |  ENTER / SPACE START DIVE  |  ESC BACK";
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {

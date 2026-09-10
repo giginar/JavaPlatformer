@@ -70,12 +70,9 @@ public final class AchievementScreen extends BaseScreen {
             shapeRenderer.setColor(unlocked ? Color.GOLD : Color.DARK_GRAY);
             shapeRenderer.rect(row.x, row.y, 7f, row.height);
         }
-        shapeRenderer.setColor(0.02f, 0.16f, 0.23f, 0.96f);
-        shapeRenderer.rect(previousPageButton.x, previousPageButton.y,
-            previousPageButton.width, previousPageButton.height);
-        shapeRenderer.rect(backButton.x, backButton.y, backButton.width, backButton.height);
-        shapeRenderer.rect(nextPageButton.x, nextPageButton.y,
-            nextPageButton.width, nextPageButton.height);
+        drawUiButton(previousPageButton, false);
+        drawUiButton(backButton, false);
+        drawUiButton(nextPageButton, false);
         endShapes();
 
         batch.begin();
@@ -87,12 +84,9 @@ public final class AchievementScreen extends BaseScreen {
         }
         drawCentered(smallFont, "PAGE " + (page() + 1) + " / " + pageCount(),
             91f, Color.CYAN);
-        drawCentered(smallFont, inputHint(), 72f, Color.LIGHT_GRAY);
-        drawCenteredAt(smallFont, "< PREV", previousPageButton.x
-            + previousPageButton.width / 2f, 51f, Color.LIGHT_GRAY);
-        drawCentered(smallFont, "BACK TO MENU", 51f, Color.WHITE);
-        drawCenteredAt(smallFont, "NEXT >", nextPageButton.x
-            + nextPageButton.width / 2f, 51f, Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, "< PREV", previousPageButton, Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, "BACK TO MENU", backButton, Color.WHITE);
+        drawUiButtonLabel(smallFont, "NEXT >", nextPageButton, Color.LIGHT_GRAY);
         batch.end();
     }
 
@@ -105,15 +99,15 @@ public final class AchievementScreen extends BaseScreen {
                 selected = first + i;
             }
         }
-        if (game.input().pointerJustPressed(previousPageButton)) {
+        if (game.input().buttonJustReleased(previousPageButton)) {
             changePage(-1);
             return false;
         }
-        if (game.input().pointerJustPressed(nextPageButton)) {
+        if (game.input().buttonJustReleased(nextPageButton)) {
             changePage(1);
             return false;
         }
-        if (game.input().pointerJustPressed(backButton) || game.input().backJustPressed()) {
+        if (game.input().buttonJustReleased(backButton) || game.input().backJustPressed()) {
             AudioManager.playSelect();
             game.showMainMenu();
             return true;
@@ -164,16 +158,6 @@ public final class AchievementScreen extends BaseScreen {
 
     private Rectangle rowBounds(int visibleRow) {
         return row.set(170f, 548f - visibleRow * 57f, 940f, 50f);
-    }
-
-    private String inputHint() {
-        if (game.input().usingController()) {
-            return "D-PAD BROWSE  |  [B] BACK";
-        }
-        if (game.input().usingTouch()) {
-            return "TAP PREV / NEXT TO BROWSE";
-        }
-        return "UP / DOWN BROWSE  |  LEFT / RIGHT PAGE  |  ESC BACK";
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {

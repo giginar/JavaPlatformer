@@ -3,6 +3,14 @@ package com.game;
 public final class GameConfig {
     public static final float WORLD_WIDTH = 1280f;
     public static final float WORLD_HEIGHT = 720f;
+    /** Width of each full-height touch strip, in density-independent pixels. */
+    public static final float TOUCH_EDGE_WIDTH_DP = 144f;
+    public static final float TOUCH_HINT_DURATION_SECONDS = 4f;
+    public static final float TOUCH_HINT_FADE_SECONDS = 1f;
+    public static final float BUTTON_HOVER_SCALE = 1.06f;
+    public static final float BUTTON_PRESSED_SCALE = 0.96f;
+    public static final float BUTTON_PRESS_OFFSET = 2f;
+    public static final float BUTTON_GLOW_PADDING = 4f;
     public static final String PREFERENCES_NAME = "DeepDiveDriftPrefs";
     public static final float DEFAULT_STAGE_DURATION_SECONDS = 180f;
     public static final float MIN_STAGE_DURATION_SECONDS = 5f;

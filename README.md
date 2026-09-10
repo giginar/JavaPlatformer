@@ -17,12 +17,15 @@ Apple/iOS ve macOS bu sürüm çalışmasının kapsamına dahil değildir.
 | --- | --- | --- | --- |
 | Klavye | `Space`, `W`, `↑` veya sol fare | `Z`, `X` veya sağ fare | Oklar, `Enter`, `Esc`, `P` |
 | Gamepad | `A`, sol çubuk veya D-pad yukarı | `X`, `B`, `RB` veya `RT` | D-pad/çubuk, `A`, `B`, `Start` |
-| Android | Ekrandaki `SWIM` düğmesini basılı tut | `FIRE` düğmesine dokun | Seçeneğe dokun, sağ üstten duraklat |
+| Android | Sol kenar şeridinde herhangi bir yeri basılı tut | Sağ kenar şeridinde herhangi bir yere dokun | Seçeneğe dokun, sağ üstteki `Ⅱ` simgesinden duraklat |
 
-Dokunmatik düğmeler ekranın güvenli alanlarına göre yerleşir. Menü, ayarlar, yükseltme seçimi, duraklatma ve sonuç ekranlarının tamamı dokunmatik ve gamepad ile kullanılabilir.
+Kenar şeritleri ekranın tüm yüksekliğinde, geniş ekranlardaki siyah yan boşluklar dahil çalışır; aynı anda yüzüp ateş edilebilir. `SWIM` / `FIRE` ipuçları köşelerde görünür ve ilk 4 saniyede kaybolur; dokunma alanları aktif kalır. Şerit genişliği cihazın ekran yoğunluğuna göre ayarlanır. Dash yükü varsa alt ortadaki küçük `DASH` düğmesine dokunulur.
 
-Telefondaki duraklatma düğmesi, daha büyük dokunma alanı ve belirgin `PAUSE` simgesiyle
-sağ üstteki oyun bilgilerinin altında bulunur.
+Pause ve dash düğmeleri ekranın güvenli alanlarına göre yerleşir. Mesafe, sonraki mesafe hedefi ve bölüm ilerlemesi üstte; combo sağda pause alanından ayrı gösterilir. Yükseltme ekranı tamamen opaktır. Menü, ayarlar, yükseltme seçimi, duraklatma ve sonuç ekranlarının tamamı dokunmatik ve gamepad ile kullanılabilir.
+
+Ana menüdeki veya OPTIONS içindeki **CONTROLS** sayfası, kullanılan klavye/fare, gamepad veya dokunmatiğe göre kontrol rehberini otomatik değiştirir. Oyun başlangıcındaki kısa ipuçları korunur; diğer menülerin altında sürekli kontrol açıklaması gösterilmez. DIVE SHOP'taki pearl bakiyesi, ekipman ve kıyafet sekmelerinin ortak başlığında görünür ve alışverişten sonra hemen güncellenir.
+
+Menü düğmeleri fare üzerlerine geldiğinde parlar ve yazıları hafif büyür; fare veya parmak basılıyken içeri oturur. Seçim bırakınca tamamlanır, düğmenin dışına sürükleyip bırakmak işlemi iptal eder. Görsel efektlerin boyutları `GameConfig` içindeki `BUTTON_*` değerlerinden ayarlanabilir.
 
 ## Hızlı ses kontrolü
 

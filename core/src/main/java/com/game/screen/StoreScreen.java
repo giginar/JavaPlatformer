@@ -72,28 +72,30 @@ public final class StoreScreen extends BaseScreen {
 
         beginFilledShapes();
         shapeRenderer.setColor(PANEL_COLOR);
-        shapeRenderer.rect(150f, 78f, 980f, 552f);
+        shapeRenderer.rect(150f, 78f, 980f, 614f);
+        shapeRenderer.setColor(0.08f, 0.12f, 0.16f, 1f);
+        shapeRenderer.rect(756f, 625f, 344f, 54f);
+        shapeRenderer.setColor(Color.GOLD);
+        shapeRenderer.rect(756f, 625f, 3f, 54f);
         drawTabShapes();
         for (int i = 0; i < itemCount(); i++) {
             rowBounds(i);
             shapeRenderer.setColor(i == selected ? SELECTED_ROW_COLOR : ROW_COLOR);
-            shapeRenderer.rect(row.x, row.y, row.width, row.height);
+            drawUiButton(row, shapeRenderer.getColor(), i == selected);
             if (activeTab == StoreTab.DIVE_SUITS) {
                 shapeRenderer.setColor(suitColor(SUITS[i]));
                 shapeRenderer.rect(row.x, row.y, 7f, row.height);
             }
         }
-        shapeRenderer.setColor(game.input().pointerOver(backButton)
-            ? new Color(0.08f, 0.46f, 0.53f, 0.98f)
-            : new Color(0.02f, 0.16f, 0.23f, 0.96f));
-        shapeRenderer.rect(backButton.x, backButton.y, backButton.width, backButton.height);
+        drawUiButton(backButton, false);
         shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.95f);
-        shapeRenderer.rect(150f, 625f, 980f, 5f);
+        shapeRenderer.rect(150f, 690f, 980f, 2f);
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "DIVE SHOP", 704f, Color.WHITE);
-        drawCentered(mediumFont, "PRESSURE PEARLS  " + progression.pearls(), 655f, Color.GOLD);
+        largeFont.setColor(Color.WHITE);
+        largeFont.draw(batch, "DIVE SHOP", 180f, 672f);
+        drawCenteredAt(mediumFont, "PEARLS  " + progression.pearls(), 928f, 663f, Color.GOLD);
         drawTabs();
         for (int i = 0; i < itemCount(); i++) {
             if (activeTab == StoreTab.EQUIPMENT) {
@@ -104,27 +106,26 @@ public final class StoreScreen extends BaseScreen {
         }
         drawCentered(smallFont, status, 128f,
             statusTimer > 0f ? Color.YELLOW : Color.LIGHT_GRAY);
-        drawCentered(smallFont, inputHint(), 99f, Color.LIGHT_GRAY);
-        drawCentered(smallFont, "BACK TO MENU", 51f, Color.WHITE);
+        drawUiButtonLabel(smallFont, "BACK TO MENU", backButton, Color.WHITE);
         batch.end();
     }
 
     private void drawTabShapes() {
         shapeRenderer.setColor(activeTab == StoreTab.EQUIPMENT
             ? SELECTED_TAB_COLOR : TAB_COLOR);
-        shapeRenderer.rect(equipmentTab.x, equipmentTab.y, equipmentTab.width, equipmentTab.height);
+        drawUiButton(equipmentTab, shapeRenderer.getColor(), activeTab == StoreTab.EQUIPMENT);
         shapeRenderer.setColor(activeTab == StoreTab.DIVE_SUITS
             ? SELECTED_TAB_COLOR : TAB_COLOR);
-        shapeRenderer.rect(suitsTab.x, suitsTab.y, suitsTab.width, suitsTab.height);
+        drawUiButton(suitsTab, shapeRenderer.getColor(), activeTab == StoreTab.DIVE_SUITS);
     }
 
     /** @return true when this screen was replaced and rendering must stop immediately. */
     private boolean handleInput() {
-        if (game.input().pointerJustPressed(equipmentTab)) {
+        if (game.input().buttonJustReleased(equipmentTab)) {
             changeTab(StoreTab.EQUIPMENT);
             return false;
         }
-        if (game.input().pointerJustPressed(suitsTab)) {
+        if (game.input().buttonJustReleased(suitsTab)) {
             changeTab(StoreTab.DIVE_SUITS);
             return false;
         }
@@ -134,13 +135,13 @@ public final class StoreScreen extends BaseScreen {
             if (game.input().pointerOver(row)) {
                 selected = i;
             }
-            if (game.input().pointerJustPressed(row)) {
+            if (game.input().buttonJustReleased(row)) {
                 selected = i;
                 activateSelected();
                 return false;
             }
         }
-        if (game.input().pointerJustPressed(backButton)) {
+        if (game.input().buttonJustReleased(backButton)) {
             returnToMenu();
             return true;
         }
@@ -226,10 +227,9 @@ public final class StoreScreen extends BaseScreen {
     }
 
     private void drawTabs() {
-        drawCenteredAt(smallFont, "EQUIPMENT", equipmentTab.x + equipmentTab.width / 2f,
-            602f, activeTab == StoreTab.EQUIPMENT ? Color.YELLOW : Color.LIGHT_GRAY);
-        drawCenteredAt(smallFont, "DIVE SUITS  " + unlockedSuitCount() + "/" + SUITS.length,
-            suitsTab.x + suitsTab.width / 2f, 602f,
+        drawUiButtonLabel(smallFont, "EQUIPMENT", equipmentTab,
+            activeTab == StoreTab.EQUIPMENT ? Color.YELLOW : Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, "DIVE SUITS  " + unlockedSuitCount() + "/" + SUITS.length, suitsTab,
             activeTab == StoreTab.DIVE_SUITS ? Color.YELLOW : Color.LIGHT_GRAY);
     }
 
@@ -288,16 +288,6 @@ public final class StoreScreen extends BaseScreen {
 
     private Rectangle rowBounds(int index) {
         return row.set(180f, 486f - index * 82f, 920f, 72f);
-    }
-
-    private String inputHint() {
-        if (game.input().usingController()) {
-            return "GAMEPAD  LEFT/RIGHT TAB  |  D-PAD CHOOSE  |  [A] BUY/EQUIP  |  [B] BACK";
-        }
-        if (game.input().usingTouch()) {
-            return "TAP A TAB, THEN TAP AN ITEM TO BUY OR EQUIP";
-        }
-        return "KEYBOARD  LEFT/RIGHT TAB  |  UP/DOWN CHOOSE  |  [ENTER/SPACE] BUY/EQUIP  |  [ESC] BACK";
     }
 
     private Color suitColor(DiverSuit suit) {

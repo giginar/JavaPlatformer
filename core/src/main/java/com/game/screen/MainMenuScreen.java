@@ -12,18 +12,18 @@ import com.game.manager.FontManager;
 
 public class MainMenuScreen extends BaseScreen {
     private static final String[] DESKTOP_MENU_OPTIONS = {
-        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "SOUND", "OPTIONS", "EXIT"
+        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "SOUND", "CONTROLS", "OPTIONS", "EXIT"
     };
     private static final String[] MOBILE_MENU_OPTIONS = {
-        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "SOUND", "OPTIONS"
+        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "SOUND", "CONTROLS", "OPTIONS"
     };
     private static final float TRANSITION_DURATION = 0.45f;
     private static final Color ACCENT_COLOR = new Color(0.55f, 0.9f, 1f, 1f);
-    private static final float FIRST_ROW_Y = 488f;
+    private static final float FIRST_ROW_Y = 500f;
     private static final float ROW_SPACING = 68f;
     private static final float SOUND_ROW_Y = FIRST_ROW_Y - 3f * ROW_SPACING;
-    private static final Rectangle VOLUME_DOWN = new Rectangle(415f, SOUND_ROW_Y - 40f, 64f, 64f);
-    private static final Rectangle VOLUME_UP = new Rectangle(801f, SOUND_ROW_Y - 40f, 64f, 64f);
+    private static final Rectangle VOLUME_DOWN = new Rectangle(415f, SOUND_ROW_Y - 36f, 64f, 56f);
+    private static final Rectangle VOLUME_UP = new Rectangle(801f, SOUND_ROW_Y - 36f, 64f, 56f);
 
     private final Background background;
     private final BitmapFont smallFont;
@@ -72,9 +72,14 @@ public class MainMenuScreen extends BaseScreen {
         batch.end();
 
         beginFilledShapes();
-        shapeRenderer.setColor(0.05f, 0.24f, 0.32f, 1f);
-        shapeRenderer.rect(VOLUME_DOWN.x, VOLUME_DOWN.y, VOLUME_DOWN.width, VOLUME_DOWN.height);
-        shapeRenderer.rect(VOLUME_UP.x, VOLUME_UP.y, VOLUME_UP.width, VOLUME_UP.height);
+        for (int i = 0; i < menuOptions.length; i++) {
+            rowBounds(i);
+            boolean soundAdjustment = i == 3 && (game.input().pointerOver(VOLUME_DOWN)
+                || game.input().pointerOver(VOLUME_UP));
+            drawUiButton(menuRow, i == selectedIndex && !soundAdjustment);
+        }
+        drawUiButton(VOLUME_DOWN, false);
+        drawUiButton(VOLUME_UP, false);
         endShapes();
 
         batch.begin();
@@ -82,20 +87,20 @@ public class MainMenuScreen extends BaseScreen {
         drawCentered(smallFont, "SURVIVE THE ABYSS", 580f, ACCENT_COLOR);
 
         for (int i = 0; i < menuOptions.length; i++) {
+            rowBounds(i);
             Color color = i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY;
             String prefix = i == selectedIndex ? ">  " : "   ";
             if ("SOUND".equals(menuOptions[i])) {
                 int volume = Math.round(AudioManager.getMasterVolume() * 100f);
-                drawCentered(mediumFont, volume == 0 ? "SOUND OFF" : "SOUND " + volume + "%",
-                    SOUND_ROW_Y, color);
+                drawUiButtonLabel(mediumFont, volume == 0 ? "SOUND OFF" : "SOUND " + volume + "%",
+                    menuRow, color);
             } else {
-                drawCentered(mediumFont, prefix + menuOptions[i], FIRST_ROW_Y - i * ROW_SPACING, color);
+                drawUiButtonLabel(mediumFont, prefix + menuOptions[i], menuRow, color);
             }
         }
-        drawAt(mediumFont, "-", VOLUME_DOWN.x + VOLUME_DOWN.width / 2f, SOUND_ROW_Y, Color.WHITE);
-        drawAt(mediumFont, "+", VOLUME_UP.x + VOLUME_UP.width / 2f, SOUND_ROW_Y, Color.WHITE);
+        drawUiButtonLabel(mediumFont, "-", VOLUME_DOWN, Color.WHITE);
+        drawUiButtonLabel(mediumFont, "+", VOLUME_UP, Color.WHITE);
 
-        drawCentered(smallFont, inputHint(), 72f, Color.LIGHT_GRAY);
         batch.end();
 
         if (transitioning) {
@@ -112,19 +117,19 @@ public class MainMenuScreen extends BaseScreen {
 
     private boolean handleInput() {
         // Process sound controls before hover/confirmation sounds, so muting is silent.
-        if (game.input().pointerJustPressed(VOLUME_DOWN)) {
+        if (game.input().buttonJustReleased(VOLUME_DOWN)) {
             selectedIndex = 3;
             changeVolume(-0.25f);
             return false;
         }
-        if (game.input().pointerJustPressed(VOLUME_UP)) {
+        if (game.input().buttonJustReleased(VOLUME_UP)) {
             selectedIndex = 3;
             changeVolume(0.25f);
             return false;
         }
         for (int i = 0; i < menuOptions.length; i++) {
             rowBounds(i);
-            if ("SOUND".equals(menuOptions[i]) && game.input().pointerJustPressed(menuRow)) {
+            if ("SOUND".equals(menuOptions[i]) && game.input().buttonJustReleased(menuRow)) {
                 selectedIndex = i;
                 AudioManager.toggleMute();
                 return false;
@@ -133,7 +138,7 @@ public class MainMenuScreen extends BaseScreen {
                 selectedIndex = i;
                 AudioManager.playSelect();
             }
-            if (game.input().pointerJustPressed(menuRow)) {
+            if (game.input().buttonJustReleased(menuRow)) {
                 selectedIndex = i;
                 return activateSelected();
             }
@@ -177,6 +182,10 @@ public class MainMenuScreen extends BaseScreen {
                 game.openOptions();
                 return true;
             }
+            case "CONTROLS" -> {
+                game.openControls();
+                return true;
+            }
             case "EXIT" -> com.badlogic.gdx.Gdx.app.exit();
             default -> throw new IllegalStateException("Unknown menu option: " + menuOptions[selectedIndex]);
         }
@@ -185,25 +194,14 @@ public class MainMenuScreen extends BaseScreen {
 
     private Rectangle rowBounds(int index) {
         float baseline = FIRST_ROW_Y - index * ROW_SPACING;
-        return menuRow.set(405f, baseline - 40f, 470f, 64f);
+        if (index == 3) {
+            return menuRow.set(489f, baseline - 36f, 302f, 56f);
+        }
+        return menuRow.set(405f, baseline - 36f, 470f, 56f);
     }
 
     private void changeVolume(float amount) {
         AudioManager.setMasterVolume(AudioManager.getMasterVolume() + amount);
-    }
-
-    private String inputHint() {
-        if ("SOUND".equals(menuOptions[selectedIndex])) {
-            return game.input().usingTouch() ? "TAP SOUND TO MUTE  |  - / + ADJUST VOLUME"
-                : "LEFT / RIGHT VOLUME  |  SELECT MUTE / UNMUTE";
-        }
-        if (game.input().usingController()) {
-            return "GAMEPAD  D-PAD / STICK NAVIGATE  |  [A] SELECT  |  [B] EXIT";
-        }
-        if (game.input().usingTouch()) {
-            return "TAP AN OPTION TO SELECT";
-        }
-        return "KEYBOARD  ARROWS / W-S NAVIGATE  |  [ENTER / SPACE] SELECT  |  [ESC] EXIT";
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {

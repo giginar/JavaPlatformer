@@ -79,12 +79,12 @@ public class GameScreen extends BaseScreen {
     private static final float POWER_UP_SPAWN_INTERVAL = 18f;
     private static final float BASE_MAGNET_RANGE = 78f;
     private static final int MAX_DASH_CHARGES = 2;
-    private static final Rectangle TOUCH_SWIM_BUTTON = new Rectangle(32f, 28f, 230f, 120f);
-    private static final Rectangle TOUCH_FIRE_BUTTON = new Rectangle(1018f, 28f, 230f, 120f);
-    private static final Rectangle TOUCH_DASH_BUTTON = new Rectangle(530f, 28f, 220f, 76f);
-    private static final float TOUCH_PAUSE_WIDTH = 112f;
-    private static final float TOUCH_PAUSE_HEIGHT = 96f;
-    private static final Rectangle TOUCH_PAUSE_BUTTON = new Rectangle(1136f, 464f,
+    private static final Rectangle TOUCH_SWIM_HINT = new Rectangle(12f, 16f, 132f, 64f);
+    private static final Rectangle TOUCH_FIRE_HINT = new Rectangle(1136f, 16f, 132f, 64f);
+    private static final Rectangle TOUCH_DASH_BUTTON = new Rectangle(564f, 16f, 152f, 60f);
+    private static final float TOUCH_PAUSE_WIDTH = 76f;
+    private static final float TOUCH_PAUSE_HEIGHT = 64f;
+    private static final Rectangle TOUCH_PAUSE_BUTTON = new Rectangle(1192f, 644f,
         TOUCH_PAUSE_WIDTH, TOUCH_PAUSE_HEIGHT);
     private static final Rectangle GAME_OVER_RETRY_BUTTON = new Rectangle(405f, 236f, 470f, 48f);
     private static final Rectangle GAME_OVER_MENU_BUTTON = new Rectangle(405f, 194f, 470f, 38f);
@@ -129,6 +129,7 @@ public class GameScreen extends BaseScreen {
     private float invulnerabilityTimer;
     private float breathTimer;
     private float tutorialTimer;
+    private float touchHintTimer;
     private float bannerTimer;
     private float bossWarningTimer;
     private float hitStopTimer;
@@ -246,6 +247,9 @@ public class GameScreen extends BaseScreen {
     }
 
     private boolean handleInput() {
+        if (choosingUpgrade || paused || gameOver) {
+            game.input().suppressGameplayTouchUntilRelease();
+        }
         if (choosingUpgrade) {
             handleUpgradeInput();
             return false;
@@ -254,11 +258,11 @@ public class GameScreen extends BaseScreen {
         if (gameOver) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.R)
                 || game.input().confirmJustPressed()
-                || game.input().pointerJustPressed(GAME_OVER_RETRY_BUTTON)) {
+                || game.input().buttonJustReleased(GAME_OVER_RETRY_BUTTON)) {
                 AudioManager.playConfirm();
                 resetGame();
             } else if (game.input().backJustPressed()
-                || game.input().pointerJustPressed(GAME_OVER_MENU_BUTTON)) {
+                || game.input().buttonJustReleased(GAME_OVER_MENU_BUTTON)) {
                 AudioManager.playSelect();
                 game.showMainMenu();
                 return true;
@@ -273,7 +277,7 @@ public class GameScreen extends BaseScreen {
                     selectedPauseIndex = i;
                     AudioManager.playSelect();
                 }
-                if (game.input().pointerJustPressed(interactiveRow)) {
+                if (game.input().buttonJustReleased(interactiveRow)) {
                     selectedPauseIndex = i;
                     return handlePauseSelection();
                 }
@@ -306,6 +310,7 @@ public class GameScreen extends BaseScreen {
         } else if (game.input().helpJustPressed()) {
             showTutorial = true;
             tutorialTimer = 0f;
+            touchHintTimer = 0f;
             AudioManager.playSelect();
         }
 
@@ -322,7 +327,7 @@ public class GameScreen extends BaseScreen {
                 selectedUpgradeIndex = i;
                 AudioManager.playSelect();
             }
-            if (game.input().pointerJustPressed(interactiveRow)) {
+            if (game.input().buttonJustReleased(interactiveRow)) {
                 selectedUpgradeIndex = i;
                 applySelectedUpgrade();
                 return;
@@ -432,7 +437,7 @@ public class GameScreen extends BaseScreen {
             }
         }
         boolean swimmingUp = game.input().swimPressed()
-            || game.input().pointerPressed(TOUCH_SWIM_BUTTON)
+            || game.input().touchSwimPressed()
             || CAPTURE_AUTOPLAY && captureSwimmingUp;
         diver.update(delta, swimmingUp,
             session.getAgilityMultiplier() * equippedSuit.agilityMultiplier());
@@ -510,6 +515,7 @@ public class GameScreen extends BaseScreen {
         inkVeilTimer = Math.max(0f, inkVeilTimer - delta);
         descentMotionTimer = Math.max(0f, descentMotionTimer - delta);
         ambientTime += delta;
+        touchHintTimer += delta;
         safetyTimer = Math.max(0f, safetyTimer - delta);
         for (PowerUpType type : PowerUpType.values()) {
             float remaining = activePowerUps.getOrDefault(type, 0f);
@@ -526,7 +532,9 @@ public class GameScreen extends BaseScreen {
 
         if (showTutorial) {
             tutorialTimer += delta;
-            if (tutorialTimer >= TUTORIAL_DURATION) {
+            float duration = game.input().isMobile()
+                ? GameConfig.TOUCH_HINT_DURATION_SECONDS : TUTORIAL_DURATION;
+            if (tutorialTimer >= duration) {
                 showTutorial = false;
             }
         }
@@ -624,7 +632,7 @@ public class GameScreen extends BaseScreen {
             return;
         }
         boolean shootPressed = game.input().shootJustPressed()
-            || game.input().pointerJustPressed(TOUCH_FIRE_BUTTON)
+            || game.input().touchFireJustPressed(TOUCH_PAUSE_BUTTON)
             || CAPTURE_AUTOPLAY;
         boolean overdrive = isPowerActive(PowerUpType.HARPOON_OVERDRIVE);
         if (!shootPressed || shootCooldownTimer > 0f
@@ -1147,7 +1155,8 @@ public class GameScreen extends BaseScreen {
     }
 
     private String dashStatusText() {
-        return "DASH x" + dashCharges + " READY  |  " + dashInstruction();
+        return "DASH x" + dashCharges + (game.input().usingController() ? "  [LB]"
+            : game.input().usingTouch() ? "" : "  [C]");
     }
 
     private static String formatDistance(int meters) {
@@ -1286,13 +1295,19 @@ public class GameScreen extends BaseScreen {
     }
 
     private void drawUiShapes() {
+        if (choosingUpgrade) {
+            beginFilledShapes();
+            drawUpgradeShapes();
+            endShapes();
+            return;
+        }
         float oxygenRatio = session.getOxygenRatio();
         EnemyFish boss = activeBoss();
 
         beginFilledShapes();
         shapeRenderer.setColor(0.01f, 0.04f, 0.09f, 0.78f);
         shapeRenderer.rect(16f, 616f, 300f, 88f);
-        shapeRenderer.rect(958f, 548f, 306f, 156f);
+        shapeRenderer.rect(340f, 648f, 600f, 56f);
 
         shapeRenderer.setColor(0.12f, 0.15f, 0.18f, 0.95f);
         shapeRenderer.rect(24f, 626f, 276f, 22f);
@@ -1302,17 +1317,17 @@ public class GameScreen extends BaseScreen {
         shapeRenderer.rect(24f, 626f, 276f * oxygenRatio, 22f);
 
         shapeRenderer.setColor(0.08f, 0.13f, 0.2f, 0.95f);
-        shapeRenderer.rect(974f, 558f, 274f, 7f);
+        shapeRenderer.rect(354f, 650f, 572f, 3f);
         shapeRenderer.setColor(0.16f, 0.78f, 0.92f, 1f);
-        shapeRenderer.rect(974f, 558f, 274f * runDirector.stageProgress(), 7f);
+        shapeRenderer.rect(354f, 650f, 572f * runDirector.stageProgress(), 3f);
 
         if (boss != null) {
             shapeRenderer.setColor(0.01f, 0.02f, 0.08f, 0.9f);
-            shapeRenderer.rect(385f, 650f, 510f, 48f);
+            shapeRenderer.rect(385f, 608f, 510f, 36f);
             shapeRenderer.setColor(0.2f, 0.05f, 0.25f, 1f);
-            shapeRenderer.rect(405f, 660f, 470f, 16f);
+            shapeRenderer.rect(405f, 614f, 470f, 8f);
             shapeRenderer.setColor(0.75f, 0.16f, 0.95f, 1f);
-            shapeRenderer.rect(405f, 660f, 470f * bossProgressRatio(boss), 16f);
+            shapeRenderer.rect(405f, 614f, 470f * bossProgressRatio(boss), 8f);
         }
 
         if (oxygenRatio < 0.25f && !gameOver && DisplaySettings.flashEffectsEnabled()) {
@@ -1328,18 +1343,14 @@ public class GameScreen extends BaseScreen {
         boolean touchControlsVisible = game.input().isMobile()
             && !paused && !gameOver && !choosingUpgrade;
         if (touchControlsVisible) {
-            shapeRenderer.setColor(0.02f, 0.12f, 0.2f,
-                game.input().pointerPressed(TOUCH_SWIM_BUTTON) ? 0.92f : 0.72f);
-            shapeRenderer.rect(TOUCH_SWIM_BUTTON.x, TOUCH_SWIM_BUTTON.y,
-                TOUCH_SWIM_BUTTON.width, TOUCH_SWIM_BUTTON.height);
-            boolean weaponDisabled = runSettings.has(ChallengeModifier.NO_WEAPON);
-            shapeRenderer.setColor(weaponDisabled ? 0.07f : 0.16f,
-                weaponDisabled ? 0.08f : 0.24f,
-                weaponDisabled ? 0.1f : 0.3f,
-                weaponDisabled ? 0.72f
-                    : game.input().pointerPressed(TOUCH_FIRE_BUTTON) ? 0.96f : 0.76f);
-            shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
-                TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
+            float hintAlpha = touchHintAlpha();
+            if (hintAlpha > 0f) {
+                shapeRenderer.setColor(0.02f, 0.12f, 0.2f, 0.5f * hintAlpha);
+                shapeRenderer.rect(TOUCH_SWIM_HINT.x, TOUCH_SWIM_HINT.y,
+                    TOUCH_SWIM_HINT.width, TOUCH_SWIM_HINT.height);
+                shapeRenderer.rect(TOUCH_FIRE_HINT.x, TOUCH_FIRE_HINT.y,
+                    TOUCH_FIRE_HINT.width, TOUCH_FIRE_HINT.height);
+            }
             if (dashCharges > 0) {
                 shapeRenderer.setColor(0.08f, 0.38f, 0.28f,
                     game.input().pointerPressed(TOUCH_DASH_BUTTON) ? 0.98f : 0.82f);
@@ -1351,29 +1362,25 @@ public class GameScreen extends BaseScreen {
                 TOUCH_PAUSE_BUTTON.width, TOUCH_PAUSE_BUTTON.height);
             shapeRenderer.setColor(Color.WHITE);
             float pauseCenterX = TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width / 2f;
-            shapeRenderer.rect(pauseCenterX - 19f, TOUCH_PAUSE_BUTTON.y + 44f, 12f, 34f);
-            shapeRenderer.rect(pauseCenterX + 7f, TOUCH_PAUSE_BUTTON.y + 44f, 12f, 34f);
+            shapeRenderer.rect(pauseCenterX - 10f, TOUCH_PAUSE_BUTTON.y + 21f, 7f, 24f);
+            shapeRenderer.rect(pauseCenterX + 3f, TOUCH_PAUSE_BUTTON.y + 21f, 7f, 24f);
         }
 
-        if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
+        if (showTutorial && !game.input().usingTouch() && !paused && !gameOver) {
             shapeRenderer.setColor(0.01f, 0.04f, 0.09f, 0.84f);
-            float tutorialY = game.input().isMobile() ? tutorialPanelY() : 18f;
-            shapeRenderer.rect(220f, tutorialY, 840f, 78f);
+            shapeRenderer.rect(220f, 18f, 840f, 78f);
         }
 
-        if (bannerTimer > 0f && !bannerSubtitle.isEmpty()
+        if (bannerTimer > 0f && bossWarningTimer <= 0f
             && !paused && !gameOver && !choosingUpgrade) {
-            float alpha = Math.min(0.94f, bannerTimer * 1.4f);
+            float alpha = Math.min(0.82f, bannerTimer * 1.4f);
             shapeRenderer.setColor(0.005f, 0.035f, 0.09f, alpha);
-            shapeRenderer.rect(310f, 432f, 660f, 128f);
+            shapeRenderer.rect(370f, 548f, 540f, 56f);
             shapeRenderer.setColor(0.12f, 0.8f, 0.95f, alpha);
-            shapeRenderer.rect(310f, 552f, 660f, 8f);
-            shapeRenderer.rect(310f, 432f, 660f, 4f);
+            shapeRenderer.rect(370f, 602f, 540f, 2f);
         }
 
-        if (choosingUpgrade) {
-            drawUpgradeShapes();
-        } else if (paused || gameOver) {
+        if (paused || gameOver) {
             shapeRenderer.setColor(0f, 0f, 0f, 0.62f);
             shapeRenderer.rect(0f, 0f, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
             shapeRenderer.setColor(0.01f, 0.04f, 0.09f, 0.96f);
@@ -1381,27 +1388,21 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
             shapeRenderer.rect(365f, 540f, 550f, 5f);
             if (paused) {
-                pauseRowBounds(selectedPauseIndex);
-                shapeRenderer.setColor(0.06f, 0.22f, 0.29f, 0.85f);
-                shapeRenderer.rect(interactiveRow.x, interactiveRow.y,
-                    interactiveRow.width, interactiveRow.height);
+                for (int i = 0; i < PAUSE_OPTIONS.length; i++) {
+                    pauseRowBounds(i);
+                    drawUiButton(interactiveRow, i == selectedPauseIndex);
+                }
             } else {
-                shapeRenderer.setColor(0.04f, 0.21f, 0.28f,
-                    game.input().pointerOver(GAME_OVER_RETRY_BUTTON) ? 0.95f : 0.75f);
-                shapeRenderer.rect(GAME_OVER_RETRY_BUTTON.x, GAME_OVER_RETRY_BUTTON.y,
-                    GAME_OVER_RETRY_BUTTON.width, GAME_OVER_RETRY_BUTTON.height);
-                shapeRenderer.setColor(0.02f, 0.1f, 0.17f,
-                    game.input().pointerOver(GAME_OVER_MENU_BUTTON) ? 0.95f : 0.72f);
-                shapeRenderer.rect(GAME_OVER_MENU_BUTTON.x, GAME_OVER_MENU_BUTTON.y,
-                    GAME_OVER_MENU_BUTTON.width, GAME_OVER_MENU_BUTTON.height);
+                drawUiButton(GAME_OVER_RETRY_BUTTON, false);
+                drawUiButton(GAME_OVER_MENU_BUTTON, false);
             }
         }
 
-        if (displayedAchievement != null) {
+        if (displayedAchievement != null && !paused && !gameOver) {
             shapeRenderer.setColor(0.015f, 0.055f, 0.1f, 0.97f);
-            shapeRenderer.rect(390f, 570f, 500f, 62f);
+            shapeRenderer.rect(390f, 480f, 500f, 56f);
             shapeRenderer.setColor(Color.GOLD);
-            shapeRenderer.rect(390f, 627f, 500f, 5f);
+            shapeRenderer.rect(390f, 534f, 500f, 2f);
         }
         endShapes();
 
@@ -1409,25 +1410,9 @@ public class GameScreen extends BaseScreen {
         shapeRenderer.setColor(Color.WHITE);
         shapeRenderer.rect(24f, 626f, 276f, 22f);
         if (boss != null) {
-            shapeRenderer.rect(405f, 660f, 470f, 16f);
-        }
-        if (choosingUpgrade) {
-            for (int i = 0; i < upgradeChoices.size(); i++) {
-                float x = upgradeCardX(i);
-                shapeRenderer.setColor(i == selectedUpgradeIndex ? Color.YELLOW : Color.CYAN);
-                shapeRenderer.rect(x, 170f, 350f, 360f);
-            }
+            shapeRenderer.rect(405f, 614f, 470f, 8f);
         }
         if (touchControlsVisible) {
-            shapeRenderer.setColor(Color.CYAN);
-            shapeRenderer.rect(TOUCH_SWIM_BUTTON.x, TOUCH_SWIM_BUTTON.y,
-                TOUCH_SWIM_BUTTON.width, TOUCH_SWIM_BUTTON.height);
-            shapeRenderer.setColor(Color.LIGHT_GRAY);
-            if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
-                shapeRenderer.setColor(Color.DARK_GRAY);
-            }
-            shapeRenderer.rect(TOUCH_FIRE_BUTTON.x, TOUCH_FIRE_BUTTON.y,
-                TOUCH_FIRE_BUTTON.width, TOUCH_FIRE_BUTTON.height);
             if (dashCharges > 0) {
                 shapeRenderer.setColor(Color.LIME);
                 shapeRenderer.rect(TOUCH_DASH_BUTTON.x, TOUCH_DASH_BUTTON.y,
@@ -1441,7 +1426,7 @@ public class GameScreen extends BaseScreen {
     }
 
     private void drawUpgradeShapes() {
-        shapeRenderer.setColor(0f, 0f, 0f, 0.78f);
+        shapeRenderer.setColor(0.005f, 0.025f, 0.065f, 1f);
         shapeRenderer.rect(0f, 0f, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
         for (int i = 0; i < upgradeChoices.size(); i++) {
             float x = upgradeCardX(i);
@@ -1450,7 +1435,8 @@ public class GameScreen extends BaseScreen {
             } else {
                 shapeRenderer.setColor(0.01f, 0.06f, 0.12f, 0.95f);
             }
-            shapeRenderer.rect(x, 170f, 350f, 360f);
+            upgradeCardBounds(i);
+            drawUiButton(interactiveRow, shapeRenderer.getColor(), i == selectedUpgradeIndex);
             shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
             shapeRenderer.rect(x, 525f, 350f, 5f);
         }
@@ -1458,23 +1444,30 @@ public class GameScreen extends BaseScreen {
 
     private void drawUiText() {
         batch.begin();
+        if (choosingUpgrade || paused || gameOver) {
+            if (choosingUpgrade) {
+                drawUpgradeSelection();
+            } else if (paused) {
+                drawPauseMenu();
+            } else {
+                drawGameOverScreen();
+            }
+            batch.end();
+            return;
+        }
 
         smallFont.setColor(Color.WHITE);
         smallFont.draw(batch, "SCORE  " + session.getDisplayScore(), 26f, 694f);
         smallFont.draw(batch, "BEST   " + highScore, 26f, 668f);
         smallFont.draw(batch, "OXYGEN " + Math.round(session.getOxygen()) + " / "
             + Math.round(session.getMaxOxygen()), 54f, 645f);
-        smallFont.draw(batch, difficulty.name(), 976f, 692f);
-        smallFont.setColor(suitUiColor());
-        smallFont.draw(batch, runSettings.difficulty().title() + "  |  "
-            + equippedSuit.title(), 976f, 666f);
-        smallFont.setColor(Color.WHITE);
-        smallFont.draw(batch, "BELOW  " + runDirector.displayDepthMeters() + " M", 976f, 640f);
-        smallFont.draw(batch, "DIST  " + formatDistance(runDirector.displayMeters()), 976f, 615f);
-        smallFont.draw(batch, "NEXT  " + formatDistance(runDirector.nextMilestoneMeters()), 976f, 590f);
+        drawCentered(smallFont, "DIST  " + formatDistance(runDirector.displayMeters())
+            + "    |    NEXT  " + formatDistance(runDirector.nextMilestoneMeters()), 694f, Color.WHITE);
+        drawCentered(smallFont, difficulty.name() + "  |  " + runSettings.difficulty().title(),
+            670f, Color.CYAN);
 
         float powerStatusY = 600f;
-        if (dashCharges > 0) {
+        if (dashCharges > 0 && !game.input().isMobile()) {
             smallFont.setColor(Color.LIME);
             smallFont.draw(batch, dashStatusText(), 24f, powerStatusY);
             powerStatusY -= 26f;
@@ -1503,31 +1496,28 @@ public class GameScreen extends BaseScreen {
                 ? "SURVIVE OCTOPUS  " + Math.max(0, Math.round(
                     GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS - unarmedBossSurvivalTimer)) + "s"
                 : "ABYSSAL OCTOPUS";
-            drawCentered(smallFont, bossText, 695f, BOSS_TEXT_COLOR);
+            drawCentered(smallFont, bossText, 642f, BOSS_TEXT_COLOR);
         }
 
         if (session.getCombo() > 1) {
-            mediumFont.setColor(Color.YELLOW);
-            mediumFont.draw(batch, String.format(Locale.ROOT, "COMBO x%.2f",
-                session.getComboMultiplier()), 1000f, 542f);
+            smallFont.setColor(Color.YELLOW);
+            layout.setText(smallFont, String.format(Locale.ROOT, "COMBO x%.2f",
+                session.getComboMultiplier()));
+            smallFont.draw(batch, layout,
+                TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width - layout.width,
+                TOUCH_PAUSE_BUTTON.y - 16f);
         }
 
-        if (showTutorial && !paused && !gameOver && !choosingUpgrade) {
+        if (showTutorial && !game.input().usingTouch()) {
             if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
                 drawCentered(smallFont, "NO HARPOON CHALLENGE  |  SURVIVE BY MOVEMENT ALONE",
-                    game.input().usingTouch() ? tutorialPanelY() + 58f : 76f, Color.YELLOW);
+                    76f, Color.YELLOW);
                 drawCentered(smallFont, "AVOID THE SEABED  |  DASH IF AVAILABLE  |  PAUSE FOR OPTIONS",
-                    game.input().usingTouch() ? tutorialPanelY() + 29f : 47f, Color.LIGHT_GRAY);
+                    47f, Color.LIGHT_GRAY);
             } else if (game.input().usingController()) {
                 drawCentered(smallFont, "[A] / STICK UP SWIM  |  [X / B / RB] FIRE", 76f, Color.WHITE);
                 drawCentered(smallFont, "AVOID THE SEABED  |  [LB] DASH  |  [START] PAUSE  |  [Y] HELP",
                     47f, Color.LIGHT_GRAY);
-            } else if (game.input().usingTouch()) {
-                float tutorialY = tutorialPanelY();
-                drawCentered(smallFont, "HOLD SWIM TO RISE  |  TAP FIRE TO SHOOT",
-                    tutorialY + 58f, Color.WHITE);
-                drawCentered(smallFont, "AVOID THE SEABED  |  TAP DASH  |  PAUSE IS AT THE TOP RIGHT",
-                    tutorialY + 29f, Color.LIGHT_GRAY);
             } else {
                 drawCentered(smallFont, "SPACE / W / UP OR LEFT MOUSE TO SWIM  |  Z / X OR RIGHT MOUSE FIRE",
                     76f, Color.WHITE);
@@ -1537,52 +1527,42 @@ public class GameScreen extends BaseScreen {
         }
 
         if (game.input().isMobile() && !paused && !gameOver && !choosingUpgrade) {
-            drawCenteredAt(mediumFont, "SWIM", TOUCH_SWIM_BUTTON.x + TOUCH_SWIM_BUTTON.width / 2f,
-                TOUCH_SWIM_BUTTON.y + 74f, Color.WHITE);
-            drawCenteredAt(mediumFont,
-                runSettings.has(ChallengeModifier.NO_WEAPON) ? "LOCKED" : "FIRE",
-                TOUCH_FIRE_BUTTON.x + TOUCH_FIRE_BUTTON.width / 2f,
-                TOUCH_FIRE_BUTTON.y + 74f, Color.WHITE);
-            if (dashCharges > 0) {
-                drawCenteredAt(mediumFont, "DASH x" + dashCharges,
-                    TOUCH_DASH_BUTTON.x + TOUCH_DASH_BUTTON.width / 2f,
-                    TOUCH_DASH_BUTTON.y + 52f, Color.WHITE);
+            float hintAlpha = touchHintAlpha();
+            if (hintAlpha > 0f) {
+                smallFont.setColor(1f, 1f, 1f, hintAlpha);
+                drawTouchHint(TOUCH_SWIM_HINT, "SWIM", "HOLD LEFT");
+                drawTouchHint(TOUCH_FIRE_HINT,
+                    runSettings.has(ChallengeModifier.NO_WEAPON) ? "LOCKED" : "FIRE", "TAP RIGHT");
             }
-            drawCenteredAt(smallFont, "PAUSE", TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width / 2f,
-                TOUCH_PAUSE_BUTTON.y + 28f, Color.WHITE);
+            if (dashCharges > 0) {
+                drawCenteredAt(smallFont, "DASH x" + dashCharges,
+                    TOUCH_DASH_BUTTON.x + TOUCH_DASH_BUTTON.width / 2f,
+                    TOUCH_DASH_BUTTON.y + 38f, Color.WHITE);
+            }
         }
 
-        if (bannerTimer > 0f && !paused && !gameOver && !choosingUpgrade) {
+        if (bannerTimer > 0f && bossWarningTimer <= 0f) {
             float alpha = Math.min(1f, bannerTimer * 1.5f);
+            smallFont.setColor(0.45f, 0.92f, 1f, alpha);
             if (bannerSubtitle.isEmpty()) {
-                mediumFont.setColor(0.45f, 0.92f, 1f, alpha);
-                drawCenteredWithCurrentColor(mediumFont, bannerText, 535f);
+                drawFittedCentered(smallFont, bannerText, 584f, 512f);
             } else {
-                BitmapFont bannerTitleFont = bannerText.length() > 20 ? mediumFont : largeFont;
-                bannerTitleFont.setColor(0.45f, 0.92f, 1f, alpha);
-                drawCenteredWithCurrentColor(bannerTitleFont, bannerText, 520f);
+                drawFittedCentered(smallFont, bannerText, 594f, 512f);
                 smallFont.setColor(1f, 1f, 1f, alpha);
-                drawCenteredWithCurrentColor(smallFont, bannerSubtitle, 470f);
+                drawFittedCentered(smallFont, bannerSubtitle, 568f, 512f);
             }
         }
         if (bossWarningTimer > 0f && !gameOver) {
             float alpha = DisplaySettings.flashEffectsEnabled()
                 ? 0.65f + MathUtils.sin(bossWarningTimer * 18f) * 0.35f
                 : 1f;
-            largeFont.setColor(1f, 0.2f, 0.18f, alpha);
-            drawCenteredWithCurrentColor(largeFont, "ABYSSAL OCTOPUS AWAKENS", 560f);
+            mediumFont.setColor(1f, 0.2f, 0.18f, alpha);
+            drawFittedCentered(mediumFont, "ABYSSAL OCTOPUS AWAKENS", 588f, 540f);
         }
         if (displayedAchievement != null) {
-            drawCentered(smallFont, "ACHIEVEMENT UNLOCKED", 617f, Color.GOLD);
-            drawCentered(mediumFont, displayedAchievement.title(), 588f, Color.WHITE);
-        }
-
-        if (choosingUpgrade) {
-            drawUpgradeSelection();
-        } else if (paused) {
-            drawPauseMenu();
-        } else if (gameOver) {
-            drawGameOverScreen();
+            drawCentered(smallFont, "ACHIEVEMENT UNLOCKED", 524f, Color.GOLD);
+            smallFont.setColor(Color.WHITE);
+            drawFittedCentered(smallFont, displayedAchievement.title(), 500f, 472f);
         }
 
         batch.end();
@@ -1590,18 +1570,13 @@ public class GameScreen extends BaseScreen {
 
     private void drawUpgradeSelection() {
         drawCentered(largeFont, "CHOOSE AN UPGRADE", 625f, Color.WHITE);
-        String hint = game.input().usingController()
-            ? "GAMEPAD  D-PAD CHOOSE  |  [A] INSTALL"
-            : game.input().usingTouch()
-            ? "TAP A CARD TO INSTALL"
-            : "KEYBOARD  ARROWS / WASD OR 1-3 CHOOSE  |  [ENTER / SPACE] INSTALL";
-        drawCentered(smallFont, hint, 580f, Color.LIGHT_GRAY);
 
         for (int i = 0; i < upgradeChoices.size(); i++) {
             UpgradeType type = upgradeChoices.get(i);
             float centerX = 260f + i * 380f;
             Color color = i == selectedUpgradeIndex ? Color.YELLOW : Color.WHITE;
-            drawCenteredAt(mediumFont, type.title(), centerX, 465f, color);
+            mediumFont.setColor(color);
+            drawFittedCenteredAt(mediumFont, type.title(), centerX, 465f, 318f);
             drawCenteredAt(smallFont, scaledUpgradeDescription(type), centerX, 382f,
                 Color.LIGHT_GRAY);
             int currentLevel = session.getUpgradeLevel(type);
@@ -1625,17 +1600,12 @@ public class GameScreen extends BaseScreen {
 
     private void drawPauseMenu() {
         drawCentered(largeFont, "PAUSED", 485f, Color.WHITE);
-        float startY = 385f;
         for (int i = 0; i < PAUSE_OPTIONS.length; i++) {
             Color color = i == selectedPauseIndex ? Color.YELLOW : Color.LIGHT_GRAY;
             String prefix = i == selectedPauseIndex ? ">  " : "   ";
-            drawCentered(mediumFont, prefix + PAUSE_OPTIONS[i], startY - i * 62f, color);
+            pauseRowBounds(i);
+            drawUiButtonLabel(mediumFont, prefix + PAUSE_OPTIONS[i], interactiveRow, color);
         }
-        String hint = game.input().usingController()
-            ? "GAMEPAD  D-PAD CHOOSE  |  [A] SELECT  |  [B / START] RESUME"
-            : game.input().usingTouch() ? "TAP AN OPTION"
-            : "KEYBOARD  ARROWS / W-S CHOOSE  |  [ENTER / SPACE] SELECT  |  [ESC] RESUME";
-        drawCentered(smallFont, hint, 195f, Color.LIGHT_GRAY);
     }
 
     private void drawGameOverScreen() {
@@ -1656,8 +1626,8 @@ public class GameScreen extends BaseScreen {
         String menu = game.input().usingController() ? "[B] RETURN TO MENU"
             : game.input().usingTouch() ? "TAP TO RETURN TO MENU"
             : "[ESC] OR CLICK TO RETURN TO MENU";
-        drawCentered(smallFont, retry, 267f, Color.WHITE);
-        drawCentered(smallFont, menu, 220f, Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, retry, GAME_OVER_RETRY_BUTTON, Color.WHITE);
+        drawUiButtonLabel(smallFont, menu, GAME_OVER_MENU_BUTTON, Color.LIGHT_GRAY);
     }
 
     private Rectangle pauseRowBounds(int index) {
@@ -1681,22 +1651,51 @@ public class GameScreen extends BaseScreen {
             : GameConfig.WORLD_WIDTH / viewport.getScreenWidth();
         float verticalScale = viewport.getScreenHeight() == 0 ? 1f
             : GameConfig.WORLD_HEIGHT / viewport.getScreenHeight();
-        float safeLeft = Gdx.graphics.getSafeInsetLeft() * horizontalScale;
-        float safeRight = Gdx.graphics.getSafeInsetRight() * horizontalScale;
-        float safeTop = Gdx.graphics.getSafeInsetTop() * verticalScale;
-        float safeBottom = Gdx.graphics.getSafeInsetBottom() * verticalScale;
+        int rightGutter = Gdx.graphics.getWidth() - viewport.getScreenX() - viewport.getScreenWidth();
+        int topGutter = Gdx.graphics.getHeight() - viewport.getScreenY() - viewport.getScreenHeight();
+        float safeLeft = Math.max(0, Gdx.graphics.getSafeInsetLeft() - viewport.getScreenX()) * horizontalScale;
+        float safeRight = Math.max(0, Gdx.graphics.getSafeInsetRight() - rightGutter) * horizontalScale;
+        float safeTop = Math.max(0, Gdx.graphics.getSafeInsetTop() - topGutter) * verticalScale;
+        float safeBottom = Math.max(0, Gdx.graphics.getSafeInsetBottom() - viewport.getScreenY()) * verticalScale;
 
-        TOUCH_SWIM_BUTTON.set(32f + safeLeft, 28f + safeBottom, 230f, 120f);
-        TOUCH_FIRE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 262f,
-            28f + safeBottom, 230f, 120f);
-        TOUCH_DASH_BUTTON.set((GameConfig.WORLD_WIDTH - 220f) / 2f,
-            28f + safeBottom, 220f, 76f);
-        TOUCH_PAUSE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 32f - TOUCH_PAUSE_WIDTH,
-            GameConfig.WORLD_HEIGHT - safeTop - 256f, TOUCH_PAUSE_WIDTH, TOUCH_PAUSE_HEIGHT);
+        TOUCH_SWIM_HINT.set(12f + safeLeft, 16f + safeBottom, 132f, 64f);
+        TOUCH_FIRE_HINT.set(GameConfig.WORLD_WIDTH - safeRight - 144f,
+            16f + safeBottom, 132f, 64f);
+        TOUCH_DASH_BUTTON.set((GameConfig.WORLD_WIDTH - 152f) / 2f,
+            16f + safeBottom, 152f, 60f);
+        TOUCH_PAUSE_BUTTON.set(GameConfig.WORLD_WIDTH - safeRight - 12f - TOUCH_PAUSE_WIDTH,
+            GameConfig.WORLD_HEIGHT - safeTop - 12f - TOUCH_PAUSE_HEIGHT,
+            TOUCH_PAUSE_WIDTH, TOUCH_PAUSE_HEIGHT);
     }
 
-    private float tutorialPanelY() {
-        return TOUCH_SWIM_BUTTON.y + TOUCH_SWIM_BUTTON.height + 16f;
+    private float touchHintAlpha() {
+        return MathUtils.clamp((GameConfig.TOUCH_HINT_DURATION_SECONDS - touchHintTimer)
+            / GameConfig.TOUCH_HINT_FADE_SECONDS, 0f, 1f);
+    }
+
+    private void drawTouchHint(Rectangle bounds, String action, String instruction) {
+        float centerX = bounds.x + bounds.width / 2f;
+        layout.setText(smallFont, action);
+        smallFont.draw(batch, layout, centerX - layout.width / 2f, bounds.y + 49f);
+        layout.setText(smallFont, instruction);
+        smallFont.draw(batch, layout, centerX - layout.width / 2f, bounds.y + 25f);
+    }
+
+    private void drawFittedCentered(BitmapFont font, String text, float y, float maxWidth) {
+        drawFittedCenteredAt(font, text, GameConfig.WORLD_WIDTH / 2f, y, maxWidth);
+    }
+
+    private void drawFittedCenteredAt(BitmapFont font, String text, float centerX, float y, float maxWidth) {
+        float scaleX = font.getData().scaleX;
+        float scaleY = font.getData().scaleY;
+        layout.setText(font, text);
+        if (layout.width > maxWidth) {
+            float ratio = maxWidth / layout.width;
+            font.getData().setScale(scaleX * ratio, scaleY * ratio);
+        }
+        layout.setText(font, text);
+        font.draw(batch, layout, centerX - layout.width / 2f, y);
+        font.getData().setScale(scaleX, scaleY);
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {
@@ -1709,12 +1708,8 @@ public class GameScreen extends BaseScreen {
         font.draw(batch, layout, centerX - layout.width / 2f, y);
     }
 
-    private void drawCenteredWithCurrentColor(BitmapFont font, String text, float y) {
-        layout.setText(font, text);
-        font.draw(batch, layout, (GameConfig.WORLD_WIDTH - layout.width) / 2f, y);
-    }
-
     public void resetGame() {
+        game.input().suppressGameplayTouchUntilRelease();
         saveHighScore();
         session.reset();
         runDirector = new RunDirector();
@@ -1742,6 +1737,7 @@ public class GameScreen extends BaseScreen {
         safetyTimer = CELEBRATION_DURATION;
         breathTimer = 0f;
         tutorialTimer = 0f;
+        touchHintTimer = 0f;
         bannerTimer = CELEBRATION_DURATION;
         bannerText = difficulty.name();
         bannerSubtitle = runSettings.difficulty().title() + "  |  DESCENDING TO "
@@ -1800,12 +1796,4 @@ public class GameScreen extends BaseScreen {
         super.dispose();
     }
 
-    private Color suitUiColor() {
-        return switch (equippedSuit) {
-            case TIDELINE_BLUE -> Color.CYAN;
-            case SALVAGE_GREEN -> Color.LIME;
-            case RESCUE_RED -> Color.SCARLET;
-            case ABYSS_BLACK -> Color.LIGHT_GRAY;
-        };
-    }
 }

@@ -2,6 +2,7 @@
 /target/
 /*/target/
 /.mvn/tools/
+/.lwjgl/
 
 ## Java
 *.class

@@ -18,9 +18,13 @@ public final class GameInput {
     private static final float AXIS_DEAD_ZONE = 0.45f;
 
     private final Vector2[] pointerPositions = new Vector2[MAX_POINTERS];
+    private final Vector2[] buttonPressPositions = new Vector2[MAX_POINTERS];
     private final boolean[] pointerDown = new boolean[MAX_POINTERS];
     private final boolean[] pointerJustDown = new boolean[MAX_POINTERS];
+    private final boolean[] pointerJustUp = new boolean[MAX_POINTERS];
+    private final boolean[] buttonPressInsideViewport = new boolean[MAX_POINTERS];
     private final boolean[] pointerInsideViewport = new boolean[MAX_POINTERS];
+    private final boolean[] gameplayTouchBlocked = new boolean[MAX_POINTERS];
     private final InputDeviceTracker inputDeviceTracker = new InputDeviceTracker();
 
     private Controller controller;
@@ -50,6 +54,7 @@ public final class GameInput {
     public GameInput() {
         for (int i = 0; i < pointerPositions.length; i++) {
             pointerPositions[i] = new Vector2();
+            buttonPressPositions[i] = new Vector2();
         }
     }
 
@@ -126,6 +131,46 @@ public final class GameInput {
             || controllerDash && !previousControllerDash;
     }
 
+    public boolean touchSwimPressed() {
+        return touchEdgePressed(false, false, null);
+    }
+
+    public boolean touchFireJustPressed(Rectangle pauseButton) {
+        return touchEdgePressed(true, true, pauseButton);
+    }
+
+    /** Prevent a menu selection or held menu touch from becoming a gameplay action. */
+    public void suppressGameplayTouchUntilRelease() {
+        for (int i = 0; i < MAX_POINTERS; i++) {
+            gameplayTouchBlocked[i] |= pointerDown[i];
+        }
+    }
+
+    private boolean touchEdgePressed(boolean rightEdge, boolean justPressed, Rectangle excluded) {
+        if (!isMobile()) {
+            return false;
+        }
+        float screenWidth = Gdx.graphics.getWidth();
+        float stripWidth = Math.min(screenWidth * 0.22f,
+            Math.max(screenWidth * 0.14f, GameConfig.TOUCH_EDGE_WIDTH_DP * Gdx.graphics.getDensity()));
+        for (int i = 0; i < MAX_POINTERS; i++) {
+            if (gameplayTouchBlocked[i] || !(justPressed ? pointerJustDown[i] : pointerDown[i])) {
+                continue;
+            }
+            if (excluded != null && pointerInsideViewport[i] && excluded.contains(pointerPositions[i])) {
+                continue;
+            }
+            // Screen coordinates deliberately include the FitViewport's black side bars.
+            float x = Gdx.input.getX(i);
+            float y = Gdx.input.getY(i);
+            if (x >= 0f && x < screenWidth && y >= 0f && y < Gdx.graphics.getHeight()
+                && (rightEdge ? x >= screenWidth - stripWidth : x < stripWidth)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean pointerJustPressed(Rectangle bounds) {
         for (int i = 0; i < MAX_POINTERS; i++) {
             if (pointerJustDown[i] && pointerInsideViewport[i] && bounds.contains(pointerPositions[i])) {
@@ -142,6 +187,30 @@ public final class GameInput {
             }
         }
         return false;
+    }
+
+    /** Menu actions activate on release, only when the gesture began and ended on the same button. */
+    public boolean buttonJustReleased(Rectangle bounds) {
+        for (int i = 0; i < MAX_POINTERS; i++) {
+            if (pointerJustUp[i] && buttonContainsGesture(bounds, i)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean buttonPressed(Rectangle bounds) {
+        for (int i = 0; i < MAX_POINTERS; i++) {
+            if (pointerDown[i] && buttonContainsGesture(bounds, i)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean buttonContainsGesture(Rectangle bounds, int pointer) {
+        return buttonPressInsideViewport[pointer] && pointerInsideViewport[pointer]
+            && bounds.contains(buttonPressPositions[pointer]) && bounds.contains(pointerPositions[pointer]);
     }
 
     public boolean pointerOver(Rectangle bounds) {
@@ -167,7 +236,9 @@ public final class GameInput {
 
     /** True when touch supplied the most recent input (the default on mobile). */
     public boolean usingTouch() {
-        return inputDeviceTracker.is(InputDeviceTracker.Device.TOUCH);
+        return inputDeviceTracker.is(InputDeviceTracker.Device.TOUCH)
+            || isMobile() && !hasController()
+            && inputDeviceTracker.is(InputDeviceTracker.Device.CONTROLLER);
     }
 
     public void vibrateController(int durationMillis, float strength) {
@@ -186,9 +257,15 @@ public final class GameInput {
 
         for (int i = 0; i < MAX_POINTERS; i++) {
             boolean wasDown = pointerDown[i];
-            boolean isDown = Gdx.input.isTouched(i);
+            boolean isDown = isMobile() ? Gdx.input.isTouched(i)
+                : i == 0 && Gdx.input.isButtonPressed(Input.Buttons.LEFT);
+            if (!isDown) {
+                gameplayTouchBlocked[i] = false;
+            }
             pointerDown[i] = isDown;
             pointerJustDown[i] = (isDown && !wasDown) || (i == 0 && mouseJustPressed);
+            // A quick mouse click may begin and end between two rendered frames.
+            pointerJustUp[i] = !isDown && (wasDown || i == 0 && mouseJustPressed);
 
             float localX = Gdx.input.getX(i) - screenX;
             float localY = Gdx.graphics.getHeight() - Gdx.input.getY(i) - screenY;
@@ -198,6 +275,10 @@ public final class GameInput {
                 screenWidth == 0 ? 0f : localX * GameConfig.WORLD_WIDTH / screenWidth,
                 screenHeight == 0 ? 0f : localY * GameConfig.WORLD_HEIGHT / screenHeight
             );
+            if (pointerJustDown[i]) {
+                buttonPressPositions[i].set(pointerPositions[i]);
+                buttonPressInsideViewport[i] = pointerInsideViewport[i];
+            }
         }
     }
 
