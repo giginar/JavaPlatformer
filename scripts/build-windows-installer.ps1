@@ -1,6 +1,5 @@
-param(
-    [string]$Version = ''
-)
+[CmdletBinding()]
+param()
 
 $ErrorActionPreference = 'Stop'
 $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -12,18 +11,7 @@ $versionScriptPath = Join-Path $PSScriptRoot 'get-project-version.ps1'
 [xml]$projectPom = Get-Content -LiteralPath $pomPath -Raw
 $mavenVersion = ([string]$projectPom.project.version).Trim()
 
-if (-not $Version) {
-    $Version = (& $versionScriptPath -ProjectRootPath $projectRootPath).Trim()
-}
-$Version = $Version.Trim()
-if ($Version -notmatch '^\d+\.\d+(\.\d+)?$') {
-    throw "The Windows installer version must use major.minor or major.minor.build format, got: $Version"
-}
-$versionParts = @($Version.Split('.') | ForEach-Object { [int]$_ })
-$windowsBuildVersion = if ($versionParts.Count -eq 3) { $versionParts[2] } else { 0 }
-if ($versionParts[0] -gt 255 -or $versionParts[1] -gt 255 -or $windowsBuildVersion -gt 65535) {
-    throw "The Windows installer version exceeds the 255.255.65535 limit: $Version"
-}
+$Version = (& $versionScriptPath -ProjectRootPath $projectRootPath).Trim()
 
 Write-Host "Building Windows installer version $Version..."
 

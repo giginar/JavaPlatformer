@@ -11,6 +11,25 @@ DeepDive Drift, libGDX ile geliştirilen hızlı tempolu bir su altı hayatta ka
 
 Apple/iOS ve macOS bu sürüm çalışmasının kapsamına dahil değildir.
 
+## Güncel sürümü tek komutla oluştur
+
+Proje klasöründe şu komut Windows kurulumunu ve Android APK/AAB paketlerini
+mevcut kaynaklardan yeniden derler:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
+```
+
+Yalnızca APK/AAB için `-Target Android`, yalnızca Windows kurulumu için
+`-Target Windows`, Steam depot paketleri için `-Target Steam` ekleyin.
+Sürüm `get-project-version.ps1` tarafından `pom.xml` temel sürümü + Git commit
+sayısından otomatik hesaplanır. Örneğin 39 committe `1.0.39`, sonraki committe
+`1.0.40` üretilir; komuta sürüm yazmanız gerekmez. Commit atmak mevcut paketleri
+yenilemez: her committen sonra aynı komutu tekrar çalıştırın.
+
+Çıktı yolları ve `scripts` altındaki tüm betiklerin görevleri:
+[Hangi betiği çalıştırmalıyım?](scripts/README.md).
+
 ## Kontroller
 
 | Ortam | Yüzme | Ateş | Menü / duraklatma |
@@ -66,7 +85,7 @@ Proje Maven 3.9.16 Wrapper ve Java 21 kullanır. Yerel Maven kurulumu gerekmez:
 java -jar .\lwjgl3\target\DeepDiveDrift-1.0.0.jar
 ```
 
-İkinci komut masaüstü için bütün bağımlılıkları ve varlıkları içeren çalıştırılabilir JAR üretir. Maven temel sürümü kök `pom.xml` içindeki `<version>` alanından yönetilir. Windows kurulum dosyası ve Android APK/AAB sürümleri, bu temel sürüme Git commit sayısını ekleyen ortak `scripts/get-project-version.ps1` betiğinden gelir.
+İkinci komut masaüstü için bütün bağımlılıkları ve varlıkları içeren çalıştırılabilir JAR üretir. Maven temel sürümü kök `pom.xml` içindeki `<version>` alanından yönetilir. Windows, Android ve Steam dağıtım sürümleri, bu temel sürüme Git commit sayısını ekleyen ortak `scripts/get-project-version.ps1` betiğinden gelir.
 
 Doğrulanmış CC0/OFL kaynaklardan oyun, ikon ve mağaza görsellerini yeniden üretmek için:
 
@@ -90,10 +109,9 @@ dosyası başka bir Windows bilgisayara doğrudan gönderilebilir.
 
 Installer sürümü otomatik olarak `major.minor.build` biçiminde üretilir. `major`,
 `minor` ve başlangıç build değeri kök `pom.xml` sürümünden; kalan build numarası
-Git commit sayısından gelir. Örneğin proje sürümü `1.0.0` ve 26 commit için sürüm
-`1.0.26`, çıktı adı da `DeepDive Drift-1.0.26.exe` olur. Böylece her yeni commit
-installer sürümünü artırır. Geçici olarak belirli bir sürüm üretmek gerekirse
-`-Version 2.1.15` parametresiyle otomatik sürüm geçersiz kılınabilir.
+Git commit sayısından gelir. Çıktı adı `DeepDive Drift-<sürüm>.exe` olur.
+Her yeni committen sonra betiği yeniden çalıştırmak yeni sürümü üretir.
+Sürüm parametresi verilmez; Windows, Android ve Steam aynı hesabı kullanır.
 
 ## Android telefonda deneme
 
@@ -103,12 +121,12 @@ Telefona kopyalanıp kurulabilecek APK'yı üretmek ve doğrulamak için:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-test.ps1
 ```
 
-Çıktı: `android/target/store/google-play/DeepDiveDrift-1.0.34-universal.apk` (34 commit için).
+Çıktı: `android/target/store/google-play/DeepDiveDrift-<sürüm>-universal.apk`.
 APK ve AAB dosya adları ile Android'deki `versionName`, Windows kurulumuyla aynı
-otomatik sürümü kullanır: `1.0.34`, sonraki committe `1.0.35`.
+otomatik sürümü kullanır.
 Google Play'in sayısal `versionCode` değeri de otomatik hesaplanır:
 `pom.xml` içindeki `android.version-code` başlangıç değeri + Git commit sayısı
-(34 commit için `1 + 34 = 35`). Commit olmadan tekrar derleme sürümü artırmaz.
+(39 commit için `1 + 39 = 40`). Commit olmadan tekrar derleme sürümü artırmaz.
 Dosyayı telefona kopyalayıp açarak kurabilirsiniz. Bu test için Google Play hesabı gerekmez.
 
 USB hata ayıklaması açık bir telefona mevcut APK'yı yükleyip oyunu açmak için:
@@ -164,10 +182,12 @@ Paket doğrulaması, gerçek cihaz testi ve Play Console incelemesinin yerine ge
 ## Steam paketleri
 
 ```powershell
-.\mvnw.cmd -B -ntp -Psteam -pl lwjgl3 -am verify
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Target Steam
 ```
 
-Bu profil sabitlenmiş ve SHA-256 ile doğrulanan Temurin 21 JRE’lerini indirir. Depot içerikleri şuralarda oluşur:
+Bu komut Maven Steam profilini çalıştırır; sabitlenmiş ve SHA-256 ile doğrulanan
+Temurin 21 JRE’lerini indirir. Steam EXE sürümü ve depot klasörlerindeki `version.txt`
+dosyaları Windows/Android ile aynı otomatik sürümü kullanır. Depot içerikleri şuralarda oluşur:
 
 - `lwjgl3/target/steam/windows-x64`
 - `lwjgl3/target/steam/linux-x64`

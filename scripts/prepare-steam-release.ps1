@@ -13,8 +13,9 @@ $ErrorActionPreference = "Stop"
 $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $generatedDirectory = Join-Path $projectRootPath 'steam\generated'
 $mavenWrapper = Join-Path $projectRootPath 'mvnw.cmd'
+$version = & (Join-Path $PSScriptRoot 'get-project-version.ps1') -ProjectRootPath $projectRootPath
 
-& $mavenWrapper -B -ntp -Psteam -pl lwjgl3 -am verify
+& $mavenWrapper -f (Join-Path $projectRootPath 'pom.xml') -B -ntp -Psteam -pl lwjgl3 -am clean verify
 if ($LASTEXITCODE -ne 0) {
     throw "Steam package build failed with exit code $LASTEXITCODE"
 }
@@ -46,8 +47,6 @@ if ($LinuxDepotId) {
     $linuxDepotEntry = '        "' + $LinuxDepotId + '" "' + (Convert-ToVdfPath $linuxDepotScript) + '"'
 }
 
-[xml]$projectPom = Get-Content -LiteralPath (Join-Path $projectRootPath 'pom.xml') -Raw
-$version = [string]$projectPom.project.version
 $appVdf = $appTemplate.Replace('{{APP_ID}}', $AppId)
 $appVdf = $appVdf.Replace('{{VERSION}}', $version)
 $appVdf = $appVdf.Replace('{{BUILD_OUTPUT}}', (Convert-ToVdfPath (Join-Path $generatedDirectory 'output')))

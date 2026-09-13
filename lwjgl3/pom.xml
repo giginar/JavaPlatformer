@@ -145,10 +145,10 @@
                                         <requires64Bit>true</requires64Bit>
                                     </jre>
                                     <versionInfo>
-                                        <fileVersion>1.0.0.0</fileVersion>
-                                        <txtFileVersion>${project.version}</txtFileVersion>
-                                        <productVersion>1.0.0.0</productVersion>
-                                        <txtProductVersion>${project.version}</txtProductVersion>
+                                        <fileVersion>${release.version}.0</fileVersion>
+                                        <txtFileVersion>${release.version}</txtFileVersion>
+                                        <productVersion>${release.version}.0</productVersion>
+                                        <txtProductVersion>${release.version}</txtProductVersion>
                                         <companyName>DeepDive Drift</companyName>
                                         <fileDescription>DeepDive Drift</fileDescription>
                                         <copyright>Copyright (c) 2026</copyright>
@@ -166,6 +166,26 @@
                         <version>${maven.exec.version}</version>
                         <executions>
                             <execution>
+                                <id>calculate-steam-version</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>powershell.exe</executable>
+                                    <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+                                    <arguments>
+                                        <argument>-NoProfile</argument>
+                                        <argument>-ExecutionPolicy</argument>
+                                        <argument>Bypass</argument>
+                                        <argument>-File</argument>
+                                        <argument>${maven.multiModuleProjectDirectory}/scripts/get-project-version.ps1</argument>
+                                        <argument>-MavenPropertiesPath</argument>
+                                        <argument>${project.build.directory}/release-version.properties</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <id>prepare-steam-depots</id>
                                 <phase>verify</phase>
                                 <goals>
@@ -180,9 +200,26 @@
                                         <argument>Bypass</argument>
                                         <argument>-File</argument>
                                         <argument>${maven.multiModuleProjectDirectory}/scripts/build-steam-packages.ps1</argument>
-                                        <argument>-Version</argument>
-                                        <argument>${project.version}</argument>
                                     </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>properties-maven-plugin</artifactId>
+                        <version>${maven.properties.version}</version>
+                        <executions>
+                            <execution>
+                                <id>read-steam-version</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>read-project-properties</goal>
+                                </goals>
+                                <configuration>
+                                    <files>
+                                        <file>${project.build.directory}/release-version.properties</file>
+                                    </files>
                                 </configuration>
                             </execution>
                         </executions>

@@ -1,17 +1,20 @@
-param(
-    [Parameter(Mandatory = $true)]
-    [string]$Version
-)
+# Maven packaging helper. For a complete build, run build.ps1 -Target Steam.
+[CmdletBinding()]
+param()
 
 $ErrorActionPreference = 'Stop'
 $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$Version = & (Join-Path $PSScriptRoot 'get-project-version.ps1') -ProjectRootPath $projectRootPath
+[xml]$projectPom = Get-Content -LiteralPath (Join-Path $projectRootPath 'pom.xml') -Raw
+$mavenVersion = ([string]$projectPom.project.version).Trim()
 $desktopTargetPath = Join-Path $projectRootPath 'lwjgl3\target'
 $steamTargetPath = Join-Path $desktopTargetPath 'steam'
 $toolsCachePath = Join-Path $projectRootPath '.mvn\tools'
 $windowsContentPath = Join-Path $steamTargetPath 'windows-x64'
 $linuxContentPath = Join-Path $steamTargetPath 'linux-x64'
-$desktopJarPath = Join-Path $desktopTargetPath "DeepDiveDrift-$Version.jar"
+$desktopJarPath = Join-Path $desktopTargetPath "DeepDiveDrift-$mavenVersion.jar"
 $windowsLauncherPath = Join-Path $desktopTargetPath 'steam-launcher\DeepDiveDrift.exe'
+Write-Host "Packaging Steam version $Version..."
 
 $runtimeVersion = '21.0.11_10'
 $runtimeReleaseTag = 'jdk-21.0.11%2B10'
@@ -59,6 +62,11 @@ foreach ($requiredPath in @($desktopJarPath, $windowsLauncherPath)) {
     if (-not (Test-Path -LiteralPath $requiredPath)) {
         throw "Required Steam build input is missing: $requiredPath"
     }
+}
+
+$launcherVersion = (Get-Item -LiteralPath $windowsLauncherPath).VersionInfo.ProductVersion
+if ($launcherVersion -ne $Version) {
+    throw "Steam launcher version '$launcherVersion' does not match $Version. Run build.ps1 -Target Steam."
 }
 
 $resolvedDesktopTarget = [System.IO.Path]::GetFullPath($desktopTargetPath).TrimEnd('\') + '\'
@@ -112,7 +120,12 @@ try {
     }
 }
 
+foreach ($contentPath in @($windowsContentPath, $linuxContentPath)) {
+    Set-Content -LiteralPath (Join-Path $contentPath 'version.txt') -Encoding ASCII -Value $Version
+}
+
 Write-Host 'Steam depot content is ready:'
+Write-Host "  Version: $Version"
 Write-Host "  Windows: $windowsContentPath"
 Write-Host "  Linux: $linuxContentPath"
 Write-Host '  Linux launch command: runtime/bin/java -jar DeepDiveDrift.jar'

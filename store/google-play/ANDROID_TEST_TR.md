@@ -1,16 +1,17 @@
 # Android telefonda test ve Google Play'e hazırlık
 
-Windows için `build-windows-installer.ps1` EXE üretir. Android için karşılığı
-`scripts/build-android-test.ps1` betiğidir. Aynı oyun kodundan telefon için APK ve
+Android için `scripts/build.ps1 -Target Android` çalıştırın; bu komut
+`build-android-test.ps1` betiğini çağırır. Aynı oyun kodundan telefon için APK ve
 Google Play için AAB üretilir. Komutları proje kökündeki PowerShell terminalinde çalıştırın.
+Sürüm commit sayısından otomatik okunur. Tüm betikler için [kullanım rehberi](../../scripts/README.md).
 
 ## İlk deneme: APK'yı telefona kopyala
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-test.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Target Android
 ```
 
-1. `android/target/store/google-play/DeepDiveDrift-1.0.34-universal.apk` dosyasını USB dosya aktarımıyla telefonun İndirilenler klasörüne kopyalayın. Dosyadaki sürüm Windows kurulumuyla aynı hesaptan gelir; `1.0.34` örneği 34 commit içindir.
+1. Derleme sonunda yolu yazdırılan `android/target/store/google-play/DeepDiveDrift-<sürüm>-universal.apk` dosyasını USB dosya aktarımıyla telefonun İndirilenler klasörüne kopyalayın. Dosyadaki sürüm Windows kurulumuyla aynı hesaptan gelir.
 2. Telefonda Dosyalar / Dosyalarım uygulamasından APK'yı açın.
 3. Android isterse bu dosya yöneticisi için **Bilinmeyen uygulamaları yükle / Bu kaynaktan izin ver** seçeneğini açıp kuruluma dönün. Menü adı Android sürümüne göre değişebilir.
 4. **Yükle**, ardından **Aç** düğmesine dokunun. Oyunun adı **DeepDive Drift**.

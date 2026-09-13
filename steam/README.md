@@ -3,8 +3,12 @@
 ## 1. Depot içeriklerini üret
 
 ```powershell
-.\mvnw.cmd -B -ntp -Psteam -pl lwjgl3 -am verify
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Target Steam
 ```
+
+Sürüm ortak `get-project-version.ps1` betiğinden otomatik okunur. Windows EXE
+sürümü, iki depot klasöründeki `version.txt` ve hazırlanan VDF açıklaması aynı
+sürümü kullanır. Her committen sonra aynı komutu çalıştırın; elle sürüm girmeyin.
 
 Steamworks > Installation > General Installation bölümünde platforma göre şu başlatma seçeneklerini tanımlayın:
 

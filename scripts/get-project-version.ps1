@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$ProjectRootPath = '',
-    [switch]$Android
+    [switch]$Android,
+    [string]$MavenPropertiesPath = ''
 )
 
 Set-StrictMode -Version Latest
@@ -55,6 +56,11 @@ if ($LASTEXITCODE -eq 0 -and $workingTreeChanges) {
 }
 
 $version = "$major.$minor.$build"
+if ($MavenPropertiesPath) {
+    $propertiesPath = [System.IO.Path]::GetFullPath($MavenPropertiesPath)
+    New-Item -ItemType Directory -Path (Split-Path -Parent $propertiesPath) -Force | Out-Null
+    Set-Content -LiteralPath $propertiesPath -Encoding ASCII -Value "release.version=$version"
+}
 if ($Android) {
     # Keep Android's update counter independent of changes to the base semantic version.
     $baseVersionCodeText = [string]$projectPom.project.properties.'android.version-code'
