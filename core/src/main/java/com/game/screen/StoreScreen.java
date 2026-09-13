@@ -15,6 +15,8 @@ import com.game.model.DiverSuit;
 import com.game.model.PermanentUpgrade;
 import com.game.model.ProgressionStore;
 
+import java.util.Locale;
+
 public final class StoreScreen extends BaseScreen {
     private enum StoreTab {
         EQUIPMENT,
@@ -85,6 +87,8 @@ public final class StoreScreen extends BaseScreen {
             if (activeTab == StoreTab.DIVE_SUITS) {
                 shapeRenderer.setColor(suitColor(SUITS[i]));
                 shapeRenderer.rect(row.x, row.y, 7f, row.height);
+            } else {
+                drawUpgradeProgress(UPGRADES[i]);
             }
         }
         drawUiButton(backButton, false);
@@ -104,8 +108,15 @@ public final class StoreScreen extends BaseScreen {
                 drawSuitRow(i);
             }
         }
-        drawCentered(smallFont, status, 128f,
+        String defaultStatus = activeTab == StoreTab.EQUIPMENT
+            ? "INSTALL TIME: LV 1 = 5 MIN  |  LV 2 = 10 MIN  |  LV 3 = 15 MIN"
+            : "UNLOCK A SUIT, THEN EQUIP IT FOR YOUR NEXT DIVE";
+        drawCentered(smallFont, statusTimer > 0f ? status : defaultStatus, 128f,
             statusTimer > 0f ? Color.YELLOW : Color.LIGHT_GRAY);
+        if (activeTab == StoreTab.EQUIPMENT) {
+            drawCentered(smallFont, "TIMERS CONTINUE OFFLINE. READY GEAR APPLIES TO YOUR NEXT DIVE.",
+                102f, Color.LIGHT_GRAY);
+        }
         drawUiButtonLabel(smallFont, "BACK TO MENU", backButton, Color.WHITE);
         batch.end();
     }
@@ -191,10 +202,15 @@ public final class StoreScreen extends BaseScreen {
 
     private void purchaseSelectedUpgrade() {
         PermanentUpgrade upgrade = UPGRADES[selected];
-        if (progression.level(upgrade) >= upgrade.maxLevel()) {
+        long remaining = progression.remainingInstallMillis(upgrade);
+        if (remaining > 0L) {
+            showStatus("INSTALLING LV " + (progression.level(upgrade) + 1)
+                + " - " + formatDuration(remaining) + " LEFT", false);
+        } else if (progression.level(upgrade) >= upgrade.maxLevel()) {
             showStatus("ALREADY AT MAX LEVEL", false);
         } else if (progression.purchase(upgrade)) {
-            showStatus(upgrade.title() + " INSTALLED", true);
+            showStatus(upgrade.title() + " LV " + (progression.level(upgrade) + 1)
+                + " - INSTALL STARTED", true);
         } else {
             showStatus("NOT ENOUGH PRESSURE PEARLS", false);
         }
@@ -218,7 +234,7 @@ public final class StoreScreen extends BaseScreen {
 
     private void showStatus(String message, boolean confirmed) {
         status = message;
-        statusTimer = 2f;
+        statusTimer = 4f;
         if (confirmed) {
             AudioManager.playConfirm();
         } else {
@@ -235,18 +251,69 @@ public final class StoreScreen extends BaseScreen {
 
     private void drawUpgradeRow(int index) {
         PermanentUpgrade upgrade = UPGRADES[index];
+        long remaining = progression.remainingInstallMillis(upgrade);
         int level = progression.level(upgrade);
         rowBounds(index);
         Color titleColor = index == selected ? Color.YELLOW : Color.WHITE;
         smallFont.setColor(titleColor);
-        smallFont.draw(batch, upgrade.title(), 205f, row.y + 52f);
+        drawFittedText(upgrade.title() + "  LV " + level + "/" + upgrade.maxLevel(),
+            205f, row.y + 52f, 450f, false);
         smallFont.setColor(Color.LIGHT_GRAY);
-        smallFont.draw(batch, upgrade.description(), 205f, row.y + 24f);
-        String price = level >= upgrade.maxLevel() ? "MAX"
-            : progression.cost(upgrade) + " PEARLS";
-        smallFont.setColor(level >= upgrade.maxLevel() ? Color.CYAN : Color.GOLD);
-        smallFont.draw(batch, "LV " + level + "/" + upgrade.maxLevel() + "   " + price,
-            850f, row.y + 38f);
+        drawFittedText(upgrade.description(), 205f, row.y + 24f, 450f, false);
+        String action;
+        String detail;
+        if (remaining > 0L) {
+            action = "INSTALLING LV " + (level + 1);
+            detail = "READY IN " + formatDuration(remaining);
+            smallFont.setColor(Color.GOLD);
+        } else if (level >= upgrade.maxLevel()) {
+            action = "MAX LEVEL";
+            detail = "READY FOR NEXT DIVE";
+            smallFont.setColor(Color.CYAN);
+        } else {
+            action = "BUY LV " + (level + 1) + "  |  " + progression.cost(upgrade) + " PEARLS";
+            detail = "INSTALL " + formatDuration(upgrade.installDurationMillis(level + 1));
+            smallFont.setColor(progression.pearls() >= progression.cost(upgrade)
+                ? Color.GOLD : Color.LIGHT_GRAY);
+        }
+        drawFittedText(action, 1080f, row.y + 52f, 270f, true);
+        drawFittedText(detail, 1080f, row.y + 27f, 270f, true);
+    }
+
+    private void drawUpgradeProgress(PermanentUpgrade upgrade) {
+        long remaining = progression.remainingInstallMillis(upgrade);
+        int level = progression.level(upgrade);
+        for (int slot = 0; slot < upgrade.maxLevel(); slot++) {
+            shapeRenderer.setColor(slot < level ? Color.CYAN
+                : remaining > 0L && slot == level ? Color.GOLD : Color.DARK_GRAY);
+            shapeRenderer.rect(680f + slot * 38f, row.y + 30f, 26f, 12f);
+        }
+        if (remaining > 0L && level < upgrade.maxLevel()) {
+            float progress = 1f - Math.min(1f,
+                (float) remaining / upgrade.installDurationMillis(level + 1));
+            shapeRenderer.setColor(Color.DARK_GRAY);
+            shapeRenderer.rect(810f, row.y + 8f, 270f, 3f);
+            shapeRenderer.setColor(Color.GOLD);
+            shapeRenderer.rect(810f, row.y + 8f, 270f * progress, 3f);
+        }
+    }
+
+    private static String formatDuration(long milliseconds) {
+        long seconds = (milliseconds + 999L) / 1000L;
+        return String.format(Locale.ROOT, "%02d:%02d", seconds / 60L, seconds % 60L);
+    }
+
+    private void drawFittedText(String text, float x, float y, float maxWidth, boolean rightAligned) {
+        float scaleX = smallFont.getData().scaleX;
+        float scaleY = smallFont.getData().scaleY;
+        layout.setText(smallFont, text);
+        if (layout.width > maxWidth) {
+            float ratio = maxWidth / layout.width;
+            smallFont.getData().setScale(scaleX * ratio, scaleY * ratio);
+            layout.setText(smallFont, text);
+        }
+        smallFont.draw(batch, layout, rightAligned ? x - layout.width : x, y);
+        smallFont.getData().setScale(scaleX, scaleY);
     }
 
     private void drawSuitRow(int index) {

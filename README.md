@@ -75,6 +75,31 @@ açılışta da hatırlanır.
 - Ekran sarsıntısı ve flaş efektleri ayarlardan ayrı ayrı kapatılabilir.
 - Skor, oksijen ve hareket hesapları FPS’den bağımsızdır.
 
+## Mağaza ekipman seviyeleri ve kurulum süresi
+
+DIVE SHOP → EQUIPMENT içindeki her ekipman üç seviyeye yükseltilebilir:
+
+| Satın alınan seviye | Tamamlanma süresi |
+| --- | --- |
+| 1 | 5 dakika |
+| 2 | 10 dakika |
+| 3 | 15 dakika |
+
+İnciler satın alırken düşer. Geri sayım tamamlanınca seviye kalıcı olarak hazır olur;
+bu süre bonusun kullanım süresi değildir. Seviye etkileri birikir ve mevcut fiyat
+hesabı korunur: temel fiyat × satın alınacak seviye. Aynı ekipmanda kurulum sürerken
+bir sonraki seviye alınamaz; farklı ekipmanların kurulumları aynı anda ilerleyebilir.
+
+Tamamlanma zamanı kaydedilir; oyun kapalıyken ve arka plandayken de cihaz saatine
+göre süre ilerler. Mağaza aktif seviyeyi, kurulan seviyeyi ve kalan süreyi gösterir.
+Tamamlanan ekipman yeni dalışta veya **tekrar oyna** ile başlayan dalışta uygulanır.
+Devam eden dalışın oksijen, kalkan, mıknatıs, zıpkın ve inci ödülü bonusları değişmez.
+**NO UPGRADES** modunda bu ekipman bonusları uygulanmaz.
+
+Eski kayıtlardaki satın alınmış ilk üç seviye beklemeden hazır kalır. Eski dördüncü
+seviyeler üçe çekilir ve dördüncü seviyeye ödenen inciler bir defaya mahsus iade edilir.
+Oyun içinde puanla seçilen geçici yükseltmeler ve kıyafet satın alma sistemi aynı kalır.
+
 ## Maven ile geliştirme
 
 Proje Maven 3.9.16 Wrapper ve Java 21 kullanır. Yerel Maven kurulumu gerekmez:

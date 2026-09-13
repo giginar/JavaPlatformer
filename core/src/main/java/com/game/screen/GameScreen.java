@@ -39,6 +39,7 @@ import com.game.model.ChallengeModifier;
 import com.game.model.GameBalance;
 import com.game.model.GameSession;
 import com.game.model.DiverSuit;
+import com.game.model.EquipmentLoadout;
 import com.game.model.PowerUpType;
 import com.game.model.ProgressionStore;
 import com.game.model.RunDirector;
@@ -103,7 +104,8 @@ public class GameScreen extends BaseScreen {
     private final List<PowerUpPickup> powerUpPickups;
     private final EnumMap<PowerUpType, Float> activePowerUps;
     private final ParticleSystem particles;
-    private final GameSession session;
+    private GameSession session;
+    private EquipmentLoadout equipment;
     private final Random random;
     private final Preferences preferences;
     private final ProgressionStore progression;
@@ -195,12 +197,6 @@ public class GameScreen extends BaseScreen {
         progression = new ProgressionStore(preferences);
         achievementStore = new AchievementStore(preferences);
         equippedSuit = progression.selectedSuit();
-        float startingOxygen = loadoutBonusesEnabled()
-            ? progression.startingMaxOxygen() + equippedSuit.oxygenBonus()
-            : GameSession.MAX_OXYGEN;
-        session = new GameSession(startingOxygen,
-            this.runSettings.difficulty().upgradeEffectMultiplier(),
-            this.runSettings.difficulty().oxygenDrainMultiplier());
         highScore = preferences.getInteger("highScore", 0);
         resetGame();
         if (Boolean.getBoolean("deepdive.capture.boss")) {
@@ -640,10 +636,8 @@ public class GameScreen extends BaseScreen {
             return;
         }
 
-        int permanentHarpoonBonus = loadoutBonusesEnabled()
-            ? progression.startingHarpoonBonus() : 0;
         harpoons.add(new Harpoon(diver.getX() + 50f, diver.getY() + 26f,
-            session.getHarpoonHitCount() + permanentHarpoonBonus
+            session.getHarpoonHitCount() + equipment.startingHarpoonBonus()
                 + (overdrive ? 2 : 0)));
         stageShotsFired++;
         runShotsFired++;
@@ -1006,7 +1000,7 @@ public class GameScreen extends BaseScreen {
         choosingUpgrade = false;
         if (!progressionRewardGranted) {
             earnedPearls = progression.awardDistance(runDirector.distanceMeters(),
-                runSettings.rewardMultiplier(), loadoutBonusesEnabled());
+                runSettings.rewardMultiplier(), equipment);
             progressionRewardGranted = true;
         }
         if (won) {
@@ -1073,7 +1067,7 @@ public class GameScreen extends BaseScreen {
     private float activeMagnetRange() {
         float range = BASE_MAGNET_RANGE;
         if (loadoutBonusesEnabled()) {
-            range += progression.magnetBonusRange() + equippedSuit.magnetBonusRange();
+            range += equipment.magnetBonusRange() + equippedSuit.magnetBonusRange();
         }
         if (isPowerActive(PowerUpType.MAGNETIC_CURRENT)) {
             range += 260f;
@@ -1711,7 +1705,12 @@ public class GameScreen extends BaseScreen {
     public void resetGame() {
         game.input().suppressGameplayTouchUntilRelease();
         saveHighScore();
-        session.reset();
+        equipment = loadoutBonusesEnabled() ? progression.snapshotEquipment() : EquipmentLoadout.NONE;
+        float startingOxygen = equipment.startingMaxOxygen()
+            + (loadoutBonusesEnabled() ? equippedSuit.oxygenBonus() : 0f);
+        session = new GameSession(startingOxygen,
+            runSettings.difficulty().upgradeEffectMultiplier(),
+            runSettings.difficulty().oxygenDrainMultiplier());
         runDirector = new RunDirector();
         enemies.clear();
         harpoons.clear();
@@ -1729,8 +1728,7 @@ public class GameScreen extends BaseScreen {
         hazardSpawnTimer = 0f;
         powerUpSpawnTimer = 0f;
         shootCooldownTimer = 0f;
-        invulnerabilityTimer = loadoutBonusesEnabled()
-            ? progression.startingShieldSeconds() : 0f;
+        invulnerabilityTimer = equipment.startingShieldSeconds();
         if (invulnerabilityTimer > 0f) {
             activePowerUps.put(PowerUpType.PRESSURE_SHIELD, invulnerabilityTimer);
         }

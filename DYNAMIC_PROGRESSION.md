@@ -31,6 +31,18 @@ Torpedo Dash. A completed dive awards one Pressure Pearl per 100 m (modified by 
 The Dive Shop persists pearl balance and permanent equipment levels in the existing game
 preferences.
 
+Each shop equipment item has three permanent levels. Buying levels 1, 2, and 3
+starts a 5-, 10-, and 15-minute installation respectively; pearls are charged when
+installation starts. A saved completion timestamp lets installation continue offline.
+Only one level per item can be installing at a time, while different items can install
+concurrently. Previously completed levels remain usable during the next installation.
+At the start of each dive (including retries), equipment bonuses are captured for that
+entire dive, including its Salvage Map reward. Finishing an installation cannot change
+the ongoing dive. The NO UPGRADES challenge uses no equipment bonuses.
+
+Existing purchased levels remain completed. Legacy fourth levels are reduced to three
+with a one-time refund of the fourth-level pearl cost.
+
 Run upgrades are offered at 1,000, 2,500, and 5,000 score, then every additional 2,500 score
 for the rest of the dive. Their levels have no run-specific maximum and reset whenever a new
 dive starts. Dive Shop equipment remains separate and persists between dives.
