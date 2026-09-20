@@ -9,8 +9,6 @@ public final class ProgressionStore {
         long currentTimeMillis();
     }
 
-    private static final String PEARLS_KEY = "progression.pearls";
-    private static final String SELECTED_SUIT_KEY = "progression.suit.selected";
     private final Preferences preferences;
     private final TimeSource timeSource;
 
@@ -21,15 +19,15 @@ public final class ProgressionStore {
     public ProgressionStore(Preferences preferences, TimeSource timeSource) {
         this.preferences = preferences;
         this.timeSource = timeSource;
-        migrateLegacyLevels();
+        SaveSchema.migrate(preferences);
     }
 
     public int pearls() {
-        return preferences.getInteger(PEARLS_KEY, 0);
+        return Math.max(0, preferences.getInteger(SaveSchema.PEARLS_KEY, 0));
     }
 
     public int level(PermanentUpgrade upgrade) {
-        completeInstallation(upgrade, timeSource.currentTimeMillis());
+        completeInstallation(upgrade, currentTimeMillis());
         return installedLevel(upgrade);
     }
 
@@ -43,14 +41,14 @@ public final class ProgressionStore {
     }
 
     public long remainingInstallMillis(PermanentUpgrade upgrade) {
-        long now = timeSource.currentTimeMillis();
+        long now = currentTimeMillis();
         completeInstallation(upgrade, now);
         long readyAt = preferences.getLong(installationKey(upgrade), 0L);
         return readyAt == 0L ? 0L : Math.max(0L, readyAt - now);
     }
 
     public boolean purchase(PermanentUpgrade upgrade) {
-        long now = timeSource.currentTimeMillis();
+        long now = currentTimeMillis();
         completeInstallation(upgrade, now);
         int level = installedLevel(upgrade);
         int cost = upgrade.costForLevel(level);
@@ -58,30 +56,57 @@ public final class ProgressionStore {
             || preferences.getLong(installationKey(upgrade), 0L) > now) {
             return false;
         }
-        preferences.putInteger(PEARLS_KEY, pearls() - cost);
-        preferences.putLong(installationKey(upgrade), now + upgrade.installDurationMillis(level + 1));
+        preferences.putInteger(SaveSchema.PEARLS_KEY, pearls() - cost);
+        preferences.putLong(installationKey(upgrade),
+            safeDeadline(now, upgrade.installDurationMillis(level + 1)));
         preferences.flush();
         return true;
     }
 
-    public int awardDistance(float meters) {
-        return awardDistance(meters, 1f, true);
-    }
-
-    public int awardDistance(float meters, float runMultiplier, boolean permanentBonusesEnabled) {
-        return awardDistance(meters, runMultiplier,
-            permanentBonusesEnabled ? snapshotEquipment() : EquipmentLoadout.NONE);
-    }
-
-    public int awardDistance(float meters, float runMultiplier, EquipmentLoadout equipment) {
-        int baseReward = Math.max(0, (int) (meters / 100f));
-        float multiplier = Math.max(0f, runMultiplier) * equipment.pearlRewardMultiplier();
-        int reward = Math.round(baseReward * multiplier);
-        if (reward > 0) {
-            preferences.putInteger(PEARLS_KEY, pearls() + reward);
-            preferences.flush();
+    /** Starts a new locally persisted reward transaction for a new dive or retry. */
+    public long beginRun() {
+        long sequence = Math.max(0L, preferences.getLong(SaveSchema.RUN_SEQUENCE_KEY, 0L));
+        if (sequence == Long.MAX_VALUE) {
+            sequence = 0L;
+            preferences.putLong(SaveSchema.LAST_REWARDED_RUN_KEY, 0L);
         }
+        sequence++;
+        preferences.putLong(SaveSchema.RUN_SEQUENCE_KEY, sequence);
+        preferences.flush();
+        return sequence;
+    }
+
+    /** Awards one completion reward at most once for the supplied persisted run sequence. */
+    public int awardRun(long runSequence, float meters, float runMultiplier,
+                        EquipmentLoadout equipment) {
+        long latestSequence = Math.max(0L,
+            preferences.getLong(SaveSchema.RUN_SEQUENCE_KEY, 0L));
+        long lastRewarded = Math.max(0L,
+            preferences.getLong(SaveSchema.LAST_REWARDED_RUN_KEY, 0L));
+        if (runSequence <= lastRewarded || runSequence <= 0L || runSequence != latestSequence) {
+            return 0;
+        }
+        int reward = creditDistanceReward(meters, runMultiplier, equipment);
+        preferences.putLong(SaveSchema.LAST_REWARDED_RUN_KEY, runSequence);
+        preferences.flush();
         return reward;
+    }
+
+    public static int calculateDistanceReward(float meters, float runMultiplier,
+                                               EquipmentLoadout equipment) {
+        if (!Float.isFinite(meters) || meters < 100f || !Float.isFinite(runMultiplier)
+            || runMultiplier <= 0f || equipment == null
+            || !Float.isFinite(equipment.pearlRewardMultiplier())
+            || equipment.pearlRewardMultiplier() <= 0f) {
+            return 0;
+        }
+        int baseReward = Math.max(0, (int) (meters / 100f));
+        float multiplier = runMultiplier * equipment.pearlRewardMultiplier();
+        float reward = baseReward * multiplier;
+        if (!Float.isFinite(reward) || reward >= Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return Math.max(0, Math.round(reward));
     }
 
     public float startingMaxOxygen() {
@@ -101,7 +126,7 @@ public final class ProgressionStore {
     }
 
     public EquipmentLoadout snapshotEquipment() {
-        long now = timeSource.currentTimeMillis();
+        long now = currentTimeMillis();
         for (PermanentUpgrade upgrade : PermanentUpgrade.values()) {
             completeInstallation(upgrade, now);
         }
@@ -123,31 +148,14 @@ public final class ProgressionStore {
         }
     }
 
-    private void migrateLegacyLevels() {
-        boolean changed = false;
-        for (PermanentUpgrade upgrade : PermanentUpgrade.values()) {
-            int savedLevel = preferences.getInteger(levelKey(upgrade), 0);
-            if (savedLevel > upgrade.maxLevel()) {
-                // The previous shop sold four levels (two for Twin Launcher).
-                if (savedLevel == 4 && upgrade != PermanentUpgrade.TWIN_LAUNCHER) {
-                    preferences.putInteger(PEARLS_KEY, pearls() + upgrade.costForLevel(3));
-                }
-                preferences.putInteger(levelKey(upgrade), upgrade.maxLevel());
-                changed = true;
-            }
-        }
-        if (changed) {
-            preferences.flush();
-        }
-    }
-
     public boolean isSuitUnlocked(DiverSuit suit) {
         return suit == DiverSuit.TIDELINE_BLUE
             || preferences.getBoolean(suitKey(suit), false);
     }
 
     public DiverSuit selectedSuit() {
-        String saved = preferences.getString(SELECTED_SUIT_KEY, DiverSuit.TIDELINE_BLUE.name());
+        String saved = preferences.getString(SaveSchema.SELECTED_SUIT_KEY,
+            DiverSuit.TIDELINE_BLUE.name());
         try {
             DiverSuit suit = DiverSuit.valueOf(saved);
             return isSuitUnlocked(suit) ? suit : DiverSuit.TIDELINE_BLUE;
@@ -160,9 +168,9 @@ public final class ProgressionStore {
         if (isSuitUnlocked(suit) || pearls() < suit.cost()) {
             return false;
         }
-        preferences.putInteger(PEARLS_KEY, pearls() - suit.cost());
+        preferences.putInteger(SaveSchema.PEARLS_KEY, pearls() - suit.cost());
         preferences.putBoolean(suitKey(suit), true);
-        preferences.putString(SELECTED_SUIT_KEY, suit.name());
+        preferences.putString(SaveSchema.SELECTED_SUIT_KEY, suit.name());
         preferences.flush();
         return true;
     }
@@ -171,20 +179,43 @@ public final class ProgressionStore {
         if (!isSuitUnlocked(suit)) {
             return false;
         }
-        preferences.putString(SELECTED_SUIT_KEY, suit.name());
+        preferences.putString(SaveSchema.SELECTED_SUIT_KEY, suit.name());
         preferences.flush();
         return true;
     }
 
     private static String levelKey(PermanentUpgrade upgrade) {
-        return "progression.level." + upgrade.name();
+        return SaveSchema.levelKey(upgrade);
     }
 
     private static String installationKey(PermanentUpgrade upgrade) {
-        return "progression.installation.readyAt." + upgrade.name();
+        return SaveSchema.installationKey(upgrade);
     }
 
     private static String suitKey(DiverSuit suit) {
-        return "progression.suit.unlocked." + suit.name();
+        return SaveSchema.suitKey(suit);
+    }
+
+    private int creditDistanceReward(float meters, float runMultiplier,
+                                     EquipmentLoadout equipment) {
+        int calculated = calculateDistanceReward(meters, runMultiplier, equipment);
+        int balance = pearls();
+        int credited = Math.min(calculated, Integer.MAX_VALUE - balance);
+        if (credited > 0) {
+            preferences.putInteger(SaveSchema.PEARLS_KEY,
+                SaveSchema.saturatingAdd(balance, credited));
+        }
+        return credited;
+    }
+
+    private long currentTimeMillis() {
+        return Math.max(0L, timeSource.currentTimeMillis());
+    }
+
+    private static long safeDeadline(long now, long duration) {
+        if (duration > Long.MAX_VALUE - now) {
+            return Long.MAX_VALUE;
+        }
+        return now + duration;
     }
 }

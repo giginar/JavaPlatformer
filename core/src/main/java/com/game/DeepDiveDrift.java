@@ -22,6 +22,7 @@ import com.game.screen.StoreScreen;
 import com.game.screen.SoundChoiceScreen;
 import com.game.settings.DisplaySettings;
 import com.game.model.RunSettings;
+import com.game.model.SaveSchema;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -35,6 +36,7 @@ public class DeepDiveDrift extends Game {
     @Override
     public void create() {
         DisplaySettings.initialize();
+        SaveSchema.migrate(Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME));
         input = new GameInput();
         Gdx.input.setCatchKey(Input.Keys.BACK, true);
         GameAssets.initialize();

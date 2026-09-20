@@ -147,6 +147,7 @@ public class GameScreen extends BaseScreen {
     private int highScore;
     private int nextRunUpgradeIndex;
     private int earnedPearls;
+    private long rewardRunSequence;
     private int dashCharges;
     private int stageShotsFired;
     private int runShotsFired;
@@ -1000,8 +1001,8 @@ public class GameScreen extends BaseScreen {
         paused = false;
         choosingUpgrade = false;
         if (!progressionRewardGranted) {
-            earnedPearls = progression.awardDistance(runDirector.distanceMeters(),
-                runSettings.rewardMultiplier(), equipment);
+            earnedPearls = progression.awardRun(rewardRunSequence,
+                runDirector.distanceMeters(), runSettings.rewardMultiplier(), equipment);
             progressionRewardGranted = true;
         }
         if (won) {
@@ -1706,6 +1707,7 @@ public class GameScreen extends BaseScreen {
     public void resetGame() {
         game.input().suppressGameplayTouchUntilRelease();
         saveHighScore();
+        rewardRunSequence = progression.beginRun();
         equipment = loadoutBonusesEnabled() ? progression.snapshotEquipment() : EquipmentLoadout.NONE;
         float startingOxygen = equipment.startingMaxOxygen()
             + (loadoutBonusesEnabled() ? equippedSuit.oxygenBonus() : 0f);

@@ -86,4 +86,46 @@ class AchievementStoreTest {
         assertTrue(store.recordVictory(settings,
             false, false, false, false).isEmpty());
     }
+
+    @Test
+    void everyCatalogAchievementHasADeterministicReachableTrigger() {
+        AchievementStore store = new AchievementStore(new MemoryPreferences());
+        for (int kill = 1; kill <= 250; kill++) {
+            store.recordKill(kill == 250 ? 10 : 1, kill == 250);
+        }
+        for (int pickup = 0; pickup < 25; pickup++) {
+            store.recordOxygenPickup();
+            store.recordPowerUpPickup();
+        }
+        store.recordRunProgress(1_000f, 100_000f, true, true);
+
+        RunSettings lockdown = new RunSettings(RunDifficulty.HARD,
+            EnumSet.allOf(ChallengeModifier.class));
+        for (int stage = 1; stage <= 5; stage++) {
+            store.recordStageComplete(stage, lockdown, true, true, true, true);
+        }
+        store.recordVictory(new RunSettings(RunDifficulty.EASY, EnumSet.noneOf(ChallengeModifier.class)),
+            true, true, true, true);
+        store.recordVictory(RunSettings.standard(), true, true, true, true);
+        store.recordVictory(lockdown, true, true, true, true);
+
+        assertEquals(Achievement.values().length, store.unlockedCount());
+    }
+
+    @Test
+    void careerCountersSaturateInsteadOfWrappingNegative() {
+        MemoryPreferences preferences = new MemoryPreferences();
+        preferences.putInteger("achievement.stats.kills", Integer.MAX_VALUE);
+        preferences.putInteger("achievement.stats.oxygenPickups", Integer.MAX_VALUE);
+        preferences.putInteger("achievement.stats.powerUps", Integer.MAX_VALUE);
+        AchievementStore store = new AchievementStore(preferences);
+
+        store.recordKill(1, false);
+        store.recordOxygenPickup();
+        store.recordPowerUpPickup();
+
+        assertEquals(Integer.MAX_VALUE, preferences.getInteger("achievement.stats.kills"));
+        assertEquals(Integer.MAX_VALUE, preferences.getInteger("achievement.stats.oxygenPickups"));
+        assertEquals(Integer.MAX_VALUE, preferences.getInteger("achievement.stats.powerUps"));
+    }
 }

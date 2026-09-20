@@ -17,6 +17,7 @@ public final class AchievementStore {
 
     public AchievementStore(Preferences preferences) {
         this.preferences = preferences;
+        SaveSchema.migrate(preferences);
     }
 
     public boolean isUnlocked(Achievement achievement) {
@@ -34,7 +35,7 @@ public final class AchievementStore {
     }
 
     public List<Achievement> recordKill(int combo, boolean boss) {
-        int kills = preferences.getInteger(KILLS_KEY, 0) + 1;
+        int kills = saturatingIncrement(preferences.getInteger(KILLS_KEY, 0));
         preferences.putInteger(KILLS_KEY, kills);
         List<Achievement> unlocked = new ArrayList<>();
         unlock(unlocked, Achievement.FIRST_BLOOD);
@@ -52,7 +53,7 @@ public final class AchievementStore {
     }
 
     public List<Achievement> recordOxygenPickup() {
-        int pickups = preferences.getInteger(OXYGEN_KEY, 0) + 1;
+        int pickups = saturatingIncrement(preferences.getInteger(OXYGEN_KEY, 0));
         preferences.putInteger(OXYGEN_KEY, pickups);
         List<Achievement> unlocked = new ArrayList<>();
         unlock(unlocked, Achievement.FIRST_OXYGEN);
@@ -62,7 +63,7 @@ public final class AchievementStore {
     }
 
     public List<Achievement> recordPowerUpPickup() {
-        int pickups = preferences.getInteger(POWER_UP_KEY, 0) + 1;
+        int pickups = saturatingIncrement(preferences.getInteger(POWER_UP_KEY, 0));
         preferences.putInteger(POWER_UP_KEY, pickups);
         List<Achievement> unlocked = new ArrayList<>();
         unlock(unlocked, Achievement.FIRST_POWER_UP);
@@ -168,7 +169,7 @@ public final class AchievementStore {
     }
 
     private String boundedProgress(String key, int target) {
-        return Math.min(target, preferences.getInteger(key, 0)) + " / " + target;
+        return Math.min(target, Math.max(0, preferences.getInteger(key, 0))) + " / " + target;
     }
 
     private void unlockAt(List<Achievement> unlocked, Achievement achievement,
@@ -200,5 +201,9 @@ public final class AchievementStore {
 
     private static String unlockKey(Achievement achievement) {
         return UNLOCKED_PREFIX + achievement.name();
+    }
+
+    private static int saturatingIncrement(int value) {
+        return value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : Math.max(0, value) + 1;
     }
 }

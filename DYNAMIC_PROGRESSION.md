@@ -28,9 +28,15 @@ milestone celebrations keep the simulation moving but clear active threats and s
 ones for 2.7 seconds.
 
 Temporary pickups are Pressure Shield, Time Bubble, Magnetic Current, Harpoon Overdrive, and
-Torpedo Dash. A completed dive awards one Pressure Pearl per 100 m (modified by Salvage Map).
-The Dive Shop persists pearl balance and permanent equipment levels in the existing game
-preferences.
+Torpedo Dash. A completed dive first floors distance to one base Pressure Pearl per full 100 m.
+The run multiplier is the selected difficulty multiplier plus `0.20` for each active challenge.
+The completed Salvage Map multiplier is then applied, and the combined result is rounded once to
+the nearest integer. Reward and wallet arithmetic saturate at the integer limit rather than
+wrapping negative.
+
+Each dive and retry receives a persisted increasing run sequence. Completion records the most
+recently rewarded sequence in the same preferences update as the wallet credit, so repeated end,
+retry, or menu flows cannot credit the same run again.
 
 Each shop equipment item has three permanent levels. Buying levels 1, 2, and 3
 starts a 5-, 10-, and 15-minute installation respectively; pearls are charged when
@@ -43,6 +49,21 @@ the ongoing dive. The NO UPGRADES challenge uses no equipment bonuses.
 
 Existing purchased levels remain completed. Legacy fourth levels are reduced to three
 with a one-time refund of the fourth-level pearl cost.
+
+The primary `DeepDiveDriftPrefs` store now carries `save.schemaVersion = 1`. A missing version is
+legacy version 0. Migration retains the existing enum-backed keys, installations, suits,
+achievements, career counters, difficulty, and challenge settings. Migrations run in numeric order,
+write the new version only after a successful step, and are safe to repeat. Invalid fields are
+repaired individually: negative currency/counters and out-of-range equipment levels are clamped,
+invalid enum selections fall back to existing defaults, and invalid non-positive installation
+timestamps are removed without resetting unrelated data.
+
+Future additions should append stable enum values and keys rather than rename existing values.
+New equipment needs a new `progression.level.<NAME>` and installation key; new suits need an unlock
+key and must preserve `progression.suit.selected` fallback behavior. A selectable weapon, pilot, or
+vehicle system would also need a stable selection key, explicit legacy default, migration tests,
+and shop/setup UI. Achievement additions can continue using `achievement.unlocked.<NAME>` plus a
+non-negative counter only when a persistent aggregate is required.
 
 Run upgrades are offered at 1,000, 2,500, and 5,000 score, then every additional 2,500 score
 for the rest of the dive. Upgrades stop appearing once their effect reaches a meaningful cap,

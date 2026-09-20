@@ -2,6 +2,7 @@ package com.game.model;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.EnumSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -126,19 +127,21 @@ class ProgressionStoreUpgradeTest {
         assertEquals(1.5f, nextDive.startingShieldSeconds());
         assertEquals(35f, nextDive.magnetBonusRange());
         assertEquals(1, nextDive.startingHarpoonBonus());
-        assertEquals(100, store.awardDistance(10_000f, 1f, currentDive));
-        assertEquals(115, store.awardDistance(10_000f, 1f, nextDive));
-        assertEquals(100, store.awardDistance(10_000f, 1f, false));
+        assertEquals(100, ProgressionStore.calculateDistanceReward(10_000f, 1f, currentDive));
+        assertEquals(115, ProgressionStore.calculateDistanceReward(10_000f, 1f, nextDive));
+        assertEquals(100, ProgressionStore.calculateDistanceReward(
+            10_000f, 1f, EquipmentLoadout.NONE));
     }
 
     @Test
     void existingPurchasesStayReadyAndRemovedFourthLevelsAreRefundedOnlyOnce() {
-        preferences.putInteger("progression.pearls", 100);
-        preferences.putInteger("progression.level.PRESSURE_TANK", 4);
-        preferences.putInteger("progression.level.SALVAGE_MAP", 4);
-        preferences.putInteger("progression.level.TWIN_LAUNCHER", 2);
-        preferences.putBoolean("progression.suit.unlocked.RESCUE_RED", true);
-        ProgressionStore migrated = new ProgressionStore(preferences, now::get);
+        MemoryPreferences legacyPreferences = new MemoryPreferences();
+        legacyPreferences.putInteger("progression.pearls", 100);
+        legacyPreferences.putInteger("progression.level.PRESSURE_TANK", 4);
+        legacyPreferences.putInteger("progression.level.SALVAGE_MAP", 4);
+        legacyPreferences.putInteger("progression.level.TWIN_LAUNCHER", 2);
+        legacyPreferences.putBoolean("progression.suit.unlocked.RESCUE_RED", true);
+        ProgressionStore migrated = new ProgressionStore(legacyPreferences, now::get);
 
         assertEquals(168, migrated.pearls());
         assertEquals(3, migrated.level(PermanentUpgrade.PRESSURE_TANK));
@@ -146,8 +149,87 @@ class ProgressionStoreUpgradeTest {
         assertEquals(2, migrated.level(PermanentUpgrade.TWIN_LAUNCHER));
         assertEquals(0L, migrated.remainingInstallMillis(PermanentUpgrade.PRESSURE_TANK));
         assertTrue(migrated.isSuitUnlocked(DiverSuit.RESCUE_RED));
-        assertEquals(168, new ProgressionStore(preferences, now::get).pearls());
+        assertEquals(168, new ProgressionStore(legacyPreferences, now::get).pearls());
         assertTrue(migrated.purchase(PermanentUpgrade.TWIN_LAUNCHER));
         assertEquals(900_000L, migrated.remainingInstallMillis(PermanentUpgrade.TWIN_LAUNCHER));
+    }
+
+    @Test
+    void persistedRunSequenceMakesCompletionRewardsIdempotentAcrossReloads() {
+        long run = store.beginRun();
+
+        assertEquals(25, store.awardRun(run, 2_599f, 1f, EquipmentLoadout.NONE));
+        assertEquals(25, store.pearls());
+        assertEquals(0, store.awardRun(run, 2_599f, 1f, EquipmentLoadout.NONE));
+        assertEquals(0, new ProgressionStore(preferences, now::get)
+            .awardRun(run, 2_599f, 1f, EquipmentLoadout.NONE));
+        assertEquals(25, store.pearls());
+
+        long retry = store.beginRun();
+        assertEquals(25, store.awardRun(retry, 2_599f, 1f, EquipmentLoadout.NONE));
+        assertEquals(50, store.pearls());
+    }
+
+    @Test
+    void abandonedRunCannotRewardAfterANewerRunOrRetryStarts() {
+        long abandonedRun = store.beginRun();
+        long currentRun = store.beginRun();
+
+        assertEquals(0, store.awardRun(abandonedRun, 10_000f, 1f, EquipmentLoadout.NONE));
+        assertEquals(100, store.awardRun(currentRun, 10_000f, 1f, EquipmentLoadout.NONE));
+        assertEquals(100, store.pearls());
+    }
+
+    @Test
+    void rewardCalculationFloorsDistanceThenRoundsCombinedMultipliersOnce() {
+        EquipmentLoadout salvageLevelOne = new EquipmentLoadout(100f, 0f, 0f, 0, 1.15f);
+
+        assertEquals(49, ProgressionStore.calculateDistanceReward(
+            2_599f, 1.7f, salvageLevelOne));
+        assertEquals(25, ProgressionStore.calculateDistanceReward(
+            2_599f, 1f, EquipmentLoadout.NONE));
+        assertEquals(0, ProgressionStore.calculateDistanceReward(
+            99.999f, 2f, EquipmentLoadout.NONE));
+    }
+
+    @Test
+    void representativeDifficultyChallengeAndSalvageRewardsMatchTheDisplayedFormula() {
+        float completedRunDistance = 2_580.255f;
+        RunSettings normalOneChallenge = new RunSettings(RunDifficulty.NORMAL,
+            EnumSet.of(ChallengeModifier.NO_POWER_UPS));
+        RunSettings hardAllChallenges = new RunSettings(RunDifficulty.HARD,
+            EnumSet.allOf(ChallengeModifier.class));
+        EquipmentLoadout maxSalvageMap = new EquipmentLoadout(100f, 0f, 0f, 0, 1.45f);
+
+        assertEquals(20, ProgressionStore.calculateDistanceReward(completedRunDistance,
+            RunDifficulty.EASY.rewardMultiplier(), EquipmentLoadout.NONE));
+        assertEquals(25, ProgressionStore.calculateDistanceReward(completedRunDistance,
+            RunDifficulty.NORMAL.rewardMultiplier(), EquipmentLoadout.NONE));
+        assertEquals(38, ProgressionStore.calculateDistanceReward(completedRunDistance,
+            RunDifficulty.HARD.rewardMultiplier(), EquipmentLoadout.NONE));
+        assertEquals(30, ProgressionStore.calculateDistanceReward(completedRunDistance,
+            normalOneChallenge.rewardMultiplier(), EquipmentLoadout.NONE));
+        assertEquals(58, ProgressionStore.calculateDistanceReward(completedRunDistance,
+            hardAllChallenges.rewardMultiplier(), EquipmentLoadout.NONE));
+        assertEquals(36, ProgressionStore.calculateDistanceReward(completedRunDistance,
+            RunDifficulty.NORMAL.rewardMultiplier(), maxSalvageMap));
+        assertEquals(83, ProgressionStore.calculateDistanceReward(completedRunDistance,
+            hardAllChallenges.rewardMultiplier(), maxSalvageMap));
+    }
+
+    @Test
+    void extremeRewardsSaturateTheWalletWithoutOverflow() {
+        preferences.putInteger("progression.pearls", Integer.MAX_VALUE - 2);
+        long run = store.beginRun();
+
+        assertEquals(2, store.awardRun(run, Float.MAX_VALUE, 1f, EquipmentLoadout.NONE));
+        assertEquals(Integer.MAX_VALUE, store.pearls());
+        long nextRun = store.beginRun();
+        assertEquals(0, store.awardRun(nextRun, 10_000f, 1f, EquipmentLoadout.NONE));
+        assertEquals(Integer.MAX_VALUE, store.pearls());
+        assertEquals(0, ProgressionStore.calculateDistanceReward(
+            Float.NaN, 1f, EquipmentLoadout.NONE));
+        assertEquals(0, ProgressionStore.calculateDistanceReward(
+            10_000f, Float.POSITIVE_INFINITY, EquipmentLoadout.NONE));
     }
 }
