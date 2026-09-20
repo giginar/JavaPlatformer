@@ -1,6 +1,9 @@
 package com.game.model;
 
+import com.game.GameConfig;
 import org.junit.jupiter.api.Test;
+
+import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -102,5 +105,65 @@ class GameSessionTest {
         assertEquals(95.03f, session.getOxygen(), 0.001f);
         assertEquals(1.09f, session.getAgilityMultiplier(), 0.001f);
         assertEquals(0.865f, session.getShootCooldownMultiplier(), 0.001f);
+    }
+
+    @Test
+    void noOxygenPickupChallengeSurvivesFullRouteAndUnarmedFinaleOnEveryDifficulty() {
+        float requiredSeconds = GameConfig.DEFAULT_STAGE_DURATION_SECONDS
+            * GameBalance.stageCount() + GameConfig.RUN_TRANSITION_SAFETY_SECONDS
+            + GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS;
+
+        for (RunDifficulty difficulty : RunDifficulty.values()) {
+            RunSettings settings = new RunSettings(difficulty,
+                EnumSet.of(ChallengeModifier.NO_WEAPON,
+                    ChallengeModifier.NO_OXYGEN_PICKUPS,
+                    ChallengeModifier.NO_UPGRADES));
+            GameSession session = new GameSession(GameSession.MAX_OXYGEN,
+                difficulty.upgradeEffectMultiplier(), settings.oxygenDrainMultiplier());
+
+            session.update(requiredSeconds);
+
+            assertFalse(session.isOutOfOxygen(), difficulty.name());
+        }
+    }
+
+    @Test
+    void sessionChoicesExcludeEffectsThatHaveReachedTheirDerivedCap() {
+        GameSession normal = new GameSession();
+        for (int level = 0; level < 3; level++) {
+            assertTrue(normal.applyUpgrade(UpgradeType.RAPID_FIRE));
+        }
+        for (int level = 0; level < 7; level++) {
+            assertTrue(normal.applyUpgrade(UpgradeType.LARGE_TANKS));
+        }
+
+        assertFalse(normal.getAvailableUpgrades().contains(UpgradeType.RAPID_FIRE));
+        assertFalse(normal.getAvailableUpgrades().contains(UpgradeType.LARGE_TANKS));
+        assertFalse(normal.applyUpgrade(UpgradeType.RAPID_FIRE));
+        assertFalse(normal.applyUpgrade(UpgradeType.LARGE_TANKS));
+
+        GameSession hardWithMaximumTank = new GameSession(155f, 0.75f, 1.12f);
+        for (int level = 0; level < 4; level++) {
+            assertTrue(hardWithMaximumTank.applyUpgrade(UpgradeType.RAPID_FIRE));
+        }
+        for (int level = 0; level < 17; level++) {
+            assertTrue(hardWithMaximumTank.applyUpgrade(UpgradeType.LARGE_TANKS));
+        }
+
+        assertFalse(hardWithMaximumTank.getAvailableUpgrades().contains(UpgradeType.RAPID_FIRE));
+        assertFalse(hardWithMaximumTank.getAvailableUpgrades().contains(UpgradeType.LARGE_TANKS));
+    }
+
+    @Test
+    void everyPiercingSelectionAddsOneTargetOnEveryDifficulty() {
+        for (RunDifficulty difficulty : RunDifficulty.values()) {
+            GameSession session = new GameSession(100f,
+                difficulty.upgradeEffectMultiplier(), difficulty.oxygenDrainMultiplier());
+
+            for (int level = 1; level <= 8; level++) {
+                assertTrue(session.applyUpgrade(UpgradeType.PIERCING_HARPOON));
+                assertEquals(1 + level, session.getHarpoonHitCount(), difficulty.name());
+            }
+        }
     }
 }

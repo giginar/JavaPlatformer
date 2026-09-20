@@ -2,7 +2,8 @@ package com.game.model;
 
 public enum ChallengeModifier {
     NO_WEAPON("NO HARPOON", "Harpoon firing is completely disabled"),
-    NO_OXYGEN_PICKUPS("NO OXYGEN PICKUPS", "Oxygen tanks will not spawn"),
+    NO_OXYGEN_PICKUPS("NO OXYGEN PICKUPS",
+        "No oxygen tanks; sealed-loop drain is greatly reduced"),
     NO_POWER_UPS("NO SPECIAL POWERS", "Power-up pickups will not spawn"),
     NO_UPGRADES("NO UPGRADES", "Suit, gear and run upgrades are disabled");
 

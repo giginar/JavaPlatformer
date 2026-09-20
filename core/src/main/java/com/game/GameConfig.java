@@ -37,6 +37,12 @@ public final class GameConfig {
     public static final float HARD_OXYGEN_DRAIN_MULTIPLIER = 1.12f;
     public static final float HARD_REWARD_MULTIPLIER = 1.5f;
     public static final float CHALLENGE_REWARD_BONUS_PER_MODIFIER = 0.2f;
+    /**
+     * Sealed-loop drain used when oxygen pickups are disabled. At the hardest
+     * difficulty, a full base tank lasts beyond the five stages and the unarmed finale.
+     */
+    public static final float NO_OXYGEN_PICKUPS_DRAIN_MULTIPLIER = 0.018f;
+    public static final float RUN_TRANSITION_SAFETY_SECONDS = 2.7f;
     public static final float UNARMED_BOSS_SURVIVAL_SECONDS = 30f;
     /** Slow descent keeps falling debris visible long enough to become a dodgeable threat. */
     public static final float FALLING_DEBRIS_ACCELERATION = 35f;
@@ -44,11 +50,19 @@ public final class GameConfig {
     /** Keep enabled while testing; disable before creating a release build. */
     public static final boolean TEST_SHORTCUTS_ENABLED = false;
 
+    /** Runtime properties may request development tools, but cannot enable them in a release. */
+    public static boolean developmentShortcutsEnabled() {
+        return TEST_SHORTCUTS_ENABLED && Boolean.getBoolean("deepdive.debug");
+    }
+
     /**
      * Runtime override used by short balance-test runs. Desktop accepts
      * {@code --stage-duration=15}; other launchers can set the same system property.
      */
     public static float stageDurationSeconds() {
+        if (!developmentShortcutsEnabled()) {
+            return DEFAULT_STAGE_DURATION_SECONDS;
+        }
         String value = System.getProperty("deepdive.stageDurationSeconds");
         if (value == null || value.isBlank()) {
             return DEFAULT_STAGE_DURATION_SECONDS;

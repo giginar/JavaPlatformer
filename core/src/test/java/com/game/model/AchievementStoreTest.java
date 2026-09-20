@@ -72,4 +72,18 @@ class AchievementStoreTest {
         assertTrue(unlocked.contains(Achievement.SILENT_100));
         assertTrue(unlocked.contains(Achievement.MINIMALIST_100));
     }
+
+    @Test
+    void repeatedCompletionEventsDoNotDuplicateAchievementUnlocks() {
+        AchievementStore store = new AchievementStore(new MemoryPreferences());
+        RunSettings settings = RunSettings.standard();
+
+        store.recordStageComplete(1, settings, false, false, false, false);
+        store.recordVictory(settings, false, false, false, false);
+
+        assertTrue(store.recordStageComplete(1, settings,
+            false, false, false, false).isEmpty());
+        assertTrue(store.recordVictory(settings,
+            false, false, false, false).isEmpty());
+    }
 }

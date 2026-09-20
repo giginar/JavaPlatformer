@@ -16,9 +16,30 @@ class RunDirectorTest {
         assertTrue(director.update(0.01f).stageChanged());
         assertEquals(2, director.stage());
 
-        RunDirector.UpdateResult finale = director.update(40f);
+        assertTrue(director.update(10f).stageChanged());
+        assertEquals(3, director.stage());
+        assertTrue(director.update(10f).stageChanged());
+        assertEquals(4, director.stage());
+        assertTrue(director.update(10f).stageChanged());
         assertEquals(5, director.stage());
+        RunDirector.UpdateResult finale = director.update(10f);
         assertTrue(finale.finaleReady());
+        assertFalse(director.update(1f).finaleReady());
+    }
+
+    @Test
+    void aLargeUpdateCannotSkipStageCompletionBoundaries() {
+        RunDirector director = new RunDirector(10f);
+
+        assertTrue(director.update(50f).stageChanged());
+        assertEquals(2, director.stage());
+        assertFalse(director.finaleReady());
+
+        for (int expectedStage = 3; expectedStage <= 5; expectedStage++) {
+            assertTrue(director.update(0.01f).stageChanged());
+            assertEquals(expectedStage, director.stage());
+        }
+        assertTrue(director.finaleReady());
     }
 
     @Test

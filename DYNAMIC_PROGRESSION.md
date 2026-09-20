@@ -12,14 +12,15 @@ enemy roles, encounter combinations, hazard pool, spawn cadence, and reaction wi
 | 5 | Abyssal Rift | Mixed role gauntlets, one-hit damage, and the Abyssal Octopus finale |
 
 The default stage duration is `180` seconds, producing a roughly 15-minute route before the
-finale. A desktop test run can override it without changing source code:
+finale. An explicit development build can override it for a short desktop test run:
 
 ```powershell
 java -jar .\lwjgl3\target\DeepDiveDrift-1.0.0.jar --autostart --stage-duration=15
 ```
 
-Accepted values are 5–600 seconds. `F2` advances to the next stage and `F3` summons the boss
-when `--debug` is also supplied.
+Accepted values are 5–600 seconds when the internal development gate is enabled. Runtime
+arguments cannot enable progression shortcuts in the production build. In a development build,
+`F2` advances to the next stage and `F3` summons the boss when `--debug` is also supplied.
 
 Distance uses the 64-world-unit diver sprite as a 1.8 m reference and the authored background
 scroll speed. The first milestones are 500 m, 1 km, and then every whole kilometre. Stage and
@@ -44,8 +45,9 @@ Existing purchased levels remain completed. Legacy fourth levels are reduced to 
 with a one-time refund of the fourth-level pearl cost.
 
 Run upgrades are offered at 1,000, 2,500, and 5,000 score, then every additional 2,500 score
-for the rest of the dive. Their levels have no run-specific maximum and reset whenever a new
-dive starts. Dive Shop equipment remains separate and persists between dives.
+for the rest of the dive. Upgrades stop appearing once their effect reaches a meaningful cap,
+and choices tied to mechanics disabled by a challenge are excluded. Run levels reset whenever
+a new dive starts. Dive Shop equipment remains separate and persists between dives.
 
 Each transition increases the displayed physical depth, moves the scenery upward, reduces
 available light, and accelerates rising silt to sell the feeling of descending. After stage five,

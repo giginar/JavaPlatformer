@@ -3,6 +3,7 @@ package com.game.model;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameBalanceTest {
     @Test
@@ -42,5 +43,18 @@ class GameBalanceTest {
         assertEquals(0.16f, GameBalance.harpoonCooldown(0.46f, true), 0.0001f);
         assertEquals(5, GameBalance.maxActiveHarpoons(false));
         assertEquals(8, GameBalance.maxActiveHarpoons(true));
+    }
+
+    @Test
+    void authoredStageCurveTightensMonotonically() {
+        for (int stage = 2; stage <= GameBalance.stageCount(); stage++) {
+            GameBalance.Difficulty previous = GameBalance.difficultyForStage(stage - 1);
+            GameBalance.Difficulty current = GameBalance.difficultyForStage(stage);
+
+            assertTrue(current.spawnInterval() < previous.spawnInterval());
+            assertTrue(current.enemySpeedMultiplier() > previous.enemySpeedMultiplier());
+            assertTrue(current.hazardInterval() < previous.hazardInterval());
+            assertTrue(current.scrollSpeedMultiplier() > previous.scrollSpeedMultiplier());
+        }
     }
 }

@@ -6,6 +6,7 @@ public final class GameSession {
     public static final float SURVIVAL_SCORE_PER_SECOND = 60f;
     public static final float COMBO_WINDOW = 3f;
     public static final float KILL_OXYGEN_REWARD = 8f;
+    public static final float BASE_OXYGEN_PICKUP = 30f;
 
     private float oxygen;
     private float score;
@@ -79,6 +80,9 @@ public final class GameSession {
     }
 
     public boolean applyUpgrade(UpgradeType type) {
+        if (!isUpgradeUseful(type)) {
+            return false;
+        }
         return upgrades.apply(type);
     }
 
@@ -87,7 +91,13 @@ public final class GameSession {
     }
 
     public java.util.List<UpgradeType> getAvailableUpgrades() {
-        return upgrades.availableUpgrades();
+        java.util.List<UpgradeType> useful = new java.util.ArrayList<>();
+        for (UpgradeType type : upgrades.availableUpgrades()) {
+            if (isUpgradeUseful(type)) {
+                useful.add(type);
+            }
+        }
+        return useful;
     }
 
     public float getShootCooldownMultiplier() {
@@ -95,8 +105,8 @@ public final class GameSession {
     }
 
     public int getHarpoonHitCount() {
-        int bonusHits = upgrades.harpoonHitCount() - 1;
-        return 1 + Math.max(0, Math.round(bonusHits * upgradeEffectMultiplier));
+        // Piercing is discrete and its UI promises exactly one additional target per level.
+        return upgrades.harpoonHitCount();
     }
 
     public float getOxygenPickupBonus() {
@@ -141,6 +151,24 @@ public final class GameSession {
 
     public boolean isOutOfOxygen() {
         return oxygen <= 0f;
+    }
+
+    private boolean isUpgradeUseful(UpgradeType type) {
+        if (type == null || type.isMaxed(upgrades.level(type))) {
+            return false;
+        }
+        return switch (type) {
+            case RAPID_FIRE -> GameBalance.harpoonCooldown(
+                scaledMultiplier(upgrades.shootCooldownMultiplierAfterNextLevel()), false)
+                < GameBalance.harpoonCooldown(getShootCooldownMultiplier(), false);
+            case PIERCING_HARPOON, AGILE_DIVER -> true;
+            case OXYGEN_EFFICIENCY -> scaledMultiplier(
+                upgrades.oxygenDrainMultiplierAfterNextLevel())
+                < scaledMultiplier(upgrades.oxygenDrainMultiplier());
+            case LARGE_TANKS -> Math.min(maxOxygen, BASE_OXYGEN_PICKUP
+                + upgrades.oxygenPickupBonusAfterNextLevel() * upgradeEffectMultiplier)
+                > Math.min(maxOxygen, BASE_OXYGEN_PICKUP + getOxygenPickupBonus());
+        };
     }
 
     private float scaledMultiplier(float multiplier) {

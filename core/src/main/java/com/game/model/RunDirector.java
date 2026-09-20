@@ -38,11 +38,13 @@ public final class RunDirector {
         int calculatedStage = Math.min(GameBalance.stageCount(),
             1 + (int) (elapsed / stageDuration));
         if (calculatedStage > stage) {
-            stage = calculatedStage;
+            // Deliver every boundary on its own update so completion events cannot be skipped.
+            stage++;
             stageChanged = true;
         }
 
-        if (elapsed >= stageDuration * GameBalance.stageCount()) {
+        if (stage == GameBalance.stageCount()
+            && elapsed >= stageDuration * GameBalance.stageCount()) {
             finaleReady = true;
         }
 

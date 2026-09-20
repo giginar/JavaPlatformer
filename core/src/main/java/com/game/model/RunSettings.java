@@ -34,4 +34,42 @@ public record RunSettings(RunDifficulty difficulty, Set<ChallengeModifier> modif
         return difficulty.rewardMultiplier()
             + modifiers.size() * GameConfig.CHALLENGE_REWARD_BONUS_PER_MODIFIER;
     }
+
+    public float oxygenDrainMultiplier() {
+        float challengeMultiplier = has(ChallengeModifier.NO_OXYGEN_PICKUPS)
+            ? GameConfig.NO_OXYGEN_PICKUPS_DRAIN_MULTIPLIER : 1f;
+        return difficulty.oxygenDrainMultiplier() * challengeMultiplier;
+    }
+
+    public boolean allowsWeapon() {
+        return !has(ChallengeModifier.NO_WEAPON);
+    }
+
+    public boolean allowsOxygenPickups() {
+        return !has(ChallengeModifier.NO_OXYGEN_PICKUPS);
+    }
+
+    public boolean allowsPowerUpPickups() {
+        return !has(ChallengeModifier.NO_POWER_UPS);
+    }
+
+    public boolean loadoutBonusesEnabled() {
+        return !has(ChallengeModifier.NO_UPGRADES);
+    }
+
+    public float suitAgilityMultiplier(DiverSuit suit) {
+        return loadoutBonusesEnabled() && suit != null ? suit.agilityMultiplier() : 1f;
+    }
+
+    /** Excludes choices whose mechanic is disabled by the active challenge set. */
+    public boolean isRunUpgradeUseful(UpgradeType type) {
+        if (type == null || !loadoutBonusesEnabled()) {
+            return false;
+        }
+        if (!allowsWeapon()
+            && (type == UpgradeType.RAPID_FIRE || type == UpgradeType.PIERCING_HARPOON)) {
+            return false;
+        }
+        return allowsOxygenPickups() || type != UpgradeType.LARGE_TANKS;
+    }
 }
