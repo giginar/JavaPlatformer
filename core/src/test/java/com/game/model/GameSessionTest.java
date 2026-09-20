@@ -27,6 +27,21 @@ class GameSessionTest {
     }
 
     @Test
+    void survivalProgressMatchesAtCommonRefreshRates() {
+        float simulatedSeconds = 10f;
+        for (int framesPerSecond : new int[]{30, 60, 90, 120}) {
+            GameSession session = new GameSession();
+            float delta = 1f / framesPerSecond;
+            for (int frame = 0; frame < framesPerSecond * simulatedSeconds; frame++) {
+                session.update(delta);
+            }
+
+            assertEquals(600f, session.getScore(), 0.05f, framesPerSecond + " FPS score");
+            assertEquals(50f, session.getOxygen(), 0.05f, framesPerSecond + " FPS oxygen");
+        }
+    }
+
+    @Test
     void oxygenIsClampedAndDamageCanEndTheRun() {
         GameSession session = new GameSession();
 

@@ -4,6 +4,7 @@ import com.badlogic.gdx.Preferences;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 
 /** Persistent achievement unlocks and the small set of career counters they need. */
@@ -14,24 +15,24 @@ public final class AchievementStore {
     private static final String POWER_UP_KEY = "achievement.stats.powerUps";
 
     private final Preferences preferences;
+    private final EnumSet<Achievement> unlockedAchievements = EnumSet.noneOf(Achievement.class);
 
     public AchievementStore(Preferences preferences) {
         this.preferences = preferences;
         SaveSchema.migrate(preferences);
+        for (Achievement achievement : Achievement.values()) {
+            if (preferences.getBoolean(unlockKey(achievement), false)) {
+                unlockedAchievements.add(achievement);
+            }
+        }
     }
 
     public boolean isUnlocked(Achievement achievement) {
-        return preferences.getBoolean(unlockKey(achievement), false);
+        return unlockedAchievements.contains(achievement);
     }
 
     public int unlockedCount() {
-        int count = 0;
-        for (Achievement achievement : Achievement.values()) {
-            if (isUnlocked(achievement)) {
-                count++;
-            }
-        }
-        return count;
+        return unlockedAchievements.size();
     }
 
     public List<Achievement> recordKill(int combo, boolean boss) {
@@ -74,6 +75,17 @@ public final class AchievementStore {
 
     public List<Achievement> recordRunProgress(float distanceMeters, float score,
                                                 boolean noShots, boolean noCollections) {
+        if (!canUnlockAt(Achievement.SCORE_10K, score, 10_000f)
+            && !canUnlockAt(Achievement.SCORE_50K, score, 50_000f)
+            && !canUnlockAt(Achievement.SCORE_100K, score, 100_000f)
+            && !canUnlockAt(Achievement.DISTANCE_100, distanceMeters, 100f)
+            && !canUnlockAt(Achievement.DISTANCE_500, distanceMeters, 500f)
+            && !canUnlockAt(Achievement.DISTANCE_1000, distanceMeters, 1_000f)
+            && !(distanceMeters >= 100f && noShots && !isUnlocked(Achievement.SILENT_100))
+            && !(distanceMeters >= 100f && noCollections
+                && !isUnlocked(Achievement.MINIMALIST_100))) {
+            return Collections.emptyList();
+        }
         List<Achievement> unlocked = new ArrayList<>();
         unlockAt(unlocked, Achievement.SCORE_10K, score, 10_000f);
         unlockAt(unlocked, Achievement.SCORE_50K, score, 50_000f);
@@ -179,8 +191,12 @@ public final class AchievementStore {
         }
     }
 
+    private boolean canUnlockAt(Achievement achievement, float current, float target) {
+        return current >= target && !isUnlocked(achievement);
+    }
+
     private void unlock(List<Achievement> unlocked, Achievement achievement) {
-        if (isUnlocked(achievement)) {
+        if (!unlockedAchievements.add(achievement)) {
             return;
         }
         preferences.putBoolean(unlockKey(achievement), true);

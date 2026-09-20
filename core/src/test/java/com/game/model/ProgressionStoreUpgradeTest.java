@@ -181,6 +181,21 @@ class ProgressionStoreUpgradeTest {
     }
 
     @Test
+    void processDeathLeavesAnAbandonedRunUnrewardedAndTheNextRunInvalidatesIt() {
+        long abandonedRun = store.beginRun();
+
+        ProgressionStore relaunched = new ProgressionStore(preferences, now::get);
+        assertEquals(0, relaunched.pearls());
+        long nextRun = relaunched.beginRun();
+
+        assertEquals(0, relaunched.awardRun(abandonedRun, 10_000f, 1f,
+            EquipmentLoadout.NONE));
+        assertEquals(100, relaunched.awardRun(nextRun, 10_000f, 1f,
+            EquipmentLoadout.NONE));
+        assertEquals(100, relaunched.pearls());
+    }
+
+    @Test
     void rewardCalculationFloorsDistanceThenRoundsCombinedMultipliersOnce() {
         EquipmentLoadout salvageLevelOne = new EquipmentLoadout(100f, 0f, 0f, 0, 1.15f);
 

@@ -50,6 +50,8 @@ public final class GameInput {
     private boolean previousControllerHelp;
     private boolean previousControllerShoot;
     private boolean previousControllerDash;
+    private boolean lifecycleInputBlocked;
+    private boolean suppressActionsThisFrame;
 
     public GameInput() {
         for (int i = 0; i < pointerPositions.length; i++) {
@@ -60,59 +62,86 @@ public final class GameInput {
 
     /** Must be called exactly once near the start of each rendered frame. */
     public void update(Viewport viewport) {
+        suppressActionsThisFrame = lifecycleInputBlocked;
         updatePointers(viewport);
         updateController();
         updateActiveInputDevice();
+        if (lifecycleInputBlocked && !hasHeldActionInput()) {
+            lifecycleInputBlocked = false;
+        }
+    }
+
+    /**
+     * Drops cached input edges and ignores controls that remain physically held across an
+     * application pause. A release frame is also consumed so it cannot activate a menu button.
+     */
+    public void resetAfterLifecyclePause() {
+        for (int i = 0; i < MAX_POINTERS; i++) {
+            pointerDown[i] = false;
+            pointerJustDown[i] = false;
+            pointerJustUp[i] = false;
+            buttonPressInsideViewport[i] = false;
+            pointerInsideViewport[i] = false;
+            gameplayTouchBlocked[i] = false;
+        }
+        clearControllerState();
+        lifecycleInputBlocked = true;
+        suppressActionsThisFrame = true;
     }
 
     public boolean menuUpJustPressed() {
-        return keyJustPressed(Input.Keys.UP, Input.Keys.W)
-            || controllerUp && !previousControllerUp;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.UP, Input.Keys.W)
+            || controllerUp && !previousControllerUp);
     }
 
     public boolean menuDownJustPressed() {
-        return keyJustPressed(Input.Keys.DOWN, Input.Keys.S)
-            || controllerDown && !previousControllerDown;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.DOWN, Input.Keys.S)
+            || controllerDown && !previousControllerDown);
     }
 
     public boolean menuLeftJustPressed() {
-        return keyJustPressed(Input.Keys.LEFT, Input.Keys.A)
-            || controllerLeft && !previousControllerLeft;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.LEFT, Input.Keys.A)
+            || controllerLeft && !previousControllerLeft);
     }
 
     public boolean menuRightJustPressed() {
-        return keyJustPressed(Input.Keys.RIGHT, Input.Keys.D)
-            || controllerRight && !previousControllerRight;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.RIGHT, Input.Keys.D)
+            || controllerRight && !previousControllerRight);
     }
 
     public boolean confirmJustPressed() {
-        return keyboardConfirmJustPressed() || controllerConfirmJustPressed();
+        return !actionsSuppressed()
+            && (keyboardConfirmJustPressed() || controllerConfirmJustPressed());
     }
 
     public boolean keyboardConfirmJustPressed() {
-        return keyJustPressed(Input.Keys.ENTER, Input.Keys.SPACE);
+        return !actionsSuppressed() && keyJustPressed(Input.Keys.ENTER, Input.Keys.SPACE);
     }
 
     public boolean controllerConfirmJustPressed() {
-        return controllerConfirm && !previousControllerConfirm;
+        return !actionsSuppressed() && controllerConfirm && !previousControllerConfirm;
     }
 
     public boolean backJustPressed() {
-        return keyJustPressed(Input.Keys.ESCAPE, Input.Keys.BACK)
-            || controllerBack && !previousControllerBack;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.ESCAPE, Input.Keys.BACK)
+            || controllerBack && !previousControllerBack);
     }
 
     public boolean pauseJustPressed() {
-        return keyJustPressed(Input.Keys.P, Input.Keys.ESCAPE, Input.Keys.BACK)
-            || controllerPause && !previousControllerPause;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.P, Input.Keys.ESCAPE)
+            || keyJustPressed(Input.Keys.BACK)
+            || controllerPause && !previousControllerPause);
     }
 
     public boolean helpJustPressed() {
-        return keyJustPressed(Input.Keys.T, Input.Keys.F1)
-            || controllerHelp && !previousControllerHelp;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.T, Input.Keys.F1)
+            || controllerHelp && !previousControllerHelp);
     }
 
     public boolean swimPressed() {
+        if (actionsSuppressed()) {
+            return false;
+        }
         boolean keyboard = Gdx.input.isKeyPressed(Input.Keys.SPACE)
             || Gdx.input.isKeyPressed(Input.Keys.W)
             || Gdx.input.isKeyPressed(Input.Keys.UP);
@@ -121,14 +150,17 @@ public final class GameInput {
     }
 
     public boolean shootJustPressed() {
+        if (actionsSuppressed()) {
+            return false;
+        }
         boolean keyboard = keyJustPressed(Input.Keys.Z, Input.Keys.X);
         boolean mouse = !isMobile() && Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT);
         return keyboard || mouse || controllerShoot && !previousControllerShoot;
     }
 
     public boolean dashJustPressed() {
-        return keyJustPressed(Input.Keys.C)
-            || controllerDash && !previousControllerDash;
+        return !actionsSuppressed() && (keyJustPressed(Input.Keys.C)
+            || controllerDash && !previousControllerDash);
     }
 
     public boolean touchSwimPressed() {
@@ -147,7 +179,7 @@ public final class GameInput {
     }
 
     private boolean touchEdgePressed(boolean rightEdge, boolean justPressed, Rectangle excluded) {
-        if (!isMobile()) {
+        if (actionsSuppressed() || !isMobile()) {
             return false;
         }
         float screenWidth = Gdx.graphics.getWidth();
@@ -172,6 +204,9 @@ public final class GameInput {
     }
 
     public boolean pointerJustPressed(Rectangle bounds) {
+        if (actionsSuppressed()) {
+            return false;
+        }
         for (int i = 0; i < MAX_POINTERS; i++) {
             if (pointerJustDown[i] && pointerInsideViewport[i] && bounds.contains(pointerPositions[i])) {
                 return true;
@@ -181,6 +216,9 @@ public final class GameInput {
     }
 
     public boolean pointerPressed(Rectangle bounds) {
+        if (actionsSuppressed()) {
+            return false;
+        }
         for (int i = 0; i < MAX_POINTERS; i++) {
             if (pointerDown[i] && pointerInsideViewport[i] && bounds.contains(pointerPositions[i])) {
                 return true;
@@ -191,6 +229,9 @@ public final class GameInput {
 
     /** Menu actions activate on release, only when the gesture began and ended on the same button. */
     public boolean buttonJustReleased(Rectangle bounds) {
+        if (actionsSuppressed()) {
+            return false;
+        }
         for (int i = 0; i < MAX_POINTERS; i++) {
             if (pointerJustUp[i] && buttonContainsGesture(bounds, i)) {
                 return true;
@@ -200,6 +241,9 @@ public final class GameInput {
     }
 
     public boolean buttonPressed(Rectangle bounds) {
+        if (actionsSuppressed()) {
+            return false;
+        }
         for (int i = 0; i < MAX_POINTERS; i++) {
             if (pointerDown[i] && buttonContainsGesture(bounds, i)) {
                 return true;
@@ -329,6 +373,10 @@ public final class GameInput {
 
     private void updateActiveInputDevice() {
         boolean mobile = isMobile();
+        if (actionsSuppressed()) {
+            inputDeviceTracker.update(mobile, false, false, false);
+            return;
+        }
         boolean pointerActive = false;
         for (boolean justDown : pointerJustDown) {
             if (justDown) {
@@ -388,12 +436,63 @@ public final class GameInput {
         return controller.getAxis(axisCode);
     }
 
-    private boolean keyJustPressed(int... keys) {
-        for (int key : keys) {
-            if (Gdx.input.isKeyJustPressed(key)) {
+    private boolean hasHeldActionInput() {
+        for (boolean down : pointerDown) {
+            if (down) {
                 return true;
             }
         }
-        return false;
+        return Gdx.input.isButtonPressed(Input.Buttons.LEFT)
+            || Gdx.input.isButtonPressed(Input.Buttons.RIGHT)
+            || Gdx.input.isButtonPressed(Input.Buttons.MIDDLE)
+            || Gdx.input.isKeyPressed(Input.Keys.SPACE)
+            || Gdx.input.isKeyPressed(Input.Keys.W)
+            || Gdx.input.isKeyPressed(Input.Keys.UP)
+            || Gdx.input.isKeyPressed(Input.Keys.Z)
+            || Gdx.input.isKeyPressed(Input.Keys.X)
+            || Gdx.input.isKeyPressed(Input.Keys.C)
+            || Gdx.input.isKeyPressed(Input.Keys.P)
+            || Gdx.input.isKeyPressed(Input.Keys.ESCAPE)
+            || Gdx.input.isKeyPressed(Input.Keys.BACK)
+            || Gdx.input.isKeyPressed(Input.Keys.ENTER)
+            || controllerUp || controllerDown || controllerLeft || controllerRight
+            || controllerConfirm || controllerBack || controllerPause || controllerHelp
+            || controllerSwim || controllerShoot || controllerDash;
+    }
+
+    private void clearControllerState() {
+        controllerUp = false;
+        controllerDown = false;
+        controllerLeft = false;
+        controllerRight = false;
+        controllerConfirm = false;
+        controllerBack = false;
+        controllerPause = false;
+        controllerHelp = false;
+        controllerSwim = false;
+        controllerShoot = false;
+        controllerDash = false;
+        previousControllerUp = false;
+        previousControllerDown = false;
+        previousControllerLeft = false;
+        previousControllerRight = false;
+        previousControllerConfirm = false;
+        previousControllerBack = false;
+        previousControllerPause = false;
+        previousControllerHelp = false;
+        previousControllerShoot = false;
+        previousControllerDash = false;
+    }
+
+    private boolean actionsSuppressed() {
+        return lifecycleInputBlocked || suppressActionsThisFrame;
+    }
+
+    private boolean keyJustPressed(int key) {
+        return Gdx.input.isKeyJustPressed(key);
+    }
+
+    private boolean keyJustPressed(int first, int second) {
+        return Gdx.input.isKeyJustPressed(first) || Gdx.input.isKeyJustPressed(second);
     }
 }

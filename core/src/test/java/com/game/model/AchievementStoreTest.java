@@ -6,6 +6,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AchievementStoreTest {
@@ -71,6 +72,17 @@ class AchievementStoreTest {
         assertTrue(unlocked.contains(Achievement.SCORE_50K));
         assertTrue(unlocked.contains(Achievement.SILENT_100));
         assertTrue(unlocked.contains(Achievement.MINIMALIST_100));
+    }
+
+    @Test
+    void liveProgressWithoutAnUnlockReusesTheEmptyResult() {
+        AchievementStore store = new AchievementStore(new MemoryPreferences());
+
+        List<Achievement> first = store.recordRunProgress(0f, 0f, false, false);
+        List<Achievement> second = store.recordRunProgress(99f, 9_999f, false, false);
+
+        assertSame(first, second);
+        assertTrue(first.isEmpty());
     }
 
     @Test

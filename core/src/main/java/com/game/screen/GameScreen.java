@@ -50,8 +50,8 @@ import com.game.settings.DisplaySettings;
 
 import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -63,6 +63,7 @@ public class GameScreen extends BaseScreen {
     private static final boolean CAPTURE_AUTOPLAY = Boolean.getBoolean("deepdive.capture.autoplay");
     private static final Color BOSS_TEXT_COLOR = new Color(0.9f, 0.55f, 1f, 1f);
     private static final Color UPGRADE_TEXT_COLOR = new Color(0.45f, 0.92f, 1f, 1f);
+    private static final PowerUpType[] POWER_UP_TYPES = PowerUpType.values();
     private static final float ACHIEVEMENT_POPUP_DURATION = 4f;
 
     private static final float MAX_FRAME_DELTA = 1f / 15f;
@@ -100,7 +101,7 @@ public class GameScreen extends BaseScreen {
     private final List<EnemyProjectile> enemyProjectiles;
     private final List<EnemyFish> enemySpawnBuffer;
     private final List<PowerUpPickup> powerUpPickups;
-    private final EnumMap<PowerUpType, Float> activePowerUps;
+    private final float[] activePowerUpTimers;
     private final ParticleSystem particles;
     private GameSession session;
     private EquipmentLoadout equipment;
@@ -112,6 +113,7 @@ public class GameScreen extends BaseScreen {
     private final AchievementStore achievementStore;
     private final ArrayDeque<Achievement> achievementQueue;
     private final Rectangle interactiveRow = new Rectangle();
+    private final StringBuilder diagnosticsText = new StringBuilder(160);
 
     private Diver diver;
     private RunDirector runDirector;
@@ -142,6 +144,7 @@ public class GameScreen extends BaseScreen {
     private float ambientTime;
     private float achievementPopupTimer;
     private float unarmedBossSurvivalTimer;
+    private float elapsedRunTime;
     private int selectedPauseIndex;
     private int selectedUpgradeIndex;
     private int highScore;
@@ -188,7 +191,7 @@ public class GameScreen extends BaseScreen {
         enemyProjectiles = new ArrayList<>();
         enemySpawnBuffer = new ArrayList<>();
         powerUpPickups = new ArrayList<>();
-        activePowerUps = new EnumMap<>(PowerUpType.class);
+        activePowerUpTimers = new float[POWER_UP_TYPES.length];
         achievementQueue = new ArrayDeque<>();
         particles = new ParticleSystem();
         random = new Random();
@@ -210,7 +213,7 @@ public class GameScreen extends BaseScreen {
 
     @Override
     public void render(float delta) {
-        float frameDelta = Math.min(delta, MAX_FRAME_DELTA);
+        float frameDelta = safeFrameDelta(delta);
         updateWorldCamera(frameDelta);
         prepareFrame(0f, 0.04f, 0.12f);
         layoutTouchControls();
@@ -396,6 +399,7 @@ public class GameScreen extends BaseScreen {
     }
 
     private void updateGame(float delta) {
+        elapsedRunTime += delta;
         session.update(delta);
         refreshHighScore();
         if (session.isOutOfOxygen()) {
@@ -513,10 +517,10 @@ public class GameScreen extends BaseScreen {
         ambientTime += delta;
         touchHintTimer += delta;
         safetyTimer = Math.max(0f, safetyTimer - delta);
-        for (PowerUpType type : PowerUpType.values()) {
-            float remaining = activePowerUps.getOrDefault(type, 0f);
+        for (PowerUpType type : POWER_UP_TYPES) {
+            float remaining = activePowerUpTimers[type.ordinal()];
             if (remaining > 0f) {
-                activePowerUps.put(type, Math.max(0f, remaining - delta));
+                activePowerUpTimers[type.ordinal()] = Math.max(0f, remaining - delta);
             }
         }
 
@@ -748,7 +752,7 @@ public class GameScreen extends BaseScreen {
                 case 1 -> PowerUpType.TIME_BUBBLE;
                 default -> PowerUpType.MAGNETIC_CURRENT;
             };
-            default -> PowerUpType.values()[random.nextInt(PowerUpType.values().length)];
+            default -> POWER_UP_TYPES[random.nextInt(POWER_UP_TYPES.length)];
         };
         powerUpPickups.add(new PowerUpPickup(type, GameConfig.WORLD_WIDTH, randomY()));
     }
@@ -909,7 +913,7 @@ public class GameScreen extends BaseScreen {
         } else {
             stagePowerUses++;
             runPowerUses++;
-            activePowerUps.put(type, type.duration());
+            activePowerUpTimers[type.ordinal()] = type.duration();
         }
         if (type == PowerUpType.PRESSURE_SHIELD) {
             invulnerabilityTimer = Math.max(invulnerabilityTimer, type.duration());
@@ -927,7 +931,7 @@ public class GameScreen extends BaseScreen {
         stagePowerUses++;
         runPowerUses++;
         PowerUpType type = PowerUpType.TORPEDO_DASH;
-        activePowerUps.put(type, type.duration());
+        activePowerUpTimers[type.ordinal()] = type.duration();
         invulnerabilityTimer = Math.max(invulnerabilityTimer, type.duration());
         enemies.removeIf(enemy -> !enemy.isBoss());
         hazards.clear();
@@ -1063,7 +1067,7 @@ public class GameScreen extends BaseScreen {
     }
 
     private boolean isPowerActive(PowerUpType type) {
-        return activePowerUps.getOrDefault(type, 0f) > 0f;
+        return activePowerUpTimers[type.ordinal()] > 0f;
     }
 
     private float activeMagnetRange() {
@@ -1131,8 +1135,8 @@ public class GameScreen extends BaseScreen {
     }
 
     private String activePowerText() {
-        for (PowerUpType type : PowerUpType.values()) {
-            float remaining = activePowerUps.getOrDefault(type, 0f);
+        for (PowerUpType type : POWER_UP_TYPES) {
+            float remaining = activePowerUpTimers[type.ordinal()];
             if (remaining > 0f) {
                 return type.title() + "  " + String.format(Locale.ROOT, "%.1fs", remaining);
             }
@@ -1450,6 +1454,7 @@ public class GameScreen extends BaseScreen {
             } else {
                 drawGameOverScreen();
             }
+            drawDiagnostics();
             batch.end();
             return;
         }
@@ -1563,7 +1568,38 @@ public class GameScreen extends BaseScreen {
             drawFittedCentered(smallFont, displayedAchievement.title(), 500f, 472f);
         }
 
+        drawDiagnostics();
         batch.end();
+    }
+
+    private void drawDiagnostics() {
+        if (!DEBUG_MODE) {
+            return;
+        }
+        smallFont.setColor(Color.ORANGE);
+        diagnosticsText.setLength(0);
+        diagnosticsText.append("DEV  FPS ").append(Gdx.graphics.getFramesPerSecond())
+            .append("  RUN ").append(Math.round(elapsedRunTime)).append('s')
+            .append("  STAGE ").append(runDirector.stage())
+            .append("  BOSS ").append(hasActiveBoss() ? "ACTIVE" : "NONE");
+        smallFont.draw(batch, diagnosticsText, 800f, 610f);
+
+        diagnosticsText.setLength(0);
+        diagnosticsText.append("E ").append(enemies.size())
+            .append("  HZ ").append(hazards.size())
+            .append("  HP ").append(harpoons.size())
+            .append("  EP ").append(enemyProjectiles.size())
+            .append("  PU ").append(powerUpPickups.size())
+            .append("  O2 ").append(oxygenTanks.size())
+            .append("  FX ").append(particles.activeCount());
+        smallFont.draw(batch, diagnosticsText, 800f, 586f);
+
+        diagnosticsText.setLength(0);
+        diagnosticsText.append("JAVA HEAP ")
+            .append(Gdx.app.getJavaHeap() / (1024L * 1024L)).append(" MiB")
+            .append("  NATIVE ")
+            .append(Gdx.app.getNativeHeap() / (1024L * 1024L)).append(" MiB");
+        smallFont.draw(batch, diagnosticsText, 800f, 562f);
     }
 
     private void drawUpgradeSelection() {
@@ -1723,7 +1759,7 @@ public class GameScreen extends BaseScreen {
         hazards.clear();
         enemyProjectiles.clear();
         powerUpPickups.clear();
-        activePowerUps.clear();
+        Arrays.fill(activePowerUpTimers, 0f);
         particles.clear();
         diver = new Diver(equippedSuit);
         difficulty = runDirector.difficulty();
@@ -1735,7 +1771,7 @@ public class GameScreen extends BaseScreen {
         shootCooldownTimer = 0f;
         invulnerabilityTimer = equipment.startingShieldSeconds();
         if (invulnerabilityTimer > 0f) {
-            activePowerUps.put(PowerUpType.PRESSURE_SHIELD, invulnerabilityTimer);
+            activePowerUpTimers[PowerUpType.PRESSURE_SHIELD.ordinal()] = invulnerabilityTimer;
         }
         safetyTimer = CELEBRATION_DURATION;
         breathTimer = 0f;
@@ -1769,6 +1805,7 @@ public class GameScreen extends BaseScreen {
         runDamageEvents = 0;
         achievementPopupTimer = 0f;
         unarmedBossSurvivalTimer = 0f;
+        elapsedRunTime = 0f;
         displayedAchievement = null;
         achievementQueue.clear();
         upgradeChoices = Collections.emptyList();
@@ -1791,6 +1828,13 @@ public class GameScreen extends BaseScreen {
         if (!gameOver && !choosingUpgrade) {
             paused = true;
         }
+    }
+
+    static float safeFrameDelta(float delta) {
+        if (!Float.isFinite(delta) || delta <= 0f) {
+            return 0f;
+        }
+        return Math.min(delta, MAX_FRAME_DELTA);
     }
 
     @Override

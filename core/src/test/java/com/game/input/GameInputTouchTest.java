@@ -39,6 +39,7 @@ class GameInputTouchTest {
     private int height = 720;
     private float density = 1f;
     private boolean keyboardActive;
+    private int keyboardHeldKey = -1;
     private int mouseButton = Input.Buttons.LEFT;
     private boolean mouseJustPressed;
     private boolean controllerConnected = true;
@@ -66,7 +67,7 @@ class GameInputTouchTest {
             case "getX" -> x[(int) args[0]];
             case "getY" -> y[(int) args[0]];
             case "isKeyJustPressed" -> keyboardActive && (int) args[0] == Input.Keys.ANY_KEY;
-            case "isKeyPressed" -> false;
+            case "isKeyPressed" -> (int) args[0] == keyboardHeldKey;
             case "isButtonPressed" -> down[0] && (int) args[0] == mouseButton;
             case "isButtonJustPressed" -> mouseJustPressed && (int) args[0] == mouseButton;
             case "getDeltaX", "getDeltaY" -> 0;
@@ -184,6 +185,77 @@ class GameInputTouchTest {
         down[1] = true;
         input.update(viewport);
         assertTrue(input.touchFireJustPressed(null));
+    }
+
+    @Test
+    void lifecyclePauseConsumesHeldTouchUntilItIsReleased() {
+        touch(0, 50, 350);
+        input.update(viewport);
+        assertTrue(input.touchSwimPressed());
+
+        input.resetAfterLifecyclePause();
+        input.update(viewport);
+        assertFalse(input.touchSwimPressed());
+
+        down[0] = false;
+        input.update(viewport);
+        assertFalse(input.touchSwimPressed());
+
+        touch(0, 50, 350);
+        input.update(viewport);
+        assertTrue(input.touchSwimPressed());
+    }
+
+    @Test
+    void lifecyclePauseConsumesHeldControllerUntilItIsReleased() {
+        ControllerMapping mapping = connectController();
+        controllerButton = mapping.buttonA;
+        input.update(viewport);
+        assertTrue(input.swimPressed());
+
+        input.resetAfterLifecyclePause();
+        input.update(viewport);
+        assertFalse(input.swimPressed());
+        assertFalse(input.controllerConfirmJustPressed());
+
+        controllerButton = -1;
+        input.update(viewport);
+        assertFalse(input.controllerConfirmJustPressed());
+
+        controllerButton = mapping.buttonA;
+        input.update(viewport);
+        assertTrue(input.swimPressed());
+        assertTrue(input.controllerConfirmJustPressed());
+    }
+
+    @Test
+    void lifecyclePauseConsumesHeldKeyboardAndMouseUntilRelease() {
+        platform = Application.ApplicationType.Desktop;
+        keyboardHeldKey = Input.Keys.W;
+        input.update(viewport);
+        assertTrue(input.swimPressed());
+
+        input.resetAfterLifecyclePause();
+        input.update(viewport);
+        assertFalse(input.swimPressed());
+        keyboardHeldKey = -1;
+        input.update(viewport);
+        keyboardHeldKey = Input.Keys.W;
+        input.update(viewport);
+        assertTrue(input.swimPressed());
+
+        keyboardHeldKey = -1;
+        touch(0, 100, 350);
+        input.update(viewport);
+        assertTrue(input.swimPressed());
+        input.resetAfterLifecyclePause();
+        input.update(viewport);
+        assertFalse(input.swimPressed());
+        down[0] = false;
+        input.update(viewport);
+        touch(0, 100, 350);
+        input.update(viewport);
+        assertTrue(input.swimPressed());
     }
 
     @Test

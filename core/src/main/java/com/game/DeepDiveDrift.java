@@ -145,6 +145,9 @@ public class DeepDiveDrift extends Game {
 
     @Override
     public void pause() {
+        if (input != null) {
+            input.resetAfterLifecyclePause();
+        }
         super.pause();
         AudioManager.pauseForLifecycle();
     }
