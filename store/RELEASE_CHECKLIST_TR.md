@@ -5,7 +5,7 @@
 - [x] Windows ve Android için ortak otomatik sürüm; 34 commit için `1.0.34`, Android version code `35`
 - [x] Otomatik birim testleri
 - [x] Klavye, fare, gamepad ve dokunmatik girişleri
-- [x] Çevrimdışı çalışma; reklam, analitik ve hesap SDK’sı yok
+- [ ] Temel çevrimdışı çalışma yeniden doğrulanacak; Google Ads + UMP var, analitik ve hesap SDK’sı yok
 - [x] Görsel, ikon ve mağaza görseli haklarının belgelenmesi (CC0/OFL kaynak zinciri eklendi)
 - [ ] Ses ve müzik haklarının belgelenmesi veya dosyaların lisanslı alternatiflerle değiştirilmesi
 - [ ] Gerçek cihazlarda son kalite testi

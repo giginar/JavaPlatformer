@@ -245,6 +245,10 @@ public class GameScreen extends BaseScreen {
     }
 
     private boolean handleInput() {
+        if (game.advertising().isFullScreenContentActive()) {
+            game.input().suppressGameplayTouchUntilRelease();
+            return false;
+        }
         if (choosingUpgrade || paused || gameOver) {
             game.input().suppressGameplayTouchUntilRelease();
         }
@@ -262,7 +266,7 @@ public class GameScreen extends BaseScreen {
             } else if (game.input().backJustPressed()
                 || game.input().buttonJustReleased(GAME_OVER_MENU_BUTTON)) {
                 AudioManager.playSelect();
-                game.showMainMenu();
+                game.returnToMenuFromResults();
                 return true;
             }
             return false;
@@ -1004,6 +1008,7 @@ public class GameScreen extends BaseScreen {
         gameOver = true;
         paused = false;
         choosingUpgrade = false;
+        game.recordCompletedRun();
         if (!progressionRewardGranted) {
             earnedPearls = progression.awardRun(rewardRunSequence,
                 runDirector.distanceMeters(), runSettings.rewardMultiplier(), equipment);

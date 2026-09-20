@@ -1,13 +1,17 @@
-# DeepDive Drift Gizlilik Politikası
+# DeepDive Drift Gizlilik Politikası — Taslak
 
-Son güncelleme: 8 Ağustos 2026
+Son inceleme: 21 Eylül 2026
 
-DeepDive Drift kişisel veri toplamaz, üçüncü taraflarla veri paylaşmaz ve internet üzerinden bir sunucuya veri göndermez. Oyunda reklam, kullanıcı hesabı, analitik, çevrimiçi ödeme veya konum takibi bulunmaz.
+**POLİTİKA YAPILANDIRMASI BEKLİYOR. Bu taslağı yayınlamayın.**
 
-Oyun yalnızca en yüksek skor ile müzik, ses ve görsel efekt tercihlerini cihaz üzerinde yerel olarak saklar. Bu bilgi cihazdan ayrılmaz. Android ayarlarından uygulama verileri temizlenerek veya uygulama kaldırılarak yerel bilgi silinebilir.
+Android derlemesi artık Google Mobile Ads ve Google User Messaging Platform içerir.
+Uygulamada reklam veya ağ hizmeti bulunmadığını söyleyen önceki metin artık doğru değildir.
+Phase 7; hedef kitleyi ve yaşla ilgili politika ayarlarını belirlemeli, son SDK davranışını
+Google Play Veri Güvenliği beyanına eşlemeli ve yayından önce bu taslağı onaylı metinle
+değiştirmelidir.
 
-Bu politika, uygulamaya veri işleyen yeni bir çevrimiçi özellik veya üçüncü taraf hizmeti eklenirse güncellenecektir.
+Phase 6'da analitik, çökme raporlama, hesap, faturalandırma, ödeme, bulut kayıt veya
+konum SDK'sı eklenmedi. Oyun ilerlemesi ve tercihler cihazda yerel olarak saklanmaya
+devam eder. Reklam, izin veya ağ işlemleri başarısız olduğunda temel oynanış kullanılabilir.
 
 Gizlilik soruları için iletişim: `YAYINCI_EPOSTASI_BURAYA`
-
-Yayınlamadan önce iletişim adresi doldurulmalı ve bu dosya herkese açık bir HTTPS sayfasında barındırılmalıdır.

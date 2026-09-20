@@ -12,7 +12,7 @@ Yüz, zıpkınını ateşle ve Leviathan’a ulaşana kadar derinlikte hayatta k
 
 Derinlik seni aşağı çekerken oksijenini koru, deniz yaratıklarının saldırılarından sıyrıl ve zıpkınınla karşılık ver.
 
-DeepDive Drift, tek dokunuşla öğrenilen ama ustalaşması giderek zorlaşan çevrimdışı bir su altı hayatta kalma oyunudur. Yüzmek için basılı tut, alçalmak için bırak ve yaklaşan tehditleri zıpkınla avla. Oksijen tüplerini topla, kombonu büyüt ve her yeni derinlik seviyesinde dalgıcını güçlendiren yükseltmelerden birini seç.
+DeepDive Drift, tek dokunuşla öğrenilen ama ustalaşması giderek zorlaşan bir su altı hayatta kalma oyunudur. Temel oynanış ağ bağlantısı olmadan da kullanılabilir. Yüzmek için basılı tut, alçalmak için bırak ve yaklaşan tehditleri zıpkınla avla. Oksijen tüplerini topla, kombonu büyüt ve her yeni derinlik seviyesinde dalgıcını güçlendiren yükseltmelerden birini seç.
 
 Öne çıkanlar:
 
@@ -22,7 +22,7 @@ DeepDive Drift, tek dokunuşla öğrenilen ama ustalaşması giderek zorlaşan �
 - Çok aşamalı Abyss Leviathan boss savaşı
 - Yerel en yüksek skor kaydı
 - Ekran sarsıntısını ve flaş efektlerini kapatma seçenekleri
-- Reklamsız, hesapsız ve tamamen çevrimdışı oynanış
+- Hesap gerektirmeyen ve çevrimdışı kullanılabilen temel oynanış
 
 Ne kadar derine inebilirsin?
 
@@ -30,7 +30,7 @@ Ne kadar derine inebilirsin?
 
 - Kategori: Oyun / Arcade
 - Etiketler: Arcade, Tek oyunculu, Çevrimdışı
-- Reklam: Yok
+- Reklam: Android'de var (üretim yapılandırması bekliyor)
 - Uygulama içi satın alma: Yok
 
 Yaş derecesi ve hedef kitle, Play Console anketindeki nihai cevaplara göre belirlenmelidir.

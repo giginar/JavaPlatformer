@@ -19,7 +19,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Tar
 Bu yerel test Google Play hesabı ve Android Studio gerektirmez.
 Derleme bilgisayarında Java 21, Android SDK Platform 36 ve Build Tools 36.0.0 gerekir;
 SDK yolu `local.properties` veya `ANDROID_SDK_ROOT` üzerinden ayarlanır.
-Paketin minimum Android sürümü 5.0'dır (API 21); desteklenen sürümlerde gerçek cihaz testi ayrıca yapılmalıdır.
+Paketin minimum Android sürümü 7.0'dır (API 24); Android 5.0, 5.1 ve 6.0 artık desteklenmez. Desteklenen sürümlerde gerçek cihaz testi ayrıca yapılmalıdır.
+
+Reklam derleme modu varsayılan olarak `DISABLED` durumundadır. Google'ın resmi demo
+kimlikleriyle cihaz testi için derlemeden önce `DEEPDRIFT_ADS_MODE=TEST` ayarlayın.
+`PRODUCTION` modu yalnızca dışarıdan verilen `DEEPDRIFT_ADMOB_APP_ID`,
+`DEEPDRIFT_REWARDED_AD_UNIT_ID` ve `DEEPDRIFT_INTERSTITIAL_AD_UNIT_ID` değerleriyle
+çalışır; eksik veya Google demo kimliği olan değerler derlemeyi durdurur. Gerçek kimlikleri
+kaynak dosyalarına eklemeyin.
 
 ## USB ile tek komutta kur ve aç
 

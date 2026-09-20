@@ -8,6 +8,9 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.utils.BufferUtils;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.game.ads.AdvertisingService;
+import com.game.ads.InterstitialPolicy;
+import com.game.ads.NoOpAdvertisingService;
 import com.game.input.GameInput;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
@@ -27,12 +30,25 @@ import com.game.model.SaveSchema;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Objects;
 
 public class DeepDiveDrift extends Game {
     private final Deque<Screen> suspendedScreens = new ArrayDeque<>();
+    private final AdvertisingService advertising;
+    private final InterstitialPolicy interstitialPolicy = new InterstitialPolicy();
     private GameInput input;
     private float captureElapsed;
     private boolean captureCompleted;
+    private boolean fullScreenPauseApplied;
+    private long resultMenuOpportunity;
+
+    public DeepDiveDrift() {
+        this(new NoOpAdvertisingService());
+    }
+
+    public DeepDiveDrift(AdvertisingService advertising) {
+        this.advertising = advertising;
+    }
 
     @Override
     public void create() {
@@ -69,10 +85,34 @@ public class DeepDiveDrift extends Game {
         return input;
     }
 
+    public AdvertisingService advertising() {
+        return advertising;
+    }
+
     @Override
     public void render() {
+        updateFullScreenLifecycle();
         super.render();
         captureFrameIfRequested();
+    }
+
+    private void updateFullScreenLifecycle() {
+        boolean fullScreenActive = advertising.isFullScreenContentActive();
+        if (fullScreenActive) {
+            if (input != null) {
+                input.resetAfterLifecyclePause();
+            }
+            if (!fullScreenPauseApplied) {
+                AudioManager.pauseForLifecycle();
+                fullScreenPauseApplied = true;
+            }
+        } else if (fullScreenPauseApplied) {
+            if (input != null) {
+                input.resetAfterLifecyclePause();
+            }
+            AudioManager.resumeFromLifecycle();
+            fullScreenPauseApplied = false;
+        }
     }
 
     private void captureFrameIfRequested() {
@@ -109,6 +149,100 @@ public class DeepDiveDrift extends Game {
 
     public void showMainMenu() {
         replaceScreen(new MainMenuScreen(this));
+    }
+
+    public void recordCompletedRun() {
+        interstitialPolicy.recordCompletedRun();
+    }
+
+    /** Handles the only interstitial opportunity: a completed result screen returning to menu. */
+    public void returnToMenuFromResults() {
+        long opportunity = ++resultMenuOpportunity;
+        boolean eligible = interstitialPolicy.evaluateResultsToMenuOpportunity(
+            opportunity,
+            System.currentTimeMillis(),
+            false,
+            advertising.canRequestAds(),
+            advertising.isInterstitialAvailable(),
+            advertising.isFullScreenContentActive()
+        );
+        if (!eligible || !advertising.showInterstitial(new AdvertisingService.FullScreenCallback() {
+            @Override
+            public void onOpened() {
+                postToGameThread(() -> {
+                    interstitialPolicy.recordInterstitialDisplay(System.currentTimeMillis());
+                    pauseForFullScreenContent();
+                });
+            }
+
+            @Override
+            public void onClosed() {
+                postToGameThread(() -> {
+                    resumeAfterFullScreenContent();
+                    showMainMenu();
+                });
+            }
+        })) {
+            showMainMenu();
+        }
+    }
+
+    public boolean showPrivacyOptions() {
+        return advertising.showPrivacyOptions(new AdvertisingService.FullScreenCallback() {
+            @Override
+            public void onOpened() {
+                postToGameThread(DeepDiveDrift.this::pauseForFullScreenContent);
+            }
+
+            @Override
+            public void onClosed() {
+                postToGameThread(DeepDiveDrift.this::resumeAfterFullScreenContent);
+            }
+        });
+    }
+
+    /** Technical rewarded path; no screen offers a gameplay reward until product approval. */
+    public boolean showRewarded(AdvertisingService.RewardedCallback callback) {
+        Objects.requireNonNull(callback, "callback");
+        return advertising.showRewarded(new AdvertisingService.RewardedCallback() {
+            @Override
+            public void onOpened() {
+                interstitialPolicy.recordRewardedDisplay();
+                postToGameThread(callback::onOpened);
+            }
+
+            @Override
+            public void onRewardEarned() {
+                postToGameThread(callback::onRewardEarned);
+            }
+
+            @Override
+            public void onClosed() {
+                postToGameThread(callback::onClosed);
+            }
+        });
+    }
+
+    private void pauseForFullScreenContent() {
+        if (input != null) {
+            input.resetAfterLifecyclePause();
+        }
+        AudioManager.pauseForLifecycle();
+    }
+
+    private void resumeAfterFullScreenContent() {
+        if (input != null) {
+            input.resetAfterLifecyclePause();
+        }
+        AudioManager.resumeFromLifecycle();
+    }
+
+    private void postToGameThread(Runnable action) {
+        if (Gdx.app == null) {
+            action.run();
+        } else {
+            Gdx.app.postRunnable(action);
+        }
     }
 
     public void startNewGame() {
@@ -155,7 +289,12 @@ public class DeepDiveDrift extends Game {
     @Override
     public void resume() {
         super.resume();
-        AudioManager.resumeFromLifecycle();
+        if (advertising.isFullScreenContentActive()) {
+            AudioManager.pauseForLifecycle();
+            fullScreenPauseApplied = true;
+        } else {
+            AudioManager.resumeFromLifecycle();
+        }
     }
 
     private void openOverlay(Screen overlay) {
@@ -209,6 +348,7 @@ public class DeepDiveDrift extends Game {
             }
         }
 
+        advertising.dispose();
         AudioManager.dispose();
         FontManager.dispose();
         GameAssets.dispose();

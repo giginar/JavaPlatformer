@@ -12,8 +12,11 @@ import com.game.manager.FontManager;
 import com.game.settings.DisplaySettings;
 import com.game.settings.DisplaySettingsStore.WindowMode;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class OptionsScreen extends BaseScreen {
-    private static final Option[] DESKTOP_OPTIONS = Option.values();
     private static final Option[] MOBILE_OPTIONS = {
         Option.MUSIC,
         Option.SOUND_EFFECTS,
@@ -31,8 +34,10 @@ public class OptionsScreen extends BaseScreen {
     private final BitmapFont largeFont;
     private final GlyphLayout layout;
     private final Rectangle optionRow = new Rectangle();
-    private final Option[] options;
+    private final boolean mobileLayout;
 
+    private Option[] options;
+    private boolean privacyOptionVisible;
     private int selectedIndex;
 
     public OptionsScreen(DeepDiveDrift game) {
@@ -42,13 +47,42 @@ public class OptionsScreen extends BaseScreen {
         mediumFont = FontManager.getMediumFont();
         largeFont = FontManager.getLargeFont();
         layout = new GlyphLayout();
-        options = DisplaySettings.supportsDisplayConfiguration() ? DESKTOP_OPTIONS : MOBILE_OPTIONS;
+        mobileLayout = !DisplaySettings.supportsDisplayConfiguration();
+        privacyOptionVisible = !game.advertising().isPrivacyOptionsRequired();
+        refreshOptions();
+    }
+
+    private void refreshOptions() {
+        boolean privacyRequired = mobileLayout
+            && game.advertising().isPrivacyOptionsRequired();
+        if (options != null && privacyRequired == privacyOptionVisible) {
+            return;
+        }
+        Option selected = options == null ? Option.MUSIC : options[selectedIndex];
+        privacyOptionVisible = privacyRequired;
+        if (mobileLayout) {
+            List<Option> mobileOptions = new ArrayList<>(Arrays.asList(MOBILE_OPTIONS));
+            if (privacyRequired) {
+                mobileOptions.add(mobileOptions.indexOf(Option.ABOUT), Option.PRIVACY);
+            }
+            options = mobileOptions.toArray(Option[]::new);
+        } else {
+            options = Arrays.stream(Option.values())
+                .filter(option -> option != Option.PRIVACY)
+                .toArray(Option[]::new);
+        }
+        selectedIndex = Math.max(0, Arrays.asList(options).indexOf(selected));
     }
 
     @Override
     public void render(float delta) {
+        refreshOptions();
         prepareFrame(0f, 0.04f, 0.1f);
         updateInput();
+        if (game.advertising().isFullScreenContentActive()) {
+            game.input().suppressGameplayTouchUntilRelease();
+            return;
+        }
         if (handleInput()) {
             return;
         }
@@ -145,6 +179,10 @@ public class OptionsScreen extends BaseScreen {
             game.openAbout();
             return true;
         }
+        if (options[selectedIndex] == Option.PRIVACY) {
+            AudioManager.playConfirm();
+            return game.showPrivacyOptions();
+        }
         changeSelectedOption(1);
         return false;
     }
@@ -168,7 +206,7 @@ public class OptionsScreen extends BaseScreen {
                 DisplaySettings.cycleTextScale(direction);
                 FontManager.setTextScale(DisplaySettings.textScale().multiplier());
             }
-            case CONTROLS, ABOUT, BACK -> {
+            case CONTROLS, PRIVACY, ABOUT, BACK -> {
                 return;
             }
         }
@@ -191,7 +229,7 @@ public class OptionsScreen extends BaseScreen {
             case SCREEN_SHAKE -> option.label + ":  " + onOff(DisplaySettings.screenShakeEnabled());
             case FLASH_EFFECTS -> option.label + ":  " + onOff(DisplaySettings.flashEffectsEnabled());
             case TEXT_SIZE -> option.label + ":  " + DisplaySettings.textScale().name();
-            case CONTROLS, ABOUT, BACK -> option.label;
+            case CONTROLS, PRIVACY, ABOUT, BACK -> option.label;
         };
     }
 
@@ -202,17 +240,16 @@ public class OptionsScreen extends BaseScreen {
 
     private Rectangle rowBounds(int index) {
         float baseline = optionStartY() - index * optionSpacing();
-        float height = options.length <= MOBILE_OPTIONS.length ? 52f : 36f;
+        float height = mobileLayout ? 48f : 36f;
         return optionRow.set(270f, baseline - height / 2f - 7f, 740f, height);
     }
 
     private float optionStartY() {
-        return options.length <= MOBILE_OPTIONS.length ? 520f : 540f;
+        return 540f;
     }
 
     private float optionSpacing() {
-        return options.length <= MOBILE_OPTIONS.length
-            ? 60f
+        return mobileLayout ? 420f / Math.max(1, options.length - 1)
             : 460f / Math.max(1, options.length - 1);
     }
 
@@ -238,6 +275,7 @@ public class OptionsScreen extends BaseScreen {
         FLASH_EFFECTS("FLASH EFFECTS"),
         TEXT_SIZE("TEXT SIZE"),
         CONTROLS("CONTROLS"),
+        PRIVACY("PRIVACY OPTIONS"),
         ABOUT("ABOUT / LEGAL"),
         BACK("BACK");
 

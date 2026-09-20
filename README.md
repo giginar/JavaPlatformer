@@ -6,7 +6,7 @@ DeepDive Drift, libGDX ile geliştirilen hızlı tempolu bir su altı hayatta ka
 
 - Windows ve Linux masaüstü paketleri
 - Steam için açılmış Windows/Linux depot klasörleri
-- Android 5.0+ (`minSdk 21`) ve Google Play için Android App Bundle
+- Android 7.0+ (`minSdk 24`) ve Google Play için Android App Bundle
 - Hedef Android API: 36
 
 Apple/iOS ve macOS bu sürüm çalışmasının kapsamına dahil değildir.

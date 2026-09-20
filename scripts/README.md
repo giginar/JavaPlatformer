@@ -73,3 +73,12 @@ dağıtılan paketlerin sürümü yukarıdaki ortak hesapla belirlenir.
 
 Android SDK ve imzalama ayrıntıları [Android rehberinde](../store/google-play/ANDROID_TEST_TR.md),
 Steam kimlikleri ve yükleme adımları [Steam rehberinde](../steam/README.md) bulunur.
+
+## Android advertising build modes
+
+`DEEPDRIFT_ADS_MODE` accepts `DISABLED`, `TEST`, or `PRODUCTION` and defaults to
+`DISABLED`. `TEST` always generates Google's official demo App ID and ad-unit IDs.
+`PRODUCTION` requires `DEEPDRIFT_ADMOB_APP_ID`, `DEEPDRIFT_REWARDED_AD_UNIT_ID`, and
+`DEEPDRIFT_INTERSTITIAL_AD_UNIT_ID`; missing, malformed, or demo values fail the build.
+Production identifiers remain outside tracked source. The Android dependency graph is
+versioned and checksum-locked in `android/ads-dependencies.lock`.

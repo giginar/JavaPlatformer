@@ -15,6 +15,11 @@ $version = $androidVersion.Version
 $versionCode = $androidVersion.VersionCode
 $buildToolsVersion = [string]$projectPom.project.properties.'android.build-tools'
 $bundletoolVersion = [string]$projectPom.project.properties.'bundletool.version'
+$expectedMinSdk = [string]$projectPom.project.properties.'android.min-sdk'
+$expectedTargetSdk = [string]$projectPom.project.properties.'android.target-sdk'
+[xml]$sourceManifest = Get-Content -LiteralPath `
+    (Join-Path $projectRootPath 'android\src\main\AndroidManifest.xml') -Raw
+$expectedApplicationId = [string]$sourceManifest.manifest.package
 
 if (-not $SkipBuild) {
     & $mavenWrapper -f $pomPath -B -ntp -Pandroid-release -pl android -am clean package
@@ -64,6 +69,7 @@ $sdkDirectory = [System.IO.Path]::GetFullPath($sdkDirectory)
 $zipalignPath = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\zipalign.exe"
 $apksignerPath = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\apksigner.bat"
 $aapt2Path = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\aapt2.exe"
+$apkAnalyzerPath = Join-Path $sdkDirectory 'cmdline-tools\latest\bin\apkanalyzer.bat'
 $releaseApk = Get-Item -LiteralPath (Join-Path $releasePath "DeepDiveDrift-$version-universal.apk") -ErrorAction SilentlyContinue
 $bundleNames = @("DeepDiveDrift-$version-google-play.aab", "DeepDiveDrift-$version-google-play-unsigned.aab")
 $releaseBundle = Get-ChildItem -LiteralPath $releasePath -Filter '*.aab' -ErrorAction SilentlyContinue |
@@ -73,12 +79,97 @@ $releaseBundle = Get-ChildItem -LiteralPath $releasePath -Filter '*.aab' -ErrorA
 if (-not $releaseApk -or -not $releaseBundle) {
     throw "Release APK or AAB is missing below $releasePath"
 }
+if (-not (Test-Path -LiteralPath $apkAnalyzerPath)) {
+    throw "apkanalyzer is missing: $apkAnalyzerPath"
+}
 
 $apkBadging = (& $aapt2Path dump badging $releaseApk.FullName | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Unable to read the APK version metadata' }
 $expectedApkVersion = "versionCode='$versionCode' versionName='$([regex]::Escape($version))'"
 if ($apkBadging -notmatch $expectedApkVersion) {
     throw "APK version does not match $version (versionCode $versionCode). Rebuild the Android package."
+}
+if ($apkBadging -notmatch "package: name='$([regex]::Escape($expectedApplicationId))'" -or
+    $apkBadging -notmatch "minSdkVersion:'$([regex]::Escape($expectedMinSdk))'" -or
+    $apkBadging -notmatch "targetSdkVersion:'$([regex]::Escape($expectedTargetSdk))'") {
+    throw "APK identity or SDK metadata does not match $expectedApplicationId (min $expectedMinSdk, target $expectedTargetSdk)."
+}
+
+$apkManifestText = (& $apkAnalyzerPath manifest print $releaseApk.FullName | Out-String)
+if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect the merged APK manifest' }
+$requiredManifestValues = @(
+    'android.permission.INTERNET',
+    'android.permission.ACCESS_NETWORK_STATE',
+    'android.permission.READ_BASIC_PHONE_STATE',
+    'com.google.android.gms.permission.AD_ID',
+    'com.google.android.libraries.ads.mobile.sdk.common.AdActivity',
+    'com.google.android.play.core.hsdp.service.HsdpShimActivity',
+    'com.google.android.gms.common.api.GoogleApiActivity',
+    'androidx.startup.InitializationProvider',
+    'androidx.work.impl.background.systemjob.SystemJobService',
+    'com.game.diver.deepdivedrift.ADS_MODE'
+)
+foreach ($requiredManifestValue in $requiredManifestValues) {
+    if (-not $apkManifestText.Contains($requiredManifestValue)) {
+        throw "Merged APK manifest is missing $requiredManifestValue"
+    }
+}
+if ($apkManifestText -match 'android:value="(DISABLED|TEST|PRODUCTION)"') {
+    $adsMode = $Matches[1]
+} else {
+    throw 'Merged APK manifest does not declare a valid advertising mode.'
+}
+$testAppId = 'ca-app-pub-3940256099942544~3347511713'
+$hasAdMobApplicationId = $apkManifestText.Contains('com.google.android.gms.ads.APPLICATION_ID')
+if ($adsMode -eq 'DISABLED' -and $hasAdMobApplicationId) {
+    throw 'DISABLED package must not contain AdMob application metadata.'
+}
+if ($adsMode -eq 'TEST' -and
+    (-not $hasAdMobApplicationId -or -not $apkManifestText.Contains($testAppId))) {
+    throw 'TEST package must contain the official Google demo App ID.'
+}
+if ($adsMode -eq 'PRODUCTION' -and
+    (-not $hasAdMobApplicationId -or $apkManifestText.Contains($testAppId))) {
+    throw 'PRODUCTION package is missing external AdMob metadata or contains the demo App ID.'
+}
+
+$dexPackages = (& $apkAnalyzerPath dex packages $releaseApk.FullName | Out-String)
+if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect APK DEX classes' }
+foreach ($requiredClass in @(
+    'com.google.android.libraries.ads.mobile.sdk.MobileAds',
+    'com.google.android.ump.UserMessagingPlatform',
+    'com.game.diver.android.AndroidAdvertisingService'
+)) {
+    if ($dexPackages -notmatch "(?m)^C\s+.*\s$([regex]::Escape($requiredClass))\r?$") {
+        throw "APK DEX is missing $requiredClass"
+    }
+}
+if ($dexPackages.Contains('com.google.firebase.analytics')) {
+    throw 'Firebase Analytics must not be packaged.'
+}
+
+$apkEntries = @(& jar.exe tf $releaseApk.FullName)
+foreach ($requiredEntry in @(
+    'res/drawable/admob_close_button_white_cross.xml',
+    'res/layout/hsdp_shim_activity.xml',
+    'META-INF/services/kotlinx.coroutines.internal.MainDispatcherFactory',
+    'okhttp3/internal/publicsuffix/publicsuffixes.gz'
+)) {
+    if ($requiredEntry -notin $apkEntries) {
+        throw "APK is missing SDK runtime resource $requiredEntry"
+    }
+}
+
+$consumerRuleInventoryPath = Join-Path $androidTargetPath 'android-work\consumer-rules\inventory.txt'
+if (-not (Test-Path -LiteralPath $consumerRuleInventoryPath)) {
+    throw 'Consumer-rule inventory is missing.'
+}
+$consumerRuleInventory = Get-Content -LiteralPath $consumerRuleInventoryPath -Raw
+foreach ($requiredRules in @('ads-mobile-sdk-1.4.0', 'user-messaging-platform-4.0.0',
+    'kotlinx-coroutines-android-1.9.0')) {
+    if (-not $consumerRuleInventory.Contains($requiredRules)) {
+        throw "Consumer-rule inventory is missing $requiredRules"
+    }
 }
 
 & java.exe (Join-Path $PSScriptRoot 'VerifyAndroidAudio.java') $releaseApk.FullName (Join-Path $projectRootPath 'assets')
@@ -111,6 +202,12 @@ $androidNamespace = 'http://schemas.android.com/apk/res/android'
 if ($bundleManifest.manifest.GetAttribute('versionName', $androidNamespace) -ne $version -or
     $bundleManifest.manifest.GetAttribute('versionCode', $androidNamespace) -ne [string]$versionCode) {
     throw "AAB version does not match $version (versionCode $versionCode). Rebuild the Android package."
+}
+$bundleUsesSdk = $bundleManifest.manifest.'uses-sdk'
+if ($bundleUsesSdk.GetAttribute('minSdkVersion', $androidNamespace) -ne $expectedMinSdk -or
+    $bundleUsesSdk.GetAttribute('targetSdkVersion', $androidNamespace) -ne $expectedTargetSdk -or
+    [string]$bundleManifest.manifest.package -ne $expectedApplicationId) {
+    throw 'AAB identity or min/target SDK metadata is incorrect.'
 }
 
 function Get-ElfLoadAlignments([string]$Path) {
@@ -211,6 +308,9 @@ if (($RequireSignedBundle -or (Test-Path -LiteralPath (Join-Path $projectRootPat
 
 Write-Host 'Android verification passed:'
 Write-Host "  APK and AAB version: $version (versionCode $versionCode)"
+Write-Host "  Package: $expectedApplicationId; minSdk $expectedMinSdk; targetSdk $expectedTargetSdk"
+Write-Host "  Advertising mode: $adsMode; GMA/UMP classes, resources, and merged manifest verified"
+Write-Host '  Java service/resources and consumer-rule inventory: present'
 Write-Host '  Audio assets: present and uncompressed for Android openFd'
 Write-Host '  Bundletool schema: valid'
 Write-Host '  APK ZIP alignment: 16 KB compatible'

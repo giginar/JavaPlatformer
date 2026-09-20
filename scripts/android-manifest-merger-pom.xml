@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.game.diver.build</groupId>
+    <artifactId>android-manifest-merger-tool</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+
+    <repositories>
+        <repository>
+            <id>google</id>
+            <url>https://dl.google.com/dl/android/maven2</url>
+        </repository>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+    </repositories>
+
+    <!-- Kept outside the app dependency graph: these jars run on the build JVM. -->
+    <dependencies>
+        <dependency>
+            <groupId>com.android.tools.build</groupId>
+            <artifactId>manifest-merger</artifactId>
+            <version>${manifest-merger.version}</version>
+        </dependency>
+    </dependencies>
+</project>

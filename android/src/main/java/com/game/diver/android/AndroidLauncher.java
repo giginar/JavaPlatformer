@@ -5,8 +5,12 @@ import android.os.Bundle;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.game.DeepDiveDrift;
+import com.game.ads.AdConfiguration;
+import com.game.diver.android.generated.AdBuildConfiguration;
 
 public final class AndroidLauncher extends AndroidApplication {
+    private AndroidAdvertisingService advertising;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -19,6 +23,26 @@ public final class AndroidLauncher extends AndroidApplication {
         configuration.useImmersiveMode = true;
         configuration.useWakelock = true;
         configuration.numSamples = 4;
-        initialize(new DeepDiveDrift(), configuration);
+        AdConfiguration adConfiguration = AdBuildConfiguration.create();
+        advertising = new AndroidAdvertisingService(this, adConfiguration);
+        initialize(new DeepDiveDrift(advertising), configuration);
+        advertising.start();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (advertising != null) {
+            advertising.onActivityResumed(this);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (advertising != null) {
+            advertising.detachActivity(this);
+            advertising.dispose();
+        }
+        super.onDestroy();
     }
 }

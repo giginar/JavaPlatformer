@@ -46,7 +46,8 @@ public final class AboutScreen extends BaseScreen {
         },
         {
             "PRIVACY & RELEASE STATUS",
-            "The game has no ads, analytics, billing or crash reporting",
+            "Android supports optional Google ads and Google's consent form",
+            "The game adds no analytics, billing or third-party crash reporting",
             "Progress and settings are stored locally on the device",
             "Privacy disclosures must accompany any production store listing",
             "",

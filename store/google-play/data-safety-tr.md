@@ -1,16 +1,16 @@
 # Google Play veri güvenliği taslağı
 
-Bu beyan mevcut Android paketinin kodu ve manifesti içindir:
+**POLİTİKA YAPILANDIRMASI BEKLİYOR. Bu dosya Play Console beyanı olarak kullanılamaz.**
 
-- Veri toplama: Hayır
-- Veri paylaşma: Hayır
-- Hesap oluşturma: Yok
-- Reklam: Yok
-- Uygulama içi satın alma: Yok
-- İnternet erişimi: Yok; manifestte `INTERNET` izni bulunmaz
-- Konum, kamera, mikrofon, kişiler veya depolama izni: Yok
-- Cihazda tutulan veri: En yüksek skor, ses tercihleri ve görsel efekt tercihleri
-- Cihazdaki verinin silinmesi: Android uygulama verilerini temizlemek veya uygulamayı kaldırmak
-- Veriler aktarım sırasında şifreleniyor mu?: Ağ üzerinden veri aktarımı yapılmıyor
+Phase 6 Android paketinin doğrulanan teknik durumu:
 
-Yeni bir reklam, analitik, çökme raporlama, giriş, bulut kayıt veya ödeme SDK’sı eklenirse bu beyan yayın öncesinde yeniden değerlendirilmelidir.
+- Google Mobile Ads Next-Gen `1.4.0` ve Google UMP `4.0.0` paketlenir.
+- Manifestte `INTERNET`, `ACCESS_NETWORK_STATE`, `READ_BASIC_PHONE_STATE` ve
+  `com.google.android.gms.permission.AD_ID` bulunur.
+- Reklam modu `DISABLED`, `TEST` veya dış kimlik gerektiren `PRODUCTION` olabilir.
+- Firebase Analytics, Crashlytics, ilişkilendirme, hesap, faturalandırma, ödeme veya
+  konum SDK'sı eklenmemiştir.
+- Oyun ilerlemesi ve tercihler cihazda yerel olarak saklanır.
+
+Veri türleri, toplama/paylaşma, amaçlar, saklama, silme, çocuklar ve hedef kitle
+beyanları Phase 7'de resmi Google SDK davranışı ve son ürün politikasıyla eşlenmelidir.
