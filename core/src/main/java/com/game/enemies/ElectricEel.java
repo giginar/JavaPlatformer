@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.game.GameConfig;
+import com.game.settings.FlashEffectPolicy;
 import com.game.manager.GameAssets;
 
 /** Ranged controller: holds a distant lane, telegraphs, then fires aimed electric bolts. */
@@ -49,8 +50,8 @@ public final class ElectricEel implements EnemyFish {
 
     @Override
     public void render(SpriteBatch batch) {
-        float glow = 0.55f + MathUtils.sin(animationTime * 11f) * 0.3f;
-        if (hitTimer > 0f) {
+        float glow = FlashEffectPolicy.pulse(0.55f, 0.3f, animationTime * 11f);
+        if (FlashEffectPolicy.flash(hitTimer > 0f)) {
             batch.setColor(Color.RED);
         } else {
             batch.setColor(0.25f, glow, 1f, 1f);

@@ -15,3 +15,13 @@ Attribution is not required by CC0, but is included here with thanks.
 Orbitron font files are Copyright 2018 The Orbitron Project Authors and are used
 under the SIL Open Font License 1.1. The full license is distributed in
 `fonts/OFL.txt`.
+
+## Additional records
+
+- Audio rights and per-file hashes: `AUDIO_RIGHTS_AUDIT.md`
+- Visual asset provenance and reproducibility: `ASSET_PROVENANCE_AUDIT.md`
+- Runtime software license inventory: `THIRD_PARTY_SOFTWARE_NOTICES.md`
+
+The audio records and the provider/distribution terms for the AI-generated boss
+remain incomplete. This notice does not represent those assets as cleared for
+production distribution.

@@ -14,6 +14,7 @@ import com.game.manager.FontManager;
 import com.game.manager.GameAssets;
 import com.game.screen.GameScreen;
 import com.game.screen.AchievementScreen;
+import com.game.screen.AboutScreen;
 import com.game.screen.DiveSetupScreen;
 import com.game.screen.MainMenuScreen;
 import com.game.screen.OptionsScreen;
@@ -56,7 +57,9 @@ public class DeepDiveDrift extends Game {
             startNewGame();
         } else {
             showMainMenu();
-            if (Boolean.getBoolean("deepdive.openOptions")) {
+            if (Boolean.getBoolean("deepdive.openAbout")) {
+                openAbout();
+            } else if (Boolean.getBoolean("deepdive.openOptions")) {
                 openOptions();
             }
         }
@@ -134,6 +137,22 @@ public class DeepDiveDrift extends Game {
 
     public void openControls() {
         openOverlay(new ControlsScreen(this));
+    }
+
+    public void openAbout() {
+        openOverlay(new AboutScreen(this));
+    }
+
+    @Override
+    public void pause() {
+        super.pause();
+        AudioManager.pauseForLifecycle();
+    }
+
+    @Override
+    public void resume() {
+        super.resume();
+        AudioManager.resumeFromLifecycle();
     }
 
     private void openOverlay(Screen overlay) {

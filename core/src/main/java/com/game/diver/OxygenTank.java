@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.game.manager.GameAssets;
+import com.game.settings.FlashEffectPolicy;
 
 public class OxygenTank {
 
@@ -45,7 +46,7 @@ public class OxygenTank {
 
     public void render(SpriteBatch batch) {
         float wobble = MathUtils.sin(time * 3f) * 3f;
-        batch.setColor(1f, 1f, 1f, 0.85f + 0.15f * MathUtils.sin(time * 4f));
+        batch.setColor(1f, 1f, 1f, FlashEffectPolicy.pulse(0.85f, 0.15f, time * 4f));
         batch.draw(texture, x, baseY + wobble, WIDTH, HEIGHT);
         batch.setColor(1f, 1f, 1f, 1f);
     }

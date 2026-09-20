@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.game.settings.DisplaySettings;
 
 public class FontManager {
     private static BitmapFont smallFont;
@@ -32,6 +33,7 @@ public class FontManager {
         largeFont = generator.generateFont(parameter);
 
         generator.dispose();
+        setTextScale(DisplaySettings.textScale().multiplier());
         initialized = true;
     }
 
@@ -45,6 +47,14 @@ public class FontManager {
 
     public static BitmapFont getLargeFont() {
         return largeFont;
+    }
+
+    public static void setTextScale(float multiplier) {
+        float scale = Math.max(1f, Math.min(1.15f, multiplier));
+        if (smallFont != null) smallFont.getData().setScale(scale);
+        if (mediumFont != null) mediumFont.getData().setScale(scale);
+        // Large headings are already prominent and share tight vertical layouts.
+        if (largeFont != null) largeFont.getData().setScale(1f);
     }
 
     public static void dispose() {

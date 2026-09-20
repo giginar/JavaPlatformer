@@ -140,12 +140,27 @@ public final class AchievementScreen extends BaseScreen {
         rowBounds(visibleRow);
         smallFont.setColor(unlocked ? Color.GOLD
             : achievementIndex == selected ? Color.YELLOW : Color.LIGHT_GRAY);
-        smallFont.draw(batch, String.format("%02d  %s", achievementIndex + 1,
-            achievement.title()), 185f, row.y + 43f);
+        drawFittedText(String.format("%02d  %s", achievementIndex + 1,
+            achievement.title()), 185f, row.y + 43f, 285f, false);
         smallFont.setColor(unlocked ? Color.WHITE : Color.GRAY);
-        smallFont.draw(batch, achievement.description(), 500f, row.y + 43f);
+        drawFittedText(achievement.description(), 500f, row.y + 43f, 455f, false);
         smallFont.setColor(unlocked ? Color.LIME : Color.DARK_GRAY);
-        smallFont.draw(batch, achievements.progressText(achievement), 990f, row.y + 43f);
+        drawFittedText(achievements.progressText(achievement), 1090f,
+            row.y + 43f, 115f, true);
+    }
+
+    private void drawFittedText(String text, float x, float y, float maxWidth,
+                                boolean rightAligned) {
+        float scaleX = smallFont.getData().scaleX;
+        float scaleY = smallFont.getData().scaleY;
+        layout.setText(smallFont, text);
+        if (layout.width > maxWidth) {
+            float fit = maxWidth / layout.width;
+            smallFont.getData().setScale(scaleX * fit, scaleY * fit);
+            layout.setText(smallFont, text);
+        }
+        smallFont.draw(batch, layout, rightAligned ? x - layout.width : x, y);
+        smallFont.getData().setScale(scaleX, scaleY);
     }
 
     private int page() {

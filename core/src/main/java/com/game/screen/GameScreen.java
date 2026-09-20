@@ -1232,7 +1232,9 @@ public class GameScreen extends BaseScreen {
         if (isPowerActive(PowerUpType.PRESSURE_SHIELD)
             || isPowerActive(PowerUpType.TORPEDO_DASH)) {
             Rectangle bounds = diver.getBounds();
-            float pulse = 39f + MathUtils.sin(Gdx.graphics.getFrameId() * 0.14f) * 4f;
+            float pulse = DisplaySettings.flashEffectsEnabled()
+                ? 39f + MathUtils.sin(Gdx.graphics.getFrameId() * 0.14f) * 4f
+                : 39f;
             shapeRenderer.setColor(0.25f, 0.9f, 1f, 0.28f);
             shapeRenderer.circle(bounds.x + bounds.width / 2f,
                 bounds.y + bounds.height / 2f, pulse, 24);

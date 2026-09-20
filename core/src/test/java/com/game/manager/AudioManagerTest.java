@@ -319,6 +319,27 @@ class AudioManagerTest {
         assertFalse(musicPlaying);
     }
 
+    @Test
+    void lifecyclePauseStopsAudioAndResumeRestoresOnlyEnabledMusic() {
+        preferences.putBoolean("startupSoundChosen", true);
+        AudioManager.initialize();
+        AudioManager.playShoot();
+        int startsBeforePause = effectStarts;
+
+        AudioManager.pauseForLifecycle();
+        AudioManager.playShoot();
+
+        assertFalse(musicPlaying);
+        assertEquals(startsBeforePause, effectStarts);
+        AudioManager.resumeFromLifecycle();
+        assertTrue(musicPlaying);
+
+        AudioManager.updateMusicState(false);
+        AudioManager.pauseForLifecycle();
+        AudioManager.resumeFromLifecycle();
+        assertFalse(musicPlaying);
+    }
+
     private static <T> T proxy(Class<T> type, InvocationHandler handler) {
         return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type}, handler));
     }

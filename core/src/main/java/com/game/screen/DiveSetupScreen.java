@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Align;
 import com.game.DeepDiveDrift;
 import com.game.GameConfig;
 import com.game.diver.Background;
@@ -157,11 +158,6 @@ public final class DiveSetupScreen extends BaseScreen {
             return true;
         }
 
-        if (game.input().keyboardConfirmJustPressed()) {
-            startDive();
-            return true;
-        }
-
         if (game.input().menuUpJustPressed()) {
             selectedControl = Math.floorMod(selectedControl - 1, 7);
             AudioManager.playSelect();
@@ -172,7 +168,8 @@ public final class DiveSetupScreen extends BaseScreen {
             adjustSelected(-1);
         } else if (game.input().menuRightJustPressed()) {
             adjustSelected(1);
-        } else if (game.input().controllerConfirmJustPressed()) {
+        } else if (game.input().keyboardConfirmJustPressed()
+            || game.input().controllerConfirmJustPressed()) {
             if (selectedControl == 0) {
                 adjustSelected(1);
             } else if (selectedControl <= MODIFIERS.length) {
@@ -261,11 +258,25 @@ public final class DiveSetupScreen extends BaseScreen {
             modifierBounds(i);
             boolean enabled = modifiers.contains(modifier);
             smallFont.setColor(enabled ? Color.YELLOW : Color.LIGHT_GRAY);
-            smallFont.draw(batch, (enabled ? "[ON]  " : "[OFF] ") + modifier.title(),
-                260f, interactive.y + 39f);
+            drawFittedText((enabled ? "[ON]  " : "[OFF] ") + modifier.title(),
+                260f, interactive.y + 39f, 340f);
             smallFont.setColor(Color.LIGHT_GRAY);
-            smallFont.draw(batch, modifier.description(), 635f, interactive.y + 39f);
+            smallFont.draw(batch, modifier.description(), 635f, interactive.y + 47f,
+                390f, Align.left, true);
         }
+    }
+
+    private void drawFittedText(String text, float x, float y, float maxWidth) {
+        float scaleX = smallFont.getData().scaleX;
+        float scaleY = smallFont.getData().scaleY;
+        layout.setText(smallFont, text);
+        if (layout.width > maxWidth) {
+            float fit = maxWidth / layout.width;
+            smallFont.getData().setScale(scaleX * fit, scaleY * fit);
+            layout.setText(smallFont, text);
+        }
+        smallFont.draw(batch, layout, x, y);
+        smallFont.getData().setScale(scaleX, scaleY);
     }
 
     private Rectangle difficultyBounds(int index) {

@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.game.GameConfig;
 import com.game.manager.GameAssets;
+import com.game.settings.FlashEffectPolicy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,10 +78,11 @@ public class PiranhaSwarm implements EnemyFish {
 
     @Override
     public void render(SpriteBatch batch) {
-        if (hitEffectTimer > 0f) {
+        if (FlashEffectPolicy.flash(hitEffectTimer > 0f)) {
             batch.setColor(Color.RED);
         } else if (state == State.FORMATION) {
-            batch.setColor(1f, 0.55f + MathUtils.sin(animationTime * 18f) * 0.25f, 0.2f, 1f);
+            batch.setColor(1f,
+                FlashEffectPolicy.pulse(0.55f, 0.25f, animationTime * 18f), 0.2f, 1f);
         }
 
         for (int i = 0; i < positions.size(); i++) {

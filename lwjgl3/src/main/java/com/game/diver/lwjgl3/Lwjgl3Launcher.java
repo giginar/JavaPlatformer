@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.glutils.HdpiMode;
 import com.game.DeepDiveDrift;
 import com.game.settings.DisplaySettingsStore;
 import com.game.settings.DisplaySettingsStore.WindowMode;
+import com.game.settings.DisplaySettingsStore.TextScale;
 
 import java.util.Locale;
 
@@ -109,6 +110,7 @@ public final class Lwjgl3Launcher {
                 case "--debug" -> System.setProperty(DEBUG_PROPERTY, "true");
                 case "--autostart" -> System.setProperty("deepdive.autostart", "true");
                 case "--open-options" -> System.setProperty("deepdive.openOptions", "true");
+                case "--open-about" -> System.setProperty("deepdive.openAbout", "true");
                 case "--open-store" -> System.setProperty("deepdive.openStore", "true");
                 case "--open-setup" -> System.setProperty("deepdive.openSetup", "true");
                 case "--open-achievements" ->
@@ -128,6 +130,8 @@ public final class Lwjgl3Launcher {
                 case "--no-vsync" -> DisplaySettingsStore.setVsyncEnabled(false);
                 case "--msaa" -> DisplaySettingsStore.setMsaaSamples(4);
                 case "--no-msaa" -> DisplaySettingsStore.setMsaaSamples(0);
+                case "--large-text" -> DisplaySettingsStore.setTextScale(TextScale.LARGE);
+                case "--default-text" -> DisplaySettingsStore.setTextScale(TextScale.DEFAULT);
                 default -> applyValueArgument(argument);
             }
         }

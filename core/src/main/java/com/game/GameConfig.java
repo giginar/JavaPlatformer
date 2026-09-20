@@ -12,6 +12,7 @@ public final class GameConfig {
     public static final float BUTTON_PRESS_OFFSET = 2f;
     public static final float BUTTON_GLOW_PADDING = 4f;
     public static final String PREFERENCES_NAME = "DeepDiveDriftPrefs";
+    public static final String VERSION = "1.0.0";
     public static final float DEFAULT_STAGE_DURATION_SECONDS = 180f;
     public static final float MIN_STAGE_DURATION_SECONDS = 5f;
     public static final float MAX_STAGE_DURATION_SECONDS = 600f;

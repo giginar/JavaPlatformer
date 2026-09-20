@@ -4,6 +4,7 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.game.settings.DisplaySettingsStore.Resolution;
+import com.game.settings.DisplaySettingsStore.TextScale;
 import com.game.settings.DisplaySettingsStore.WindowMode;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public final class DisplaySettings {
     private static int activeMsaaSamples;
     private static boolean screenShakeEnabled;
     private static boolean flashEffectsEnabled;
+    private static TextScale textScale;
     private static boolean displayConfigurationSupported;
     private static boolean initialized;
 
@@ -41,6 +43,7 @@ public final class DisplaySettings {
         activeMsaaSamples = Gdx.graphics.getBufferFormat().samples;
         screenShakeEnabled = DisplaySettingsStore.screenShakeEnabled();
         flashEffectsEnabled = DisplaySettingsStore.flashEffectsEnabled();
+        textScale = DisplaySettingsStore.textScale();
         initialized = true;
         applyAll();
     }
@@ -125,6 +128,11 @@ public final class DisplaySettings {
         DisplaySettingsStore.setFlashEffectsEnabled(flashEffectsEnabled);
     }
 
+    public static void cycleTextScale(int direction) {
+        textScale = textScale.next(direction);
+        DisplaySettingsStore.setTextScale(textScale);
+    }
+
     public static void captureWindowSize() {
         if (!initialized || !displayConfigurationSupported
             || windowMode != WindowMode.WINDOWED || Gdx.graphics.isFullscreen()) {
@@ -182,6 +190,10 @@ public final class DisplaySettings {
 
     public static boolean flashEffectsEnabled() {
         return flashEffectsEnabled;
+    }
+
+    public static TextScale textScale() {
+        return textScale;
     }
 
     private static void applyWindowMode() {

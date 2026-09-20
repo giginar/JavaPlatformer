@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.game.DeepDiveDrift;
 import com.game.GameConfig;
@@ -33,7 +32,7 @@ public abstract class BaseScreen implements Screen {
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
         camera = new OrthographicCamera();
-        viewport = new FitViewport(GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT, camera);
+        viewport = new SafeAreaViewport(GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT, camera);
         viewport.apply(true);
         updateProjectionMatrices();
     }

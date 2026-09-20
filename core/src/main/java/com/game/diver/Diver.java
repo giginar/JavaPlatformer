@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.game.GameConfig;
 import com.game.manager.GameAssets;
+import com.game.settings.FlashEffectPolicy;
 import com.game.model.DiverSuit;
 
 public class Diver {
@@ -75,7 +76,8 @@ public class Diver {
         float breathing = MathUtils.sin(animationTime * 4f) * 0.025f;
         sprite.setScale(VISUAL_SCALE * (1f + breathing),
             VISUAL_SCALE * (1f - breathing * 0.6f));
-        boolean dimmed = invulnerabilityTimer > 0f && ((int) (invulnerabilityTimer * 14f) % 2 == 0);
+        boolean dimmed = FlashEffectPolicy.blink(invulnerabilityTimer > 0f,
+            (int) (invulnerabilityTimer * 14f) % 2 == 0);
         if (suit == DiverSuit.ABYSS_BLACK) {
             sprite.setColor(0.52f, 0.54f, 0.62f, dimmed ? 0.3f : 1f);
         } else {

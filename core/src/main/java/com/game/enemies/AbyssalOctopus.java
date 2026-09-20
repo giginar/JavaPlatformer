@@ -11,6 +11,7 @@ import com.game.GameConfig;
 import com.game.hazards.EnvironmentalHazard;
 import com.game.hazards.TentacleStrike;
 import com.game.manager.GameAssets;
+import com.game.settings.FlashEffectPolicy;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -104,10 +105,10 @@ public final class AbyssalOctopus implements EnemyFish {
         sprite.setPosition(position.x - (sprite.getWidth() - WIDTH) / 2f,
             position.y - (sprite.getHeight() - HEIGHT) / 2f);
         sprite.setRotation(MathUtils.sin(animationTime * 1.6f) * 0.8f);
-        if (hitEffectTimer > 0f) {
+        if (FlashEffectPolicy.flash(hitEffectTimer > 0f)) {
             sprite.setColor(Color.RED);
         } else if (isWarningState()) {
-            float flash = 0.55f + MathUtils.sin(animationTime * 24f) * 0.4f;
+            float flash = FlashEffectPolicy.pulse(0.55f, 0.4f, animationTime * 24f);
             sprite.setColor(1f, flash * 0.35f, 0.82f, 1f);
         } else if (hp <= MAX_HP / 2) {
             sprite.setColor(0.9f, 0.58f, 1f, 1f);

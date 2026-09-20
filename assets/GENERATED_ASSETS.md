@@ -17,5 +17,17 @@ Final prompt:
 > eight readable tentacles, genuinely transparent background, no environment, text,
 > UI, logo, border, or watermark.
 
-Platform-specific generative-AI disclosure and distribution requirements must be reviewed
-before a store release containing this asset.
+## Evidence boundaries
+
+- Repository provenance: the generation date, tool path, prompt, lack of reference
+  images, and output properties are recorded above.
+- Copyright/license evidence: no separate copyright registration, assignment, or
+  asset license is present in the repository.
+- Provider/distribution terms: a dated copy of the provider terms applicable on the
+  generation date is not present in the repository.
+- Google Play relevance: the release owner must review current generated-content
+  disclosure and distribution requirements. The repository record alone does not
+  establish platform compliance.
+
+Provider/distribution verification is **MANUAL VERIFICATION REQUIRED** before a
+production store release containing this asset.

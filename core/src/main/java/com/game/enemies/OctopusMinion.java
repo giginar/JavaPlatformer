@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.game.manager.GameAssets;
+import com.game.settings.FlashEffectPolicy;
 
 /** A tiny broodling thrown from the final boss; it actively corrects toward the diver. */
 public final class OctopusMinion implements EnemyFish {
@@ -36,7 +37,7 @@ public final class OctopusMinion implements EnemyFish {
 
     @Override
     public void render(SpriteBatch batch) {
-        if (hitTimer > 0f) {
+        if (FlashEffectPolicy.flash(hitTimer > 0f)) {
             batch.setColor(Color.RED);
         } else {
             batch.setColor(0.72f, 0.32f, 0.95f, 1f);

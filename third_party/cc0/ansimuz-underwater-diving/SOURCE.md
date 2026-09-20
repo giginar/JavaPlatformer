@@ -17,6 +17,7 @@ downloaded from the pack's public browser demo at:
 
 | File | SHA-256 |
 | --- | --- |
+| `background.png` | `CFF6C72694646A3707DA22A6A56ACBCCC22CB2427C051F5B89875F29592DA192` |
 | `props.png` | `D8171F40E1F0C04BBFAC2F83A127F8D7C468E2CB0C907271436D4D8118CBEBD4` |
 | `entities-player.png` | `3D66D558F7C85606A9E1D53A21C0DC998F86883118E06E42001C4AD6C34C737B` |
 | `entities-fish.png` | `F133A275B234D719ECC6E0F07107A6C0755C2FA70C105397EE7E6CB6F842AC27` |
@@ -28,3 +29,8 @@ the shipped sprites, background, icons, and storefront images. The harpoon, oxyg
 tank, bubbles, light rays, and simple layout geometry are original deterministic
 drawings made by that script. Storefront text uses the separately licensed Orbitron
 font distributed with the game.
+
+The retained background source was imported with the other verified CC0 files in
+Git commit `edd77507e620db125dec14109f323061ac49341d`. A later cleanup removed it
+while the deterministic build still referenced it. Phase 4 restored that exact Git
+blob and verified the SHA-256 above; no external file was downloaded.

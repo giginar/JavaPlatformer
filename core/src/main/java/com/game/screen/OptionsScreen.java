@@ -19,7 +19,9 @@ public class OptionsScreen extends BaseScreen {
         Option.SOUND_EFFECTS,
         Option.SCREEN_SHAKE,
         Option.FLASH_EFFECTS,
+        Option.TEXT_SIZE,
         Option.CONTROLS,
+        Option.ABOUT,
         Option.BACK
     };
 
@@ -64,6 +66,11 @@ public class OptionsScreen extends BaseScreen {
         for (int i = 0; i < options.length; i++) {
             rowBounds(i);
             drawUiButton(optionRow, i == selectedIndex);
+            if (!optionEnabled(options[i])) {
+                shapeRenderer.setColor(0.005f, 0.02f, 0.035f, 0.62f);
+                shapeRenderer.rect(optionRow.x + 2f, optionRow.y + 2f,
+                    optionRow.width - 4f, optionRow.height - 4f);
+            }
         }
         endShapes();
 
@@ -71,7 +78,8 @@ public class OptionsScreen extends BaseScreen {
         drawCentered(largeFont, "OPTIONS", 625f, Color.WHITE);
 
         for (int i = 0; i < options.length; i++) {
-            Color color = i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY;
+            Color color = !optionEnabled(options[i]) ? Color.GRAY
+                : i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY;
             String prefix = i == selectedIndex ? ">  " : "   ";
             rowBounds(i);
             drawUiButtonLabel(mediumFont, prefix + optionLabel(options[i]), optionRow, color);
@@ -132,6 +140,11 @@ public class OptionsScreen extends BaseScreen {
             game.openControls();
             return true;
         }
+        if (options[selectedIndex] == Option.ABOUT) {
+            AudioManager.playConfirm();
+            game.openAbout();
+            return true;
+        }
         changeSelectedOption(1);
         return false;
     }
@@ -151,7 +164,11 @@ public class OptionsScreen extends BaseScreen {
             case ANTIALIASING -> DisplaySettings.toggleMsaa();
             case SCREEN_SHAKE -> DisplaySettings.toggleScreenShake();
             case FLASH_EFFECTS -> DisplaySettings.toggleFlashEffects();
-            case CONTROLS, BACK -> {
+            case TEXT_SIZE -> {
+                DisplaySettings.cycleTextScale(direction);
+                FontManager.setTextScale(DisplaySettings.textScale().multiplier());
+            }
+            case CONTROLS, ABOUT, BACK -> {
                 return;
             }
         }
@@ -173,21 +190,30 @@ public class OptionsScreen extends BaseScreen {
                 + (DisplaySettings.desiredMsaaSamples() >= 4 ? "4X MSAA" : "OFF");
             case SCREEN_SHAKE -> option.label + ":  " + onOff(DisplaySettings.screenShakeEnabled());
             case FLASH_EFFECTS -> option.label + ":  " + onOff(DisplaySettings.flashEffectsEnabled());
-            case CONTROLS, BACK -> option.label;
+            case TEXT_SIZE -> option.label + ":  " + DisplaySettings.textScale().name();
+            case CONTROLS, ABOUT, BACK -> option.label;
         };
+    }
+
+    private boolean optionEnabled(Option option) {
+        return option != Option.RESOLUTION
+            || DisplaySettings.windowMode() != WindowMode.BORDERLESS;
     }
 
     private Rectangle rowBounds(int index) {
         float baseline = optionStartY() - index * optionSpacing();
-        return optionRow.set(270f, baseline - 30f, 740f, 38f);
+        float height = options.length <= MOBILE_OPTIONS.length ? 52f : 36f;
+        return optionRow.set(270f, baseline - height / 2f - 7f, 740f, height);
     }
 
     private float optionStartY() {
-        return options.length <= MOBILE_OPTIONS.length ? 500f : 535f;
+        return options.length <= MOBILE_OPTIONS.length ? 520f : 540f;
     }
 
     private float optionSpacing() {
-        return options.length <= MOBILE_OPTIONS.length ? 72f : 42f;
+        return options.length <= MOBILE_OPTIONS.length
+            ? 60f
+            : 460f / Math.max(1, options.length - 1);
     }
 
     private String onOff(boolean enabled) {
@@ -210,7 +236,9 @@ public class OptionsScreen extends BaseScreen {
         ANTIALIASING("ANTIALIASING"),
         SCREEN_SHAKE("SCREEN SHAKE"),
         FLASH_EFFECTS("FLASH EFFECTS"),
+        TEXT_SIZE("TEXT SIZE"),
         CONTROLS("CONTROLS"),
+        ABOUT("ABOUT / LEGAL"),
         BACK("BACK");
 
         private final String label;

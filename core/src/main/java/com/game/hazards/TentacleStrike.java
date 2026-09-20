@@ -3,6 +3,7 @@ package com.game.hazards;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.game.settings.FlashEffectPolicy;
 import com.game.GameConfig;
 
 /** A boss tentacle sweeps a telegraphed horizontal lane from the right edge. */
@@ -25,7 +26,7 @@ public final class TentacleStrike implements EnvironmentalHazard {
     @Override
     public void render(ShapeRenderer renderer) {
         if (lifetime < 0.95f) {
-            float pulse = 0.18f + MathUtils.sin(lifetime * 28f) * 0.12f;
+            float pulse = FlashEffectPolicy.pulse(0.18f, 0.12f, lifetime * 28f);
             renderer.setColor(1f, 0.1f, 0.32f, pulse);
             renderer.rect(0f, bounds.y, GameConfig.WORLD_WIDTH, bounds.height);
             renderer.setColor(1f, 0.35f, 0.55f, 0.75f);

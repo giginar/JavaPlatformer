@@ -3,6 +3,7 @@ package com.game.hazards;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.game.settings.FlashEffectPolicy;
 import com.game.GameConfig;
 
 public final class SeaMine implements EnvironmentalHazard {
@@ -32,7 +33,7 @@ public final class SeaMine implements EnvironmentalHazard {
         renderer.setColor(0.08f, 0.09f, 0.13f, 1f);
         renderer.circle(cx, cy, 22f, 14);
         renderer.setColor(0.95f, 0.22f, 0.12f,
-            0.65f + MathUtils.sin(time * 9f) * 0.3f);
+            FlashEffectPolicy.pulse(0.65f, 0.3f, time * 9f));
         renderer.circle(cx, cy, 7f, 10);
         renderer.setColor(0.5f, 0.55f, 0.61f, 1f);
         renderer.rect(cx - 2f, cy + 20f, 4f, 12f);

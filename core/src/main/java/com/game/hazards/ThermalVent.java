@@ -3,6 +3,7 @@ package com.game.hazards;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
+import com.game.settings.FlashEffectPolicy;
 import com.game.GameConfig;
 
 public final class ThermalVent implements EnvironmentalHazard {
@@ -36,7 +37,8 @@ public final class ThermalVent implements EnvironmentalHazard {
             renderer.setColor(1f, 0.72f, 0.18f, 0.5f);
             renderer.circle(x + WIDTH / 2f, plume.height, 22f, 12);
         } else {
-            renderer.setColor(1f, 0.7f, 0.12f, 0.35f + MathUtils.sin(cycle * 16f) * 0.18f);
+            renderer.setColor(1f, 0.7f, 0.12f,
+                FlashEffectPolicy.pulse(0.35f, 0.18f, cycle * 16f));
             renderer.rect(x, 22f, WIDTH, 7f);
         }
     }

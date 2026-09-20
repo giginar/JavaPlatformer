@@ -8,6 +8,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.MathUtils;
 import com.game.GameConfig;
 import com.game.manager.GameAssets;
+import com.game.settings.FlashEffectPolicy;
 
 public class FastFish implements EnemyFish {
 
@@ -48,7 +49,7 @@ public class FastFish implements EnemyFish {
 
     @Override
     public void render(SpriteBatch batch) {
-        if (hitEffectTimer > 0f) {
+        if (FlashEffectPolicy.flash(hitEffectTimer > 0f)) {
             batch.setColor(Color.RED);
         }
         float pulse = 1f + MathUtils.sin(animationTime * 12f) * 0.08f;

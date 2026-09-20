@@ -17,6 +17,7 @@ public class AudioManager {
     private static float masterVolume = 1f;
     private static float lastAudibleVolume = 1f;
     private static boolean soundChoicePending;
+    private static boolean lifecyclePaused;
     private static Sound[] soundEffects;
 
     private static boolean initialized = false;
@@ -60,13 +61,15 @@ public class AudioManager {
             shootSound, hitSound, oxygenSound, gameoverSound, breathSound, selectSound, confirmSound
         };
 
+        lifecyclePaused = false;
         initialized = true;
         playBackgroundMusic();
     }
 
 
     public static void playBackgroundMusic() {
-        if (musicOn && effectiveVolume() > 0f && backgroundMusic != null && !backgroundMusic.isPlaying()) {
+        if (!lifecyclePaused && musicOn && effectiveVolume() > 0f
+            && backgroundMusic != null && !backgroundMusic.isPlaying()) {
             backgroundMusic.setLooping(true);
             backgroundMusic.setVolume(0.3f * effectiveVolume());
             backgroundMusic.play();
@@ -157,6 +160,19 @@ public class AudioManager {
         }
     }
 
+    public static void pauseForLifecycle() {
+        if (!initialized || lifecyclePaused) return;
+        lifecyclePaused = true;
+        stopSoundEffects();
+        if (backgroundMusic != null) backgroundMusic.pause();
+    }
+
+    public static void resumeFromLifecycle() {
+        if (!initialized || !lifecyclePaused) return;
+        lifecyclePaused = false;
+        applyMusicVolume();
+    }
+
     public static void playShoot() {
         play(shootSound);
     }
@@ -223,6 +239,7 @@ public class AudioManager {
         confirmSound = null;
         soundEffects = null;
         soundChoicePending = false;
+        lifecyclePaused = false;
         prefs = null;
         initialized = false;
     }
@@ -232,7 +249,7 @@ public class AudioManager {
     }
 
     private static void play(Sound sound) {
-        if (initialized && sfxOn && effectiveVolume() > 0f && sound != null) {
+        if (initialized && !lifecyclePaused && sfxOn && effectiveVolume() > 0f && sound != null) {
             sound.play(effectiveVolume());
         }
     }

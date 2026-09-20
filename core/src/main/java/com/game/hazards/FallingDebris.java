@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.game.GameConfig;
+import com.game.settings.FlashEffectPolicy;
 
 /** A randomly styled piece of litter that drifts down through the water. */
 public final class FallingDebris implements EnvironmentalHazard {
@@ -78,7 +79,7 @@ public final class FallingDebris implements EnvironmentalHazard {
     @Override
     public void render(ShapeRenderer renderer) {
         if (warningTimer > 0f) {
-            float alpha = 0.25f + MathUtils.sin(warningTimer * 24f) * 0.15f;
+            float alpha = FlashEffectPolicy.pulse(0.25f, 0.15f, warningTimer * 24f);
             renderer.setColor(1f, 0.55f, 0.12f, alpha);
             renderer.rect(bounds.x + SIZE / 2f - 3f, 0f, 6f, GameConfig.WORLD_HEIGHT);
             return;

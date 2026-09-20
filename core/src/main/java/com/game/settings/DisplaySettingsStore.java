@@ -118,6 +118,20 @@ public final class DisplaySettingsStore {
         flush();
     }
 
+    public static TextScale textScale() {
+        String stored = backend().getString("textScale", TextScale.DEFAULT.name());
+        try {
+            return TextScale.valueOf(stored);
+        } catch (IllegalArgumentException exception) {
+            return TextScale.DEFAULT;
+        }
+    }
+
+    public static void setTextScale(TextScale scale) {
+        backend().putString("textScale", scale.name());
+        flush();
+    }
+
     private static PreferenceBackend backend() {
         if (backend == null) {
             if (Gdx.app == null) {
@@ -202,6 +216,26 @@ public final class DisplaySettingsStore {
 
         public WindowMode next(int direction) {
             WindowMode[] values = values();
+            return values[Math.floorMod(ordinal() + direction, values.length)];
+        }
+    }
+
+    public enum TextScale {
+        DEFAULT(1f),
+        LARGE(1.15f);
+
+        private final float multiplier;
+
+        TextScale(float multiplier) {
+            this.multiplier = multiplier;
+        }
+
+        public float multiplier() {
+            return multiplier;
+        }
+
+        public TextScale next(int direction) {
+            TextScale[] values = values();
             return values[Math.floorMod(ordinal() + direction, values.length)];
         }
     }

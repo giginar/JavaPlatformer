@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.game.GameConfig;
 import com.game.manager.GameAssets;
+import com.game.settings.FlashEffectPolicy;
 
 public class Shark implements EnemyFish {
     private static final float SPEED = 105f;
@@ -82,10 +83,10 @@ public class Shark implements EnemyFish {
             position.y - (sprite.getHeight() - HEIGHT) / 2f);
         sprite.setRotation(MathUtils.sin(animationTime * 3f) * 2.5f);
 
-        if (hitEffectTimer > 0f) {
+        if (FlashEffectPolicy.flash(hitEffectTimer > 0f)) {
             sprite.setColor(Color.RED);
         } else if (state == State.LOCKING) {
-            float warning = 0.65f + MathUtils.sin(animationTime * 22f) * 0.35f;
+            float warning = FlashEffectPolicy.pulse(0.65f, 0.35f, animationTime * 22f);
             sprite.setColor(1f, warning * 0.42f, 0.1f, 1f);
         } else {
             sprite.setColor(Color.WHITE);
