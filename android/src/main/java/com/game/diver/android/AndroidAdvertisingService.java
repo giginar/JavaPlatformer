@@ -23,6 +23,7 @@ import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAdEv
 import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd;
 import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAdEventCallback;
 import com.google.android.ump.ConsentInformation;
+import com.google.android.ump.ConsentDebugSettings;
 import com.google.android.ump.ConsentRequestParameters;
 import com.google.android.ump.UserMessagingPlatform;
 
@@ -33,6 +34,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Android-only UMP and GMA Next-Gen implementation. */
 public final class AndroidAdvertisingService implements AdvertisingService {
     private static final String TAG = "DeepDriftAds";
+    private static final String QA_UMP_GEOGRAPHY_EXTRA = "deepdive.qa.ump_geography";
+    private static final String QA_UMP_RESET_EXTRA = "deepdive.qa.ump_reset";
+    private static final String QA_UMP_TEST_DEVICE_EXTRA = "deepdive.qa.ump_test_device";
 
     private final AdConfiguration configuration;
     private final AdvertisingGate advertisingGate;
@@ -70,10 +74,17 @@ public final class AndroidAdvertisingService implements AdvertisingService {
         runOnActivity(activity -> {
             try {
                 consentInformation = UserMessagingPlatform.getConsentInformation(activity);
-                ConsentRequestParameters parameters = new ConsentRequestParameters.Builder()
-                    .setAdMobAppId(configuration.appId())
-                    // POLICY CONFIGURATION PENDING: do not set age-related flags here.
-                    .build();
+                if (configuration.mode() == AdMode.TEST
+                    && activity.getIntent().getBooleanExtra(QA_UMP_RESET_EXTRA, false)) {
+                    consentInformation.reset();
+                    Log.i(TAG, "UMP TEST state reset through the development QA gate");
+                }
+                ConsentRequestParameters.Builder parameterBuilder =
+                    new ConsentRequestParameters.Builder()
+                        .setAdMobAppId(configuration.appId());
+                applyTestConsentDebugSettings(activity, parameterBuilder);
+                // POLICY CONFIGURATION PENDING: do not set age-related flags here.
+                ConsentRequestParameters parameters = parameterBuilder.build();
                 consentInformation.requestConsentInfoUpdate(
                     activity,
                     parameters,
@@ -94,6 +105,27 @@ public final class AndroidAdvertisingService implements AdvertisingService {
             consentRefreshStarted.set(false);
             Log.w(TAG, "UMP consent refresh deferred: Activity unavailable");
         });
+    }
+
+    private void applyTestConsentDebugSettings(Activity activity,
+                                                ConsentRequestParameters.Builder parameters) {
+        if (configuration.mode() != AdMode.TEST) {
+            return;
+        }
+        int geography = activity.getIntent().getIntExtra(QA_UMP_GEOGRAPHY_EXTRA,
+            ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_DISABLED);
+        String testDevice = activity.getIntent().getStringExtra(QA_UMP_TEST_DEVICE_EXTRA);
+        if (geography == ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_DISABLED
+            || testDevice == null || testDevice.isBlank()) {
+            return;
+        }
+        ConsentDebugSettings debugSettings = new ConsentDebugSettings.Builder(activity)
+            .addTestDeviceHashedId(testDevice)
+            .setDebugGeography(geography)
+            .setForceTesting(true)
+            .build();
+        parameters.setConsentDebugSettings(debugSettings);
+        Log.i(TAG, "UMP TEST debug geography enabled: " + geography);
     }
 
     public void attachActivity(Activity activity) {
