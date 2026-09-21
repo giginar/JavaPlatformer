@@ -6,7 +6,7 @@ DeepDive Drift
 
 ## Kısa açıklama
 
-Yüz, zıpkınını ateşle ve Leviathan’a ulaşana kadar derinlikte hayatta kal.
+Yüz, zıpkınını ateşle ve Abyssal Octopus ortaya çıkana kadar hayatta kal.
 
 ## Tam açıklama
 
@@ -19,7 +19,7 @@ DeepDive Drift, tek dokunuşla öğrenilen ama ustalaşması giderek zorlaşan b
 - Hızlı, tekrar oynanabilir hayatta kalma koşuları
 - Farklı hareket ve saldırı düzenlerine sahip deniz canlıları
 - Rapid Fire, Piercing, Air Recycler, Pressurized Tanks ve Hydro Fins yükseltmeleri
-- Çok aşamalı Abyss Leviathan boss savaşı
+- Çok aşamalı Abyssal Octopus boss savaşı
 - Yerel en yüksek skor kaydı
 - Ekran sarsıntısını ve flaş efektlerini kapatma seçenekleri
 - Hesap gerektirmeyen ve çevrimdışı kullanılabilen temel oynanış

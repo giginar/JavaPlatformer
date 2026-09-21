@@ -95,6 +95,22 @@ yerel test APK'sından Play sürümüne doğrudan güncelleme mümkün olmayabil
 - Uçak modunda oynanabiliyor mu? Uzun koşuda ve ahtapot savaşında akıcılık yeterli mi?
 - Telefonun iki yatay yönünde arayüz okunabiliyor mu?
 
+### Reklam ve UMP cihaz kontrolleri
+
+Bu kontrolleri yalnızca Google'ın demo kimliklerini kullanan `TEST` derlemesinde yapın. Oyuncuya açık ödüllü reklam yerleşimi ürün kararı verilene kadar kapalı kalmalıdır.
+
+- Temiz kurulumda, geçerli UMP test bölgesi/cihaz ayarlarıyla gerekli izin formu açılıyor mu?
+- İzin sonucu alınmadan reklam isteği yapılmıyor mu; izin verilmeyen veya istenemeyen durumda oyun reklamsız devam ediyor mu?
+- UMP gerekli bildirdiğinde ana menüde gizlilik seçenekleri girişi görünüyor ve form tekrar açılabiliyor mu?
+- Uygulama arka plana alınıp döndürüldüğünde veya yeniden açıldığında önceki geçerli durum doğru işleniyor mu?
+- İlk tamamlanan koşuda ve aktif oyun sırasında interstitial görünmüyor mu?
+- En az üç tamamlanan koşudan sonra yalnızca Sonuçlar ekranındaki **RETURN TO MENU** seçimi doğal geçişinde interstitial fırsatı oluşuyor mu?
+- **DIVE AGAIN**, ayarlar, mağaza, başarımlar, geri düğmesi veya ilgisiz bir dokunma beklenmedik reklam açmıyor mu?
+- Interstitial kapatma denetimi görünür ve kullanılabilir mi; reklam oyun arayüzünden açıkça ayırt ediliyor mu?
+- Reklam kapatıldığında ana menüye yalnızca bir kez dönülüyor mu; gecikmiş callback ilgisiz ekranda reklam açmıyor mu?
+- Üç koşu sınırı, on dakikalık cooldown ve ödüllü reklam sonrası tek fırsat baskılama gerçek cihazda doğru mu?
+- Uçak modu, yükleme hatası, izin formu hatası ve reklam kapatma sırasında oyun kilitlenmeden devam ediyor mu?
+
 Test sonuçlarıyla birlikte telefon modeli ve Android sürümünü kaydedin. Mağaza için
 gerçek telefondan menü ve oynanış ekran görüntüleri alın.
 
@@ -134,8 +150,9 @@ Dahili test bu şartın yerine geçmez. [Google Play test koşulları](https://s
 
 ## Bu çalışma sırasında doğrulanan durum
 
-- 5 Eylül 2026: Android derlemesi ve 44 birim testi geçti.
-- Evrensel test APK'sının imzası, ZIP hizalaması, AAB yapısı ve dört ABI'nin ELF hizalaması doğrulandı.
+- 21 Eylül 2026: 148 birim testi geçti; Android `1.0.46` (versionCode `47`) release paketi ve bağımsız doğrulayıcı başarıyla tamamlandı.
+- Evrensel test APK'sının imzası, 16 KB ZIP hizalaması, AAB yapısı, sıkıştırılmamış sesler ve dört ABI'nin ELF hizalaması doğrulandı.
+- GMA Next-Gen/UMP sınıfları, kaynakları ve birleşik manifesti `DISABLED` reklam modu paketinde doğrulandı.
 - AAB şu anda imzasızdır; özel upload anahtarı henüz yapılandırılmamıştır.
 - Bağlı telefon bulunmadığından gerçek cihazdaki kurulum, açılış ve oynanış henüz doğrulanmadı.
 

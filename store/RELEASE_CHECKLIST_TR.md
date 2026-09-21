@@ -2,7 +2,7 @@
 
 ## Ortak
 
-- [x] Windows ve Android için ortak otomatik sürüm; 34 commit için `1.0.34`, Android version code `35`
+- [x] Windows ve Android için ortak otomatik sürüm; `versionName` commit sayısından, Android `versionCode` temel değer + commit sayısından üretilir
 - [x] Otomatik birim testleri
 - [x] Klavye, fare, gamepad ve dokunmatik girişleri
 - [ ] Temel çevrimdışı çalışma yeniden doğrulanacak; Google Ads + UMP var, analitik ve hesap SDK’sı yok
@@ -25,8 +25,18 @@
 - [ ] Gerçek Android cihazdan telefon ekran görüntüleri alma
 - [ ] İkonu, özellik görselini ve telefon ekran görüntülerini Play Console’a yükleme
 - [ ] İçerik derecelendirmesi, hedef kitle ve uygulama erişimi anketleri
+- [ ] Amaçlanan hedef yaş gruplarını seçme; çocuklar dahilse Families, nötr yaş ekranı ve reklam SDK uygunluğunu tamamlama
+- [ ] Yayın ülkelerini ve nihai mağaza/gizlilik politikası dillerini seçme
+- [ ] Veri Güvenliği çalışma sayfasını son üretim AAB'si ve güncel Play Console sorularıyla doğrulama
+- [ ] Advertising ID beyanını son hedef kitle ve `AD_ID` izniyle doğrulama
+- [ ] AdMob Privacy & Messaging bölgesel mesajlarını yayımlama ve gizlilik seçeneklerini gerçek cihazda doğrulama
+- [ ] Ödüllü reklam faydasını ayrıca onaylama; onaya kadar oyuncuya gösterilen yerleşimi kapalı tutma
 - [ ] Kapalı test/üretim erişimi için hesabın istediği test koşullarını tamamlama
-- [ ] İmzalı AAB’yi yükleyip Play App Signing’i etkinleştirme
+- [ ] İmzalı AAB'yi yükleyip Play App Signing'i etkinleştirme
+
+Phase 7 iç politika çalışma sayfası: [Google Play politika, hedef kitle ve Veri Güvenliği denetimi](google-play/phase-7-policy-audit.md).
+
+Yayına engel durumlar geçerlidir: sekiz ses varlığının ticari kullanım kanıtı, AI boss sağlayıcı/dağıtım koşulları, JLayer/JOrbis bildirim incelemesi, fiziksel cihaz ve reklam/UMP QA'sı, gerçek AdMob yapılandırması/üretim kimlikleri ve üretim imzalama tamamlanmamıştır.
 
 ## Steam
 

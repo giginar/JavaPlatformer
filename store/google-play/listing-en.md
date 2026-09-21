@@ -6,7 +6,7 @@ DeepDive Drift
 
 ## Short description
 
-Swim, fire your harpoon, and survive the depths until the Leviathan appears.
+Swim, fire your harpoon, and survive until the Abyssal Octopus appears.
 
 ## Full description
 
@@ -19,7 +19,7 @@ Features:
 - Fast, replayable survival runs
 - Sea creatures with distinct movement and attack patterns
 - Rapid Fire, Piercing, Air Recycler, Pressurized Tanks, and Hydro Fins upgrades
-- A multi-stage Abyss Leviathan boss battle
+- A multi-stage Abyssal Octopus boss battle
 - A locally saved high score
 - Separate options for screen shake and flashing effects
 - No account; core gameplay remains available offline
