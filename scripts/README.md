@@ -85,3 +85,25 @@ Steam kimlikleri ve yükleme adımları [Steam rehberinde](../steam/README.md) b
 `DEEPDRIFT_INTERSTITIAL_AD_UNIT_ID`; missing, malformed, or demo values fail the build.
 Production identifiers remain outside tracked source. The Android dependency graph is
 versioned and checksum-locked in `android/ads-dependencies.lock`.
+
+## Optimized Android release verification
+
+The ordinary Android workflow remains unoptimized for development and QA. To build and
+verify the separate R8-shrunk, optimized, and obfuscated TEST package, run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-optimized-release.ps1
+```
+
+The optimized APK and AAB use the `-optimized-` filename qualifier. R8 writes
+`mapping.txt`, `usage.txt`, `seeds.txt`, the resolved configuration, consumer-rule
+selection, warnings, version, and size comparison below
+`android/target/store/google-play/DeepDiveDrift-<version>-r8/`. Retain the mapping from
+every production release with that release's artifacts so crash traces can be
+deobfuscated. These generated per-build reports are not committed.
+
+The optimized verifier checks TEST advertising metadata, required resources and service
+descriptors, all four ABIs, every packaged ELF LOAD alignment, 16 KB APK ZIP alignment,
+R8 feature enablement, zero warnings, JNI descriptors, reflective controller loading,
+and persisted enum names. Android resource shrinking is intentionally separate and is
+not enabled by this custom non-AGP pipeline.

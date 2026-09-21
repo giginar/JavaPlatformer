@@ -160,6 +160,8 @@
                                         <argument>${bundletool.version}</argument>
                                         <argument>-ManifestMergerVersion</argument>
                                         <argument>${android.manifest-merger.version}</argument>
+                                        <argument>-OptimizationMode</argument>
+                                        <argument>${android.optimization-mode}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -167,6 +169,12 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>android-optimized-release</id>
+            <properties>
+                <android.optimization-mode>Optimized</android.optimization-mode>
+            </properties>
         </profile>
     </profiles>
 </project>

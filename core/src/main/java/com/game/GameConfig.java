@@ -65,7 +65,7 @@ public final class GameConfig {
             return DEFAULT_STAGE_DURATION_SECONDS;
         }
         String value = System.getProperty("deepdive.stageDurationSeconds");
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return DEFAULT_STAGE_DURATION_SECONDS;
         }
         try {

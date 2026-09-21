@@ -116,7 +116,7 @@ public final class AndroidAdvertisingService implements AdvertisingService {
             ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_DISABLED);
         String testDevice = activity.getIntent().getStringExtra(QA_UMP_TEST_DEVICE_EXTRA);
         if (geography == ConsentDebugSettings.DebugGeography.DEBUG_GEOGRAPHY_DISABLED
-            || testDevice == null || testDevice.isBlank()) {
+            || testDevice == null || testDevice.trim().isEmpty()) {
             return;
         }
         ConsentDebugSettings debugSettings = new ConsentDebugSettings.Builder(activity)

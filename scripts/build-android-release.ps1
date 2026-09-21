@@ -12,7 +12,10 @@ param(
     [string]$BundletoolVersion,
 
     [Parameter(Mandatory = $true)]
-    [string]$ManifestMergerVersion
+    [string]$ManifestMergerVersion,
+
+    [ValidateSet('Unoptimized', 'Optimized')]
+    [string]$OptimizationMode = 'Unoptimized'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,16 +24,20 @@ $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $androidPath = Join-Path $projectRootPath 'android'
 $targetPath = Join-Path $androidPath 'target'
 $mavenDependencyPath = Join-Path $targetPath 'android-base-dependencies'
-$workPath = Join-Path $targetPath 'android-work'
+$isOptimized = $OptimizationMode -eq 'Optimized'
+$artifactQualifier = if ($isOptimized) { '-optimized' } else { '' }
+$workPath = Join-Path $targetPath $(if ($isOptimized) { 'android-optimized-work' } else { 'android-work' })
 $outputPath = Join-Path $targetPath 'store\google-play'
 $toolsCachePath = Join-Path $projectRootPath '.mvn\tools'
 $adsDependencyLockPath = Join-Path $androidPath 'ads-dependencies.lock'
 $adsDependencyCachePath = Join-Path $toolsCachePath 'android-ads-runtime'
 $manifestMergerToolPath = Join-Path $toolsCachePath "manifest-merger-$ManifestMergerVersion"
+$applicationR8RulesPath = Join-Path $androidPath 'r8-rules.pro'
 $androidVersion = & (Join-Path $PSScriptRoot 'get-project-version.ps1') -ProjectRootPath $projectRootPath -Android
 $Version = $androidVersion.Version
 $VersionCode = $androidVersion.VersionCode
-Write-Host "Building Android version $Version (versionCode $VersionCode)..."
+$r8ReportPath = Join-Path $outputPath "DeepDiveDrift-$Version-r8"
+Write-Host "Building Android version $Version (versionCode $VersionCode, $OptimizationMode)..."
 
 function Invoke-ExternalTool {
     param(
@@ -354,10 +361,63 @@ function Expand-JavaArchive {
     Invoke-ExternalTool -FilePath $JarTool -Arguments @('xf', $Archive) -WorkingDirectory $Destination
 }
 
+function Select-R8ConsumerRules {
+    param(
+        [Parameter(Mandatory = $true)][string]$InventoryPath,
+        [Parameter(Mandatory = $true)][string]$SelectionReportPath
+    )
+
+    $selected = [System.Collections.Generic.List[string]]::new()
+    $report = [System.Collections.Generic.List[string]]::new()
+    $report.Add('# Status|Artifact|Embedded rule|Reason')
+    foreach ($line in Get-Content -LiteralPath $InventoryPath) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith('#')) {
+            continue
+        }
+        $parts = $trimmed.Split('|', 3)
+        if ($parts.Count -ne 3) {
+            throw "Invalid consumer-rule inventory entry: $trimmed"
+        }
+        $artifactName, $embeddedRule, $rulePath = $parts
+        $include = $true
+        $reason = 'dependency consumer rule'
+
+        if ($artifactName -eq 'kotlinx-coroutines-android-1.9.0.jar') {
+            $include = $embeddedRule -eq 'META-INF/com.android.tools/r8-from-1.6.0/coroutines.pro'
+            $reason = if ($include) {
+                'R8 8.10 uses the rule variant for R8 1.6 and later'
+            } else {
+                'superseded ProGuard or R8-up-to-3.0 variant'
+            }
+        } elseif ($artifactName -eq 'kotlinx-coroutines-core-jvm-1.9.0.jar') {
+            $include = $embeddedRule -eq 'META-INF/com.android.tools/r8/coroutines.pro'
+            $reason = if ($include) {
+                'R8-specific coroutine core rules'
+            } else {
+                'duplicate ProGuard compatibility variant'
+            }
+        }
+
+        if ($include) {
+            if (-not (Test-Path -LiteralPath $rulePath -PathType Leaf)) {
+                throw "Selected consumer rule is missing: $rulePath"
+            }
+            $selected.Add($rulePath)
+            $report.Add("INCLUDED|$artifactName|$embeddedRule|$reason")
+        } else {
+            $report.Add("EXCLUDED|$artifactName|$embeddedRule|$reason")
+        }
+    }
+    Write-Utf8File -Path $SelectionReportPath -Content (($report -join "`n") + "`n")
+    return $selected.ToArray()
+}
+
 $androidSdkPath = Resolve-AndroidSdkPath
 $buildToolsPath = Join-Path $androidSdkPath "build-tools\$BuildToolsVersion"
 $aapt2Path = Join-Path $buildToolsPath 'aapt2.exe'
 $d8Path = Join-Path $buildToolsPath 'd8.bat'
+$r8JarPath = Join-Path $buildToolsPath 'lib\d8.jar'
 $zipalignPath = Join-Path $buildToolsPath 'zipalign.exe'
 $androidJarPath = Join-Path $androidSdkPath "platforms\android-$TargetSdk\android.jar"
 $javaPath = (Get-Command java.exe -ErrorAction Stop).Source
@@ -373,6 +433,13 @@ foreach ($requiredPath in @(
 )) {
     if (-not (Test-Path -LiteralPath $requiredPath)) {
         throw "Required Android build input is missing: $requiredPath"
+    }
+}
+if ($isOptimized) {
+    foreach ($requiredR8Path in @($r8JarPath, $applicationR8RulesPath)) {
+        if (-not (Test-Path -LiteralPath $requiredR8Path -PathType Leaf)) {
+            throw "Required optimized Android build input is missing: $requiredR8Path"
+        }
     }
 }
 
@@ -400,6 +467,16 @@ if (-not $resolvedWorkPath.StartsWith($resolvedTargetPath, [System.StringCompari
 if (Test-Path -LiteralPath $resolvedWorkPath) {
     Remove-Item -LiteralPath $resolvedWorkPath -Recurse -Force
 }
+$resolvedR8ReportPath = [System.IO.Path]::GetFullPath($r8ReportPath)
+if ($isOptimized) {
+    if (-not $resolvedR8ReportPath.StartsWith(
+        $resolvedTargetPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean an R8 report directory outside Android target: $resolvedR8ReportPath"
+    }
+    if (Test-Path -LiteralPath $resolvedR8ReportPath) {
+        Remove-Item -LiteralPath $resolvedR8ReportPath -Recurse -Force
+    }
+}
 
 $aarPath = Join-Path $workPath 'aar'
 $dependencyPath = Join-Path $workPath 'resolved-dependencies'
@@ -418,6 +495,9 @@ foreach ($directory in @(
 )) {
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
 }
+if ($isOptimized) {
+    New-Item -ItemType Directory -Path $r8ReportPath -Force | Out-Null
+}
 
 Get-ChildItem -LiteralPath $mavenDependencyPath -File | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $dependencyPath $_.Name)
@@ -432,6 +512,7 @@ $androidResourcePackages = [System.Collections.Generic.List[string]]::new()
 $aarDirectories = [System.Collections.Generic.List[string]]::new()
 $libraryManifestPaths = [System.Collections.Generic.List[string]]::new()
 $consumerRuleInventory = [System.Collections.Generic.List[string]]::new()
+$nativeLibraryInventory = [System.Collections.Generic.List[string]]::new()
 $aarFiles = @(Get-ChildItem -LiteralPath $dependencyPath -Filter '*.aar' | Sort-Object Name)
 
 for ($aarIndex = 0; $aarIndex -lt $aarFiles.Count; $aarIndex++) {
@@ -480,7 +561,7 @@ for ($aarIndex = 0; $aarIndex -lt $aarFiles.Count; $aarIndex++) {
 
 Set-Content -LiteralPath (Join-Path $consumerRulesPath 'inventory.txt') -Encoding UTF8 `
     -Value @(
-        '# Consumer rules are recorded for a future R8 integration; this build does not shrink.'
+        '# Consumer rules extracted from packaged dependencies.'
         $consumerRuleInventory
     )
 
@@ -568,6 +649,7 @@ if (-not (Test-Path -LiteralPath $mergedManifestPath -PathType Leaf)) {
 }
 
 $linkedResourcesPath = Join-Path $workPath 'linked-resources.ap_'
+$aaptR8RulesPath = Join-Path $workPath 'aapt-generated-r8-rules.pro'
 $linkArguments = [System.Collections.Generic.List[object]]::new()
 foreach ($argument in @(
     'link', '--proto-format', '-o', $linkedResourcesPath,
@@ -579,6 +661,7 @@ foreach ($argument in @(
     '--version-name', $Version,
     '--replace-version', '--auto-add-overlay',
     '--java', $generatedSourcePath,
+    '--proguard', $aaptR8RulesPath,
     '-A', $mergedAssetPath
 )) {
     $linkArguments.Add($argument)
@@ -607,7 +690,7 @@ for ($programIndex = 0; $programIndex -lt $programArchives.Count; $programIndex+
 }
 Set-Content -LiteralPath (Join-Path $consumerRulesPath 'inventory.txt') -Encoding UTF8 `
     -Value @(
-        '# Consumer rules are recorded for a future R8 integration; this build does not shrink.'
+        '# Consumer rules extracted from packaged dependencies.'
         $consumerRuleInventory
     )
 
@@ -631,25 +714,113 @@ $launcherArchivePath = Join-Path $workPath 'android-launcher.jar'
 Invoke-ExternalTool -FilePath $jarPath -Arguments @(
     '--create', '--file', $launcherArchivePath, '-C', $compiledClassPath, '.'
 )
-$d8Inputs = @($launcherArchivePath) + @($programArchives)
-$d8Arguments = @(
-    '--release', '--min-api', [string]$MinSdk,
-    '--lib', $androidJarPath,
-    '--output', $dexPath
-) + $d8Inputs
-$d8ArgumentFile = Join-Path $workPath 'd8-arguments.txt'
+$programInputs = @($launcherArchivePath) + @($programArchives)
 $responseFileQuote = [string][char]34
-$d8ArgumentLines = $d8Arguments | ForEach-Object {
-    $value = [string]$_
-    if ($value -match '[\s"]') {
-        $responseFileQuote + $value.Replace(
-            $responseFileQuote, ('\' + $responseFileQuote)) + $responseFileQuote
-    } else {
-        $value
+if ($isOptimized) {
+    $consumerRuleInventoryPath = Join-Path $consumerRulesPath 'inventory.txt'
+    $consumerRuleSelectionPath = Join-Path $r8ReportPath 'consumer-rules.txt'
+    $selectedConsumerRules = @(Select-R8ConsumerRules `
+        -InventoryPath $consumerRuleInventoryPath `
+        -SelectionReportPath $consumerRuleSelectionPath)
+    if ($selectedConsumerRules.Count -eq 0) {
+        throw 'R8 optimization requires dependency consumer rules, but none were selected.'
     }
+
+    $mappingPath = Join-Path $r8ReportPath 'mapping.txt'
+    $usagePath = Join-Path $r8ReportPath 'usage.txt'
+    $seedsPath = Join-Path $r8ReportPath 'seeds.txt'
+    $configurationPath = Join-Path $r8ReportPath 'configuration.txt'
+    $r8OutputRulesPath = Join-Path $workPath 'r8-output-rules.pro'
+    $usageRulePath = $usagePath.Replace('\', '/')
+    $seedsRulePath = $seedsPath.Replace('\', '/')
+    Write-Utf8File -Path $r8OutputRulesPath -Content @"
+-printusage $usageRulePath
+-printseeds $seedsRulePath
+"@
+
+    $r8Arguments = [System.Collections.Generic.List[object]]::new()
+    foreach ($argument in @(
+        '--release', '--min-api', [string]$MinSdk,
+        '--lib', $androidJarPath,
+        '--output', $dexPath,
+        '--no-data-resources',
+        '--pg-map-output', $mappingPath,
+        '--pg-conf-output', $configurationPath,
+        '--pg-conf', $applicationR8RulesPath,
+        '--pg-conf', $aaptR8RulesPath,
+        '--pg-conf', $r8OutputRulesPath
+    )) {
+        $r8Arguments.Add($argument)
+    }
+    foreach ($consumerRule in $selectedConsumerRules) {
+        $r8Arguments.Add('--pg-conf')
+        $r8Arguments.Add($consumerRule)
+    }
+    foreach ($programInput in $programInputs) {
+        $r8Arguments.Add($programInput)
+    }
+
+    $r8ArgumentFile = Join-Path $workPath 'r8-arguments.txt'
+    $r8ArgumentLines = $r8Arguments | ForEach-Object {
+        $value = [string]$_
+        if ($value -match '[\s"]') {
+            $responseFileQuote + $value.Replace(
+                $responseFileQuote, ('\' + $responseFileQuote)) + $responseFileQuote
+        } else {
+            $value
+        }
+    }
+    Write-Utf8File -Path $r8ArgumentFile -Content ($r8ArgumentLines -join "`n")
+
+    $r8VersionOutput = @(& $javaPath -cp $r8JarPath com.android.tools.r8.R8 --version 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to determine the R8 version.'
+    }
+    Write-Utf8File -Path (Join-Path $r8ReportPath 'version.txt') `
+        -Content ((@($r8VersionOutput | ForEach-Object { [string]$_ }) -join "`n") + "`n")
+
+    $r8CommandOutput = @(& $javaPath -cp $r8JarPath com.android.tools.r8.R8 `
+        "@$r8ArgumentFile" 2>&1)
+    $r8ExitCode = $LASTEXITCODE
+    $r8CommandLines = @($r8CommandOutput | ForEach-Object { [string]$_ })
+    $r8CommandLines | ForEach-Object { Write-Host $_ }
+    Write-Utf8File -Path (Join-Path $r8ReportPath 'command-output.txt') `
+        -Content (($r8CommandLines -join "`n") + "`n")
+    $r8Warnings = @($r8CommandLines | Where-Object { $_ -match '(?i)\bwarning\b' })
+    Write-Utf8File -Path (Join-Path $r8ReportPath 'warnings.txt') -Content $(
+        if ($r8Warnings.Count -eq 0) { "# No R8 warnings.`n" } else { ($r8Warnings -join "`n") + "`n" }
+    )
+    if ($r8ExitCode -ne 0) {
+        throw "R8 failed with exit code $r8ExitCode"
+    }
+    if ($r8Warnings.Count -gt 0) {
+        throw "R8 emitted $($r8Warnings.Count) warning line(s); inspect warnings.txt before release."
+    }
+    foreach ($requiredReport in @($mappingPath, $usagePath, $seedsPath, $configurationPath)) {
+        if (-not (Test-Path -LiteralPath $requiredReport -PathType Leaf) -or
+            (Get-Item -LiteralPath $requiredReport).Length -eq 0) {
+            throw "R8 did not produce required report: $requiredReport"
+        }
+    }
+} else {
+    $d8Arguments = @(
+        '--release', '--min-api', [string]$MinSdk,
+        '--lib', $androidJarPath,
+        '--output', $dexPath
+    ) + $programInputs
+    $d8ArgumentFile = Join-Path $workPath 'd8-arguments.txt'
+    $d8ArgumentLines = $d8Arguments | ForEach-Object {
+        $value = [string]$_
+        if ($value -match '[\s"]') {
+            $responseFileQuote + $value.Replace(
+                $responseFileQuote, ('\' + $responseFileQuote)) + $responseFileQuote
+        } else {
+            $value
+        }
+    }
+    Write-Utf8File -Path $d8ArgumentFile -Content ($d8ArgumentLines -join "`n")
+    Invoke-ExternalTool -FilePath $d8Path -Arguments @("@$d8ArgumentFile")
 }
-Write-Utf8File -Path $d8ArgumentFile -Content ($d8ArgumentLines -join "`n")
-Invoke-ExternalTool -FilePath $d8Path -Arguments @("@$d8ArgumentFile")
 
 Expand-JavaArchive -Archive $linkedResourcesPath -Destination $modulePath -JarTool $jarPath
 $moduleManifestPath = Join-Path $modulePath 'manifest'
@@ -667,19 +838,38 @@ foreach ($abi in $expectedAbis) {
     foreach ($nativeArchive in $nativeArchives) {
         $nativeWorkPath = Join-Path $workPath ("native-{0}-{1}" -f $abi, $nativeArchive.BaseName)
         Expand-JavaArchive -Archive $nativeArchive.FullName -Destination $nativeWorkPath -JarTool $jarPath
-        Get-ChildItem -LiteralPath $nativeWorkPath -Filter '*.so' -Recurse |
-            ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $nativeDestination -Force }
+        foreach ($nativeLibrary in Get-ChildItem -LiteralPath $nativeWorkPath -Filter '*.so' -Recurse) {
+            $nativeOutput = Join-Path $nativeDestination $nativeLibrary.Name
+            if ((Test-Path -LiteralPath $nativeOutput) -and
+                (Get-FileSha256 $nativeOutput) -ne (Get-FileSha256 $nativeLibrary.FullName)) {
+                throw "Conflicting native library $abi/$($nativeLibrary.Name) from $($nativeArchive.Name)"
+            }
+            Copy-Item -LiteralPath $nativeLibrary.FullName -Destination $nativeOutput -Force
+            $nativeLibraryInventory.Add("$abi|$($nativeLibrary.Name)|$($nativeArchive.Name)")
+        }
     }
     foreach ($unpackedAarPath in $aarDirectories) {
         $aarNativePath = Join-Path $unpackedAarPath "jni\$abi"
         if (Test-Path -LiteralPath $aarNativePath) {
-            Copy-DirectoryContents -Source $aarNativePath -Destination $nativeDestination
+            foreach ($nativeLibrary in Get-ChildItem -LiteralPath $aarNativePath -Filter '*.so' -Recurse) {
+                $nativeOutput = Join-Path $nativeDestination $nativeLibrary.Name
+                if ((Test-Path -LiteralPath $nativeOutput) -and
+                    (Get-FileSha256 $nativeOutput) -ne (Get-FileSha256 $nativeLibrary.FullName)) {
+                    throw "Conflicting native library $abi/$($nativeLibrary.Name) from $(Split-Path $unpackedAarPath -Leaf)"
+                }
+                Copy-Item -LiteralPath $nativeLibrary.FullName -Destination $nativeOutput -Force
+                $nativeLibraryInventory.Add(
+                    "$abi|$($nativeLibrary.Name)|$(Split-Path $unpackedAarPath -Leaf).aar")
+            }
         }
     }
     if ((Get-ChildItem -LiteralPath $nativeDestination -Filter '*.so').Count -lt 2) {
         throw "Expected native libraries are missing for $abi"
     }
 }
+Write-Utf8File -Path (Join-Path $workPath 'native-library-inventory.txt') `
+    -Content ((@('# ABI|Library|Source dependency') +
+        @($nativeLibraryInventory | Sort-Object -Unique)) -join "`n")
 
 $baseModuleArchivePath = Join-Path $workPath 'base.zip'
 Invoke-ExternalTool -FilePath $jarPath -Arguments @(
@@ -698,7 +888,7 @@ if ($actualBundletoolSha256 -ne $bundletoolSha256) {
     throw "bundletool SHA-256 mismatch. Expected $bundletoolSha256, got $actualBundletoolSha256"
 }
 
-$unsignedBundlePath = Join-Path $workPath "DeepDiveDrift-$Version-google-play-unsigned.aab"
+$unsignedBundlePath = Join-Path $workPath "DeepDiveDrift-$Version$artifactQualifier-google-play-unsigned.aab"
 $bundleConfigPath = Join-Path $androidPath 'BundleConfig.json'
 # Android MediaPlayer/SoundPool use AssetManager.openFd, which requires STORED audio.
 # Store this rule in the AAB so Google Play's generated APKs also preserve it.
@@ -738,7 +928,7 @@ if ($isSigned) {
     }
 }
 
-$bundleName = "DeepDiveDrift-$Version-google-play$(if ($isSigned) { '' } else { '-unsigned' }).aab"
+$bundleName = "DeepDiveDrift-$Version$artifactQualifier-google-play$(if ($isSigned) { '' } else { '-unsigned' }).aab"
 $releaseBundlePath = Join-Path $outputPath $bundleName
 Copy-Item -LiteralPath $unsignedBundlePath -Destination $releaseBundlePath -Force
 
@@ -764,7 +954,7 @@ Invoke-ExternalTool -FilePath $javaPath -Arguments @(
 )
 $universalApkPath = Join-Path $workPath 'universal-apk'
 Expand-JavaArchive -Archive $apksPath -Destination $universalApkPath -JarTool $jarPath
-$releaseApkPath = Join-Path $outputPath "DeepDiveDrift-$Version-universal.apk"
+$releaseApkPath = Join-Path $outputPath "DeepDiveDrift-$Version$artifactQualifier-universal.apk"
 Copy-Item -LiteralPath (Join-Path $universalApkPath 'universal.apk') -Destination $releaseApkPath -Force
 
 Invoke-ExternalTool -FilePath $zipalignPath -Arguments @(
@@ -782,3 +972,6 @@ Write-Host 'Android release package is ready:'
 Write-Host "  AAB: $releaseBundlePath"
 Write-Host "  Universal test APK: $releaseApkPath"
 Write-Host "  Signature: $(if ($isSigned) { 'upload-key signed' } else { 'unsigned AAB' })"
+if ($isOptimized) {
+    Write-Host "  R8 mapping/reports: $r8ReportPath"
+}

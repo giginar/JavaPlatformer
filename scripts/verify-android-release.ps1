@@ -1,6 +1,10 @@
 param(
     [switch]$SkipBuild,
-    [switch]$RequireSignedBundle
+    [switch]$RequireSignedBundle,
+    [ValidateSet('Unoptimized', 'Optimized')]
+    [string]$OptimizationMode = 'Unoptimized',
+    [ValidateSet('', 'DISABLED', 'TEST', 'PRODUCTION')]
+    [string]$ExpectedAdsMode = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -13,6 +17,10 @@ $pomPath = Join-Path $projectRootPath 'pom.xml'
 $androidVersion = & (Join-Path $PSScriptRoot 'get-project-version.ps1') -ProjectRootPath $projectRootPath -Android
 $version = $androidVersion.Version
 $versionCode = $androidVersion.VersionCode
+$isOptimized = $OptimizationMode -eq 'Optimized'
+$artifactQualifier = if ($isOptimized) { '-optimized' } else { '' }
+$androidWorkPath = Join-Path $androidTargetPath $(
+    if ($isOptimized) { 'android-optimized-work' } else { 'android-work' })
 $buildToolsVersion = [string]$projectPom.project.properties.'android.build-tools'
 $bundletoolVersion = [string]$projectPom.project.properties.'bundletool.version'
 $expectedMinSdk = [string]$projectPom.project.properties.'android.min-sdk'
@@ -26,7 +34,12 @@ if ($expectedCompileSdk -ne $expectedTargetSdk) {
 $expectedApplicationId = [string]$sourceManifest.manifest.package
 
 if (-not $SkipBuild) {
-    & $mavenWrapper -f $pomPath -B -ntp -Pandroid-release -pl android -am clean package
+    $mavenProfiles = if ($isOptimized) {
+        'android-release,android-optimized-release'
+    } else {
+        'android-release'
+    }
+    & $mavenWrapper -f $pomPath -B -ntp "-P$mavenProfiles" -pl android -am package
     if ($LASTEXITCODE -ne 0) {
         throw "Android release build failed with exit code $LASTEXITCODE"
     }
@@ -47,6 +60,15 @@ function Read-PropertiesFile {
         }
     }
     return $properties
+}
+
+function Write-Utf8File {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Content
+    )
+    [System.IO.File]::WriteAllText(
+        $Path, $Content, [System.Text.UTF8Encoding]::new($false))
 }
 
 $localPropertiesPath = Join-Path $projectRootPath 'local.properties'
@@ -74,8 +96,13 @@ $zipalignPath = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\zipalign
 $apksignerPath = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\apksigner.bat"
 $aapt2Path = Join-Path $sdkDirectory "build-tools\$buildToolsVersion\aapt2.exe"
 $apkAnalyzerPath = Join-Path $sdkDirectory 'cmdline-tools\latest\bin\apkanalyzer.bat'
-$releaseApk = Get-Item -LiteralPath (Join-Path $releasePath "DeepDiveDrift-$version-universal.apk") -ErrorAction SilentlyContinue
-$bundleNames = @("DeepDiveDrift-$version-google-play.aab", "DeepDiveDrift-$version-google-play-unsigned.aab")
+$releaseApk = Get-Item -LiteralPath `
+    (Join-Path $releasePath "DeepDiveDrift-$version$artifactQualifier-universal.apk") `
+    -ErrorAction SilentlyContinue
+$bundleNames = @(
+    "DeepDiveDrift-$version$artifactQualifier-google-play.aab",
+    "DeepDiveDrift-$version$artifactQualifier-google-play-unsigned.aab"
+)
 $releaseBundle = Get-ChildItem -LiteralPath $releasePath -Filter '*.aab' -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -in $bundleNames } |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -161,16 +188,27 @@ if ($adsMode -eq 'PRODUCTION' -and
     (-not $hasAdMobApplicationId -or $apkManifestText.Contains($testAppId))) {
     throw 'PRODUCTION package is missing external AdMob metadata or contains the demo App ID.'
 }
+if ($ExpectedAdsMode -and $adsMode -ne $ExpectedAdsMode) {
+    throw "Expected advertising mode $ExpectedAdsMode, but the package contains $adsMode."
+}
 
 $dexPackages = (& $apkAnalyzerPath dex packages $releaseApk.FullName | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect APK DEX classes' }
-foreach ($requiredClass in @(
-    'com.game.DeepDiveDrift',
-    'com.game.diver.android.AndroidLauncher',
-    'com.google.android.libraries.ads.mobile.sdk.MobileAds',
-    'com.google.android.ump.UserMessagingPlatform',
-    'com.game.diver.android.AndroidAdvertisingService'
-)) {
+$requiredClasses = if ($isOptimized) {
+    @(
+        'com.game.diver.android.AndroidLauncher',
+        'com.badlogic.gdx.controllers.android.AndroidControllers'
+    )
+} else {
+    @(
+        'com.game.DeepDiveDrift',
+        'com.game.diver.android.AndroidLauncher',
+        'com.google.android.libraries.ads.mobile.sdk.MobileAds',
+        'com.google.android.ump.UserMessagingPlatform',
+        'com.game.diver.android.AndroidAdvertisingService'
+    )
+}
+foreach ($requiredClass in $requiredClasses) {
     if ($dexPackages -notmatch "(?m)^C\s+.*\s$([regex]::Escape($requiredClass))\r?$") {
         throw "APK DEX is missing $requiredClass"
     }
@@ -201,7 +239,7 @@ foreach ($requiredEntry in @(
     }
 }
 
-$consumerRuleInventoryPath = Join-Path $androidTargetPath 'android-work\consumer-rules\inventory.txt'
+$consumerRuleInventoryPath = Join-Path $androidWorkPath 'consumer-rules\inventory.txt'
 if (-not (Test-Path -LiteralPath $consumerRuleInventoryPath)) {
     throw 'Consumer-rule inventory is missing.'
 }
@@ -210,6 +248,140 @@ foreach ($requiredRules in @('ads-mobile-sdk-1.4.0', 'user-messaging-platform-4.
     'kotlinx-coroutines-android-1.9.0')) {
     if (-not $consumerRuleInventory.Contains($requiredRules)) {
         throw "Consumer-rule inventory is missing $requiredRules"
+    }
+}
+if ($isOptimized) {
+    $r8ReportPath = Join-Path $releasePath "DeepDiveDrift-$version-r8"
+    $r8Reports = @{
+        Mapping = Join-Path $r8ReportPath 'mapping.txt'
+        Usage = Join-Path $r8ReportPath 'usage.txt'
+        Seeds = Join-Path $r8ReportPath 'seeds.txt'
+        Configuration = Join-Path $r8ReportPath 'configuration.txt'
+        Warnings = Join-Path $r8ReportPath 'warnings.txt'
+        Version = Join-Path $r8ReportPath 'version.txt'
+        ConsumerRules = Join-Path $r8ReportPath 'consumer-rules.txt'
+    }
+    foreach ($reportName in $r8Reports.Keys) {
+        $reportPath = $r8Reports[$reportName]
+        if (-not (Test-Path -LiteralPath $reportPath -PathType Leaf) -or
+            (Get-Item -LiteralPath $reportPath).Length -eq 0) {
+            throw "Optimized build is missing R8 $reportName output: $reportPath"
+        }
+    }
+
+    $r8Version = Get-Content -LiteralPath $r8Reports.Version -Raw
+    if ($r8Version -notmatch '(?m)^R8 8\.10\.9-dev\b') {
+        throw 'Optimized build used an unexpected R8 version.'
+    }
+    $r8Warnings = Get-Content -LiteralPath $r8Reports.Warnings -Raw
+    if ($r8Warnings.Trim() -ne '# No R8 warnings.') {
+        throw 'Optimized build has unresolved R8 warnings.'
+    }
+    $r8Configuration = Get-Content -LiteralPath $r8Reports.Configuration -Raw
+    if ($r8Configuration -match '(?m)^\s*-dont(shrink|optimize|obfuscate)\b' -or
+        $r8Configuration -match '(?m)^\s*-dontwarn\s+\*{1,2}\s*$') {
+        throw 'R8 configuration disables a required optimization or contains a blanket dontwarn.'
+    }
+    if ($r8Configuration -notmatch
+        '(?m)^\s*-keepclasseswithmembernames,includedescriptorclasses class \* \{\s*$' -or
+        $r8Configuration -match
+        '(?m)^\s*-keepclasseswithmembernames[^\r\n]*allowoptimization[^\r\n]*class \* \{\s*$') {
+        throw 'R8 configuration must preserve JNI names and descriptors without member optimization.'
+    }
+    $r8Arguments = Get-Content -LiteralPath (Join-Path $androidWorkPath 'r8-arguments.txt') -Raw
+    foreach ($disabledOption in @('--no-tree-shaking', '--no-minification', '--no-desugaring')) {
+        if ($r8Arguments.Contains($disabledOption)) {
+            throw "Optimized R8 invocation contains forbidden option $disabledOption"
+        }
+    }
+    if ($r8Arguments -notmatch '(?m)^--min-api\r?\n24\r?$' -or
+        $r8Arguments -notmatch '(?m)^--lib\r?\n.*[\\/]platforms[\\/]android-36[\\/]android\.jar\r?$') {
+        throw 'Optimized R8 invocation must use min API 24 and the Android 36 platform library.'
+    }
+    $mappingLines = @(Get-Content -LiteralPath $r8Reports.Mapping)
+    if ($mappingLines -notcontains '# compiler: R8') {
+        throw 'R8 mapping output does not identify the R8 compiler.'
+    }
+
+    function Assert-PersistedEnumMapping {
+        param(
+            [Parameter(Mandatory = $true)][string[]]$Lines,
+            [Parameter(Mandatory = $true)][string]$ClassName,
+            [Parameter(Mandatory = $true)][int]$ExpectedConstantCount
+        )
+
+        $escapedClassName = [regex]::Escape($ClassName)
+        $classHeaderIndex = -1
+        for ($lineIndex = 0; $lineIndex -lt $Lines.Count; $lineIndex++) {
+            if ($Lines[$lineIndex] -match "^$escapedClassName -> [^:]+:`$") {
+                $classHeaderIndex = $lineIndex
+                break
+            }
+        }
+        if ($classHeaderIndex -lt 0) {
+            throw "R8 mapping is missing persisted enum $ClassName"
+        }
+
+        $constantCount = 0
+        for ($lineIndex = $classHeaderIndex + 1; $lineIndex -lt $Lines.Count; $lineIndex++) {
+            $line = $Lines[$lineIndex]
+            if ($line -match '^\S+ -> \S+:$') {
+                break
+            }
+            if ($line -match "^\s+$escapedClassName ([A-Z][A-Z0-9_]*) -> (\S+)`$") {
+                $constantCount++
+                if ($Matches[1] -ne $Matches[2]) {
+                    throw "R8 renamed persisted enum identifier $ClassName.$($Matches[1]) to $($Matches[2])"
+                }
+            }
+        }
+        if ($constantCount -ne $ExpectedConstantCount) {
+            throw "R8 mapping contains $constantCount persisted constants for $ClassName; expected $ExpectedConstantCount."
+        }
+    }
+
+    $persistedEnums = @(
+        [pscustomobject]@{ ClassName = 'com.game.model.Achievement'; Count = 40 },
+        [pscustomobject]@{ ClassName = 'com.game.model.ChallengeModifier'; Count = 4 },
+        [pscustomobject]@{ ClassName = 'com.game.model.DiverSuit'; Count = 4 },
+        [pscustomobject]@{ ClassName = 'com.game.model.PermanentUpgrade'; Count = 5 },
+        [pscustomobject]@{ ClassName = 'com.game.model.RunDifficulty'; Count = 3 },
+        [pscustomobject]@{ ClassName = 'com.game.settings.DisplaySettingsStore$WindowMode'; Count = 3 },
+        [pscustomobject]@{ ClassName = 'com.game.settings.DisplaySettingsStore$TextScale'; Count = 2 }
+    )
+    foreach ($persistedEnum in $persistedEnums) {
+        Assert-PersistedEnumMapping -Lines $mappingLines `
+            -ClassName $persistedEnum.ClassName `
+            -ExpectedConstantCount $persistedEnum.Count
+    }
+
+    $hasFirstPartyObfuscation = $false
+    foreach ($mappingLine in $mappingLines) {
+        if ($mappingLine -match '^([^ ]+) -> ([^:]+):$' -and
+            $Matches[1].StartsWith('com.game.') -and $Matches[1] -ne $Matches[2]) {
+            $hasFirstPartyObfuscation = $true
+            break
+        }
+    }
+    if (-not $hasFirstPartyObfuscation) {
+        throw 'R8 mapping does not prove first-party class obfuscation.'
+    }
+    $gdxPixmapCode = (& $apkAnalyzerPath dex code `
+        --class com.badlogic.gdx.graphics.g2d.Gdx2DPixmap $releaseApk.FullName | Out-String)
+    if ($LASTEXITCODE -ne 0 -or $gdxPixmapCode -notmatch
+        '(?m)^\.method private static native load\(\[J\[BII\)Ljava/nio/ByteBuffer;\r?$') {
+        throw 'Optimized DEX does not preserve the libGDX image-decoder JNI descriptor.'
+    }
+    $consumerSelection = Get-Content -LiteralPath $r8Reports.ConsumerRules -Raw
+    foreach ($requiredSelection in @(
+        'INCLUDED|ads-mobile-sdk-1.4.0.aar|proguard.txt',
+        'INCLUDED|user-messaging-platform-4.0.0.aar|proguard.txt',
+        'INCLUDED|kotlinx-coroutines-android-1.9.0.jar|META-INF/com.android.tools/r8-from-1.6.0/coroutines.pro',
+        'INCLUDED|kotlinx-coroutines-core-jvm-1.9.0.jar|META-INF/com.android.tools/r8/coroutines.pro'
+    )) {
+        if (-not $consumerSelection.Contains($requiredSelection)) {
+            throw "R8 consumer-rule selection is missing $requiredSelection"
+        }
     }
 }
 
@@ -289,6 +461,11 @@ function Get-ElfLoadAlignments([string]$Path) {
     } else {
         throw "Unsupported ELF class $elfClass in $Path"
     }
+    $minimumEntrySize = if ($elfClass -eq 1) { 32 } else { 56 }
+    if ($entrySize -lt $minimumEntrySize -or $entryCount -eq 0 -or
+        $programOffset + [uint64]$entrySize * [uint64]$entryCount -gt [uint64]$elfBytes.Length) {
+        throw "Invalid ELF program-header table in $Path"
+    }
 
     $alignments = @()
     for ($entryIndex = 0; $entryIndex -lt $entryCount; $entryIndex++) {
@@ -304,7 +481,23 @@ function Get-ElfLoadAlignments([string]$Path) {
                 $elfBytes, $entryOffset + $alignmentOffset)
         }
     }
+    if ($alignments.Count -eq 0) {
+        throw "ELF library has no LOAD segments: $Path"
+    }
     return $alignments
+}
+
+function Expand-ArchiveWithJar([string]$Archive, [string]$Destination, [string]$Label) {
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    Push-Location $Destination
+    try {
+        & jar.exe xf $Archive
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to extract $Label"
+        }
+    } finally {
+        Pop-Location
+    }
 }
 
 $verificationPath = Join-Path $androidTargetPath 'android-verification'
@@ -321,31 +514,97 @@ if (Test-Path -LiteralPath $verificationPath) {
 New-Item -ItemType Directory -Path $verificationPath -Force | Out-Null
 
 try {
-    Push-Location $verificationPath
-    try {
-        & jar.exe xf $releaseBundle.FullName
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Unable to extract the release AAB'
+    $aabVerificationPath = Join-Path $verificationPath 'aab'
+    $apkVerificationPath = Join-Path $verificationPath 'apk'
+    Expand-ArchiveWithJar $releaseBundle.FullName $aabVerificationPath 'the release AAB'
+    Expand-ArchiveWithJar $releaseApk.FullName $apkVerificationPath 'the universal APK'
+
+    $serviceProviders = @(
+        [pscustomobject]@{
+            Descriptor = 'META-INF\services\kotlinx.coroutines.internal.MainDispatcherFactory'
+            ClassName = 'kotlinx.coroutines.android.AndroidDispatcherFactory'
+        },
+        [pscustomobject]@{
+            Descriptor = 'META-INF\services\kotlinx.coroutines.CoroutineExceptionHandler'
+            ClassName = 'kotlinx.coroutines.android.AndroidExceptionPreHandler'
         }
-    } finally {
-        Pop-Location
+    )
+    foreach ($serviceProvider in $serviceProviders) {
+        $descriptorPath = Join-Path $apkVerificationPath $serviceProvider.Descriptor
+        if (-not (Test-Path -LiteralPath $descriptorPath -PathType Leaf) -or
+            $serviceProvider.ClassName -notin @(Get-Content -LiteralPath $descriptorPath)) {
+            throw "APK service descriptor does not retain $($serviceProvider.ClassName)"
+        }
+        if ($dexPackages -notmatch "(?m)^C\s+.*\s$([regex]::Escape($serviceProvider.ClassName))\r?$") {
+            throw "APK service provider class is missing: $($serviceProvider.ClassName)"
+        }
+    }
+
+    $nativeInventoryPath = Join-Path $androidWorkPath 'native-library-inventory.txt'
+    if (-not (Test-Path -LiteralPath $nativeInventoryPath -PathType Leaf)) {
+        throw 'Native-library source inventory is missing.'
+    }
+    $nativeSources = @{}
+    foreach ($line in Get-Content -LiteralPath $nativeInventoryPath) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith('#')) { continue }
+        $parts = $trimmed.Split('|', 3)
+        if ($parts.Count -ne 3 -or -not $parts[2]) {
+            throw "Invalid native-library inventory entry: $trimmed"
+        }
+        $key = "$($parts[0])|$($parts[1])"
+        if ($nativeSources.ContainsKey($key) -and $nativeSources[$key] -ne $parts[2]) {
+            throw "Native library $key has conflicting source dependencies."
+        }
+        $nativeSources[$key] = $parts[2]
     }
 
     $expectedAbis = 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-    foreach ($abi in $expectedAbis) {
-        $nativePath = Join-Path $verificationPath "base\lib\$abi"
-        $libraries = @(Get-ChildItem -LiteralPath $nativePath -Filter '*.so' -ErrorAction SilentlyContinue)
-        if ($libraries.Count -lt 2) {
-            throw "Expected AAB native libraries are missing for $abi"
+    $nativeVerification = [System.Collections.Generic.List[string]]::new()
+    foreach ($artifact in @(
+        [pscustomobject]@{ Label = 'AAB'; Root = Join-Path $aabVerificationPath 'base\lib' },
+        [pscustomobject]@{ Label = 'APK'; Root = Join-Path $apkVerificationPath 'lib' }
+    )) {
+        $actualAbis = @(Get-ChildItem -LiteralPath $artifact.Root -Directory -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty Name | Sort-Object)
+        $abiDifference = @(Compare-Object ($expectedAbis | Sort-Object) $actualAbis)
+        if ($abiDifference.Count -gt 0) {
+            throw "$($artifact.Label) ABI inventory differs from the required four ABIs: $($actualAbis -join ', ')"
         }
-        foreach ($library in $libraries) {
-            foreach ($alignment in (Get-ElfLoadAlignments $library.FullName)) {
-                if ($alignment -lt 16384) {
-                    throw "$($library.FullName) has a LOAD segment aligned to only $alignment bytes"
+        $artifactKeys = [System.Collections.Generic.HashSet[string]]::new(
+            [System.StringComparer]::Ordinal)
+        foreach ($abi in $expectedAbis) {
+            $nativePath = Join-Path $artifact.Root $abi
+            $libraries = @(Get-ChildItem -LiteralPath $nativePath -Filter '*.so' -File `
+                -ErrorAction SilentlyContinue | Sort-Object Name)
+            if ($libraries.Count -lt 2) {
+                throw "Expected $($artifact.Label) native libraries are missing for $abi"
+            }
+            foreach ($library in $libraries) {
+                $key = "$abi|$($library.Name)"
+                if (-not $nativeSources.ContainsKey($key)) {
+                    throw "$($artifact.Label) contains untracked native library $key"
                 }
+                [void]$artifactKeys.Add($key)
+                $alignments = @(Get-ElfLoadAlignments $library.FullName)
+                foreach ($alignment in $alignments) {
+                    if ($alignment -lt 16384) {
+                        throw "$($library.FullName) has a LOAD segment aligned to only $alignment bytes"
+                    }
+                }
+                $nativeVerification.Add(
+                    "$($artifact.Label)|$abi|$($library.Name)|$($nativeSources[$key])|$($alignments -join ',')")
+            }
+        }
+        foreach ($inventoryKey in $nativeSources.Keys) {
+            if (-not $artifactKeys.Contains($inventoryKey)) {
+                throw "$($artifact.Label) is missing inventoried native library $inventoryKey"
             }
         }
     }
+    Write-Utf8File -Path (Join-Path $androidWorkPath 'native-verification.txt') `
+        -Content ((@('# Artifact|ABI|Library|Source dependency|ELF LOAD alignments') +
+            $nativeVerification.ToArray()) -join "`n")
 } finally {
     if (Test-Path -LiteralPath $verificationPath) {
         Remove-Item -LiteralPath $verificationPath -Recurse -Force
@@ -361,7 +620,7 @@ if (($RequireSignedBundle -or (Test-Path -LiteralPath (Join-Path $projectRootPat
     throw 'Google Play requires an upload-key signed AAB. Create the upload keystore, configure keystore.properties, and rebuild. The local test APK can still be installed.'
 }
 
-Write-Host 'Android verification passed:'
+Write-Host "Android $OptimizationMode verification passed:"
 Write-Host "  APK and AAB version: $version (versionCode $versionCode)"
 Write-Host "  Package: $expectedApplicationId; minSdk $expectedMinSdk; compileSdk $expectedCompileSdk; targetSdk $expectedTargetSdk"
 Write-Host "  Advertising mode: $adsMode; GMA/UMP classes, resources, and merged manifest verified"
@@ -371,5 +630,9 @@ Write-Host '  Bundletool schema: valid'
 Write-Host '  APK ZIP alignment: 16 KB compatible'
 Write-Host '  Universal APK signature: valid local debug key'
 Write-Host '  ELF LOAD alignment: 16 KB across all four ABIs'
+if ($isOptimized) {
+    Write-Host '  R8: shrinking, optimization, and obfuscation enabled; no warnings'
+    Write-Host "  R8 mapping/reports: $r8ReportPath"
+}
 Write-Host "  AAB: $($releaseBundle.FullName)"
 Write-Host "  AAB signature: $(if ($isSigned) { 'signed' } else { 'unsigned (upload key still required)' })"
