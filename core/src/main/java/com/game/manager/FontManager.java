@@ -7,7 +7,8 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.game.settings.DisplaySettings;
 
 public class FontManager {
-    public static final String TURKISH_GLYPHS = "çÇğĞıİöÖşŞüÜ";
+    public static final String TURKISH_GLYPHS = "\u00e7\u00c7\u011f\u011e\u0131\u0130\u00f6\u00d6\u015f\u015e\u00fc\u00dc";
+    static final String FALLBACK_GLYPHS = "\u011f\u011e\u0130\u015f\u015e";
     private static BitmapFont smallFont;
     private static BitmapFont mediumFont;
     private static BitmapFont largeFont;
@@ -19,22 +20,22 @@ public class FontManager {
         }
 
         FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Orbitron-Regular.ttf"));
+        FreeTypeFontGenerator fallbackGenerator =
+            new FreeTypeFontGenerator(Gdx.files.internal("fonts/Oxanium-Regular.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
         parameter.color = Color.WHITE;
         parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + TURKISH_GLYPHS;
         parameter.minFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear;
         parameter.magFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear;
-        parameter.size = 18;
-        smallFont = generator.generateFont(parameter);
-
-        parameter.size = 28;
-        mediumFont = generator.generateFont(parameter);
-
-        parameter.size = 56;
-        largeFont = generator.generateFont(parameter);
-
-        generator.dispose();
+        try {
+            smallFont = generateFont(generator, fallbackGenerator, parameter, 18);
+            mediumFont = generateFont(generator, fallbackGenerator, parameter, 28);
+            largeFont = generateFont(generator, fallbackGenerator, parameter, 56);
+        } finally {
+            generator.dispose();
+            fallbackGenerator.dispose();
+        }
         verifyTurkishGlyphs(smallFont);
         verifyTurkishGlyphs(mediumFont);
         verifyTurkishGlyphs(largeFont);
@@ -75,11 +76,43 @@ public class FontManager {
         initialized = false;
     }
 
+    private static BitmapFont generateFont(FreeTypeFontGenerator generator,
+                                           FreeTypeFontGenerator fallbackGenerator,
+                                           FreeTypeFontGenerator.FreeTypeFontParameter parameter,
+                                           int size) {
+        parameter.size = size;
+        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + TURKISH_GLYPHS;
+        BitmapFont font = generator.generateFont(parameter);
+
+        parameter.characters = FALLBACK_GLYPHS;
+        BitmapFont fallback = fallbackGenerator.generateFont(parameter);
+        int fallbackPageOffset = font.getRegions().size;
+        font.getRegions().addAll(fallback.getRegions());
+        fallback.setOwnsTexture(false);
+        for (char glyph : FALLBACK_GLYPHS.toCharArray()) {
+            BitmapFont.Glyph fallbackGlyph = fallback.getData().getGlyph(glyph);
+            if (!isRenderable(fallbackGlyph)) {
+                font.dispose();
+                fallback.dispose();
+                throw new IllegalStateException("Fallback font is missing required Turkish glyph: " + glyph);
+            }
+            fallbackGlyph.page += fallbackPageOffset;
+            font.getData().setGlyph(glyph, fallbackGlyph);
+        }
+        fallback.dispose();
+        return font;
+    }
+
     private static void verifyTurkishGlyphs(BitmapFont font) {
         for (char glyph : TURKISH_GLYPHS.toCharArray()) {
-            if (!font.getData().hasGlyph(glyph)) {
-                throw new IllegalStateException("Orbitron font is missing required Turkish glyph: " + glyph);
+            BitmapFont.Glyph renderedGlyph = font.getData().getGlyph(glyph);
+            if (!isRenderable(renderedGlyph) || renderedGlyph.page >= font.getRegions().size) {
+                throw new IllegalStateException("Runtime font is missing required Turkish glyph: " + glyph);
             }
         }
+    }
+
+    static boolean isRenderable(BitmapFont.Glyph glyph) {
+        return glyph != null && glyph.width > 0 && glyph.height > 0;
     }
 }

@@ -16,6 +16,12 @@ Orbitron font files are Copyright 2018 The Orbitron Project Authors and are used
 under the SIL Open Font License 1.1. The full license is distributed in
 `fonts/OFL.txt`.
 
+## Oxanium
+
+Oxanium is used only for Turkish glyphs that are absent from Orbitron. It is
+Copyright 2019 The Oxanium Project Authors and is used under the SIL Open Font
+License 1.1. The full license is distributed in `fonts/Oxanium-OFL.txt`.
+
 ## Additional records
 
 - Audio rights and per-file hashes: `AUDIO_RIGHTS_AUDIT.md`

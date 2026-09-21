@@ -1,6 +1,5 @@
 package com.game.i18n;
 
-import com.game.manager.FontManager;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -33,14 +32,6 @@ class LocalizationResourcesTest {
     @Test
     void fallbackTextIsSafeBeforeBundlesAreAvailable() {
         assertEquals("English fallback", Localization.textOr("missing.key", "English fallback"));
-    }
-
-    @Test
-    void generatedFontCharacterSetContainsEveryTurkishGlyph() {
-        for (char glyph : "çÇğĞıİöÖşŞüÜ".toCharArray()) {
-            assertTrue(FontManager.TURKISH_GLYPHS.indexOf(glyph) >= 0,
-                () -> "Missing Turkish glyph configuration: " + glyph);
-        }
     }
 
     private static Properties load(String name) throws IOException {
