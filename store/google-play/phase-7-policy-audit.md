@@ -37,7 +37,7 @@ All sources below were accessed September 21, 2026.
 
 ## Product facts
 
-DeepDive Drift is a single-player, English-language arcade survival game. The player controls a diver, manages oxygen, fires a harpoon at hostile fish, sharks, piranhas, eels, sea mines, and a multi-stage Abyssal Octopus boss, collects power-ups, and can fail from damage or oxygen loss. Presentation is pixel/cartoon style with impact particles, flashes, screen shake, and tense boss presentation, without blood or gore. Flashing and screen-shake effects can be disabled.
+Project Blue: Deep Drift is a single-player, English-language arcade survival game. The player controls a diver, manages oxygen, fires a harpoon at hostile fish, sharks, piranhas, eels, sea mines, and a multi-stage Abyssal Octopus boss, collects power-ups, and can fail from damage or oxygen loss. Presentation is pixel/cartoon style with impact particles, flashes, screen shake, and tense boss presentation, without blood or gore. Flashing and screen-shake effects can be disabled.
 
 Pressure Pearls are earned through play and spent on local equipment and suit progression. There is no billing, real-money purchase, loot box, gambling, account, chat, social feature, user-generated content, location sharing, cloud save, or in-game external link. Difficulty and challenge modes increase reaction and survival demands. The Android build contains ads; the player-facing rewarded placement remains disabled.
 
@@ -162,7 +162,7 @@ This matches the documented UMP flow. Production readiness still depends on crea
 | Contains ads | Yes | GMA packaged; interstitial/rewarded infrastructure | No; final Console entry manual |
 | Target audience | Unanswered; select only intentionally designed age groups | No approved product decision | Yes — target audience |
 | Data Safety | Yes, GMA categories listed above are collected/shared | GMA disclosure and package | Console verification; audience can change treatment |
-| Privacy policy | EN/TR drafts updated for local data, GMA, UMP, and AAID | Repository documents | Publisher legal name, email, HTTPS URL |
+| Privacy policy | EN/TR drafts updated for local data, GMA, UMP, AAID, Blueborn Games, and support contact | Repository documents | Legal controller name, effective date, live HTTPS URL |
 | Advertising ID | Proposed Yes, advertising purpose | Merged permission and GMA behavior | Console wording/manual verification; audience may change manifest decision |
 | Content rating | Use factual inventory below; no rating assigned here | Source, art, listing | Complete IARC questionnaire |
 | App access | No account, login, membership, or restricted area; all game content is directly accessible | Game implementation | Confirm current build in Console |

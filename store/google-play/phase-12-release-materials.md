@@ -4,22 +4,21 @@ Date: 2026-09-21
 Status: **CONDITIONALLY READY**
 
 The English and Turkish release drafts are factually aligned with the current Android
-implementation. Final publication still depends on product identity, policy inputs,
-production configuration, rights clearance, and real Android screenshot capture.
+implementation. The public product identity and publisher brand are final. Publication
+still depends on legal/policy inputs, Pages activation, production configuration,
+rights clearance, and real Android screenshot capture.
 
 ## Store identity
 
-`STORE NAME DECISION REQUIRED`
+- Final public/store name: `Project Blue: Deep Drift`
+- Public publisher/studio brand: `Blueborn Games`
+- Support contact: `ykucukcinar@gmail.com`
+- Android application ID: `com.game.diver.deepdivedrift`
 
-The repository currently uses several forms: `DeepDive Drift` in the Android label,
-desktop title, listings, privacy drafts, and README; `DEEP DIVE DRIFT` in the in-game
-wordmark and feature graphic; `Deep Drift` in some audit prose; and `Project Blue:
-Deep Drift` as the project/phase identity. None is treated here as the approved public
-name. After the decision, update the store title, Android label, in-game/About text,
-privacy-policy titles, feature graphic, README, and release documents together.
-
-The existing working store title is `DeepDive Drift` (14 characters). It remains a
-draft and does not settle the public name.
+The final name is used by the Android label, desktop window title, in-game menu and
+About/Legal text, listings, privacy drafts, README, and generated title artwork.
+Historic Java class names, artifact IDs, filenames, and implementation packages remain
+unchanged because they are technical identifiers rather than public metadata.
 
 ## Google Play text limits and counts
 
@@ -29,8 +28,8 @@ to a single character and include the line breaks/bullet markers in the full cop
 
 | Draft | App name | Short description | Full description | Result |
 | --- | ---: | ---: | ---: | --- |
-| English | 14 / 30 | 64 / 80 | 1,494 / 4,000 | Within limits |
-| Turkish | 14 / 30 | 67 / 80 | 1,562 / 4,000 | Within limits |
+| English | 24 / 30 | 64 / 80 | 1,504 / 4,000 | Within limits |
+| Turkish | 24 / 30 | 67 / 80 | 1,572 / 4,000 | Within limits |
 
 Official source: [Create and set up your app](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en-NZ).
 
@@ -78,19 +77,20 @@ Both privacy drafts distinguish these data paths:
 The drafts do not claim no internet access, no advertising, that every kind of data
 stays on the device, or that there is no third-party processing. They make no legal
 compliance guarantee. They remain drafts until the production advertising setup,
-audience, countries, languages, and publisher details are approved.
+audience, countries, languages, effective date, legal controller identity, and live
+Pages URL are approved.
 
 `PRIVACY POLICY INPUT REQUIRED`
 
-- final public/store app name
-- publisher/controller legal name
-- working privacy/support contact email
-- active HTTPS privacy-policy URL
+- publisher/controller legal name (`LEGAL NAME INPUT REQUIRED`)
+- active HTTPS privacy-policy URL (`GITHUB PAGES ACTIVATION/URL VERIFICATION REQUIRED`)
 - effective date
-- publisher/support website or page
+- account phone/address verification where required by Google Play
 
-No confirmed repository value exists for any item above. The package identifier
-`com.game.diver.deepdivedrift` and review date are confirmed and retained separately.
+The public name, `Blueborn Games` publisher/studio brand, support contact,
+`com.game.diver.deepdivedrift` package identifier, and expected Pages URLs are confirmed.
+The expected privacy URL is `https://giginar.github.io/JavaPlatformer/privacy.html` and
+must not be treated as live until Pages activation and URL verification succeed.
 
 ## Screenshot inventory
 
@@ -141,9 +141,9 @@ shortcut is justified for Phase 12.
 24-bit RGB PNG without alpha and meets the mandatory file specification. It uses the
 rights-documented CC0/OFL visual chain and does not contain the rights-blocked boss.
 
-Status: **CONDITIONALLY USABLE**. The image visibly says `DEEP DIVE DRIFT`, so it cannot
-be final until the store-name decision. Its prominent title should also be checked in
-Play's cutoff previews after the final name is applied.
+Status: **CONDITIONALLY USABLE**. The generated image uses the final
+`PROJECT BLUE: DEEP DRIFT` title. Its prominent title must still be checked in Play's
+cutoff previews after regeneration.
 
 If revision is required, use this production brief:
 
@@ -188,22 +188,29 @@ after the final brand/name decision.
 - [ ] Final Play icon approved after store-name/brand decision
 - [ ] Adaptive Android launcher icon foreground/background and mask review
 - [x] Feature graphic draft exists and meets mandatory dimensions/format
-- [ ] Feature graphic name/cutoff review after final store-name decision
+- [ ] Feature graphic cutoff review with the final store name
 - [ ] Seven or eight current phone screenshots captured from Android
 - [ ] At least three 1920×1080 actual-gameplay phone screenshots
 - [ ] Optional tablet screenshots, if chosen, captured from a tablet layout
 - [ ] Stale boss screenshot excluded/replaced
 - [ ] Boss screenshot rights gate cleared before any boss marketing image is used
-- [ ] Final public/store name selected
+- [x] Final public/store name selected: `Project Blue: Deep Drift`
 - [x] Final-draft English text within Play limits
 - [x] Final-draft Turkish text within Play limits
 - [ ] Store languages selected; Turkish listing does not imply Turkish in-game UI
-- [ ] Publisher/controller name, support/privacy contact, website, effective date, and privacy URL supplied
+- [x] Public publisher/studio brand and support/privacy contact supplied
+- [ ] Legal controller name and effective date supplied
+- [ ] GitHub Pages manually activated and expected privacy/support URLs verified live
 - [ ] Active privacy-policy URL published and checked
 
 ## Documentation consistency
 
 - Package is consistently `com.game.diver.deepdivedrift`.
+- Public publisher/studio branding is consistently `Blueborn Games`; this is not a
+  claim that the brand is an incorporated company or the verified legal controller.
+- Expected Pages base URL is `https://giginar.github.io/JavaPlatformer/`.
+  `GITHUB PAGES MANUAL ACTIVATION REQUIRED` and
+  `GITHUB PAGES ACTIVATION/URL VERIFICATION REQUIRED` remain open.
 - Current supported Android floor is `minSdk 24`; `targetSdk 36` is current. No API 21
   claim was found in the audited release materials.
 - Phase 9's 150-test count and Phase 10's 151-test count are historical evidence from

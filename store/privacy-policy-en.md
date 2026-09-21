@@ -1,28 +1,32 @@
-# DeepDive Drift Privacy Policy — Draft
+# Project Blue: Deep Drift Privacy Policy — Draft
 
 Last reviewed: September 21, 2026
 
 Effective date: `REPLACE_WITH_EFFECTIVE_DATE`
 
-**POLICY CONFIGURATION PENDING. Do not publish this draft until the public app name, target audience, launch countries, store languages, production advertising configuration, and publisher details are approved.**
+**POLICY CONFIGURATION PENDING. Do not treat this draft or its expected URL as production-ready until the effective date, legal controller name, target audience, launch countries, store languages, production advertising configuration, and live Pages URL are approved and verified.**
 
-Public app name: `REPLACE_WITH_FINAL_STORE_NAME` (current working title: DeepDive Drift)
+Public app name: `Project Blue: Deep Drift`
 
 Android package: `com.game.diver.deepdivedrift`
 
-Publisher/controller: `REPLACE_WITH_PUBLISHER_LEGAL_NAME`
+Publisher/studio brand: `Blueborn Games`
 
-Privacy contact: `REPLACE_WITH_PUBLISHER_EMAIL`
+Legal controller name: `LEGAL NAME INPUT REQUIRED`
 
-Published policy URL: `REPLACE_WITH_PRIVACY_POLICY_URL`
+Support contact: `ykucukcinar@gmail.com`
 
-Publisher/support website: `REPLACE_WITH_PUBLISHER_WEBSITE`
+Expected policy URL: `https://giginar.github.io/JavaPlatformer/privacy.html`
+
+Expected support website: `https://giginar.github.io/JavaPlatformer/support.html`
+
+URL status: `GITHUB PAGES ACTIVATION/URL VERIFICATION REQUIRED`
 
 ## Local game data
 
-DeepDive Drift stores gameplay data locally on the device. This includes Pressure Pearls, equipment and suit progression, achievements, high score and run-completion records, difficulty and challenge choices, and audio, display, screen-shake, and flashing-effect settings. Current run state is held in memory while a run is active.
+Project Blue: Deep Drift stores gameplay data locally on the device. This includes Pressure Pearls, equipment and suit progression, achievements, high score and run-completion records, difficulty and challenge choices, and audio, display, screen-shake, and flashing-effect settings. Current run state is held in memory while a run is active.
 
-The game has no player account, publisher-operated server, cloud save, real-money purchase, or social or user-generated-content feature. The Android build disables application backup. DeepDive Drift code does not transmit this local gameplay data to the publisher. A player can remove it by clearing the app's storage or uninstalling the app.
+The game has no player account, publisher-operated server, cloud save, real-money purchase, or social or user-generated-content feature. The Android build disables application backup. Project Blue: Deep Drift code does not transmit this local gameplay data to the publisher. A player can remove it by clearing the app's storage or uninstalling the app.
 
 ## Advertising and consent processing on Android
 
@@ -37,13 +41,13 @@ Google states that the Mobile Ads SDK automatically collects and shares the foll
 
 The Android package currently requests the Advertising ID permission because it is contributed by the Google Mobile Ads SDK. Android and Google advertising settings can limit, reset, or delete the Advertising ID. Age-related and regional privacy signals may prevent the Advertising ID from being transmitted. The final audience configuration has not yet been chosen.
 
-UMP requests updated consent information when the app starts, presents a consent form when Google indicates one is required, and makes privacy options available again when required. DeepDive Drift requests ads only when UMP reports that ads may be requested. The messages and choices shown depend on the user's region, the messages configured in Google's Privacy & Messaging tools, and the user's response.
+UMP requests updated consent information when the app starts, presents a consent form when Google indicates one is required, and makes privacy options available again when required. Project Blue: Deep Drift requests ads only when UMP reports that ads may be requested. The messages and choices shown depend on the user's region, the messages configured in Google's Privacy & Messaging tools, and the user's response.
 
 Google says Mobile Ads data is encrypted in transit using TLS. Google controls its own processing and retention of advertising and consent data. More information is available in [Google's privacy policy](https://policies.google.com/privacy), [Google's advertising policies](https://policies.google.com/technologies/ads), and the [Google Mobile Ads SDK disclosure](https://developers.google.com/admob/android/next-gen/privacy/play-data-disclosure).
 
 ## Other services
 
-DeepDive Drift does not include a standalone analytics, publisher crash-reporting, account, billing, payment, cloud-save, or precise-location SDK. Google Mobile Ads nevertheless uses interaction and diagnostic data for the purposes described above. SDK crash reporting is disabled in the game's Mobile Ads configuration.
+Project Blue: Deep Drift does not include a standalone analytics, publisher crash-reporting, account, billing, payment, cloud-save, or precise-location SDK. Google Mobile Ads nevertheless uses interaction and diagnostic data for the purposes described above. SDK crash reporting is disabled in the game's Mobile Ads configuration.
 
 ## Children and age treatment
 
@@ -51,8 +55,8 @@ The intended target age groups have not been selected. The app therefore has not
 
 ## Questions and deletion requests
 
-There is no publisher-held account or server copy of local game data. Players can delete local game data through Android's app-storage controls or by uninstalling the app. Requests or questions concerning publisher-controlled data must use `REPLACE_WITH_PUBLISHER_EMAIL`. Google's privacy controls and policies govern data processed by Google.
+There is no publisher-held account or server copy of local game data. Players can delete local game data through Android's app-storage controls or by uninstalling the app. Requests or questions concerning publisher-controlled data may be sent to `ykucukcinar@gmail.com`. Google's privacy controls and policies govern data processed by Google.
 
 ## Changes
 
-The published policy must show its final app name, effective date, publisher/controller identity, working privacy contact, and active public URL. This draft must be reviewed whenever the app's audience, countries, advertising configuration, SDK versions, or data practices change.
+The published policy must show its effective date, legal controller identity, and an active public URL. This draft must be reviewed whenever the app's audience, countries, advertising configuration, SDK versions, or data practices change.

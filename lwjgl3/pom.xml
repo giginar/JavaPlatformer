@@ -134,7 +134,7 @@
                                     <headerType>gui</headerType>
                                     <jar>${project.build.directory}/${desktop.jar-name}.jar</jar>
                                     <outfile>${project.build.directory}/steam-launcher/DeepDiveDrift.exe</outfile>
-                                    <errTitle>DeepDive Drift</errTitle>
+                                    <errTitle>Project Blue: Deep Drift</errTitle>
                                     <chdir>.</chdir>
                                     <icon>${project.basedir}/icons/logo.ico</icon>
                                     <stayAlive>false</stayAlive>
@@ -149,10 +149,10 @@
                                         <txtFileVersion>${release.version}</txtFileVersion>
                                         <productVersion>${release.version}.0</productVersion>
                                         <txtProductVersion>${release.version}</txtProductVersion>
-                                        <companyName>DeepDive Drift</companyName>
-                                        <fileDescription>DeepDive Drift</fileDescription>
+                                        <companyName>Blueborn Games</companyName>
+                                        <fileDescription>Project Blue: Deep Drift</fileDescription>
                                         <copyright>Copyright (c) 2026</copyright>
-                                        <productName>DeepDive Drift</productName>
+                                        <productName>Project Blue: Deep Drift</productName>
                                         <internalName>DeepDiveDrift</internalName>
                                         <originalFilename>DeepDiveDrift.exe</originalFilename>
                                     </versionInfo>

@@ -15,7 +15,9 @@ public final class AboutScreen extends BaseScreen {
     private static final String[][] PAGES = {
         {
             "CREDITS",
-            "DEEP DIVE DRIFT  v" + GameConfig.VERSION,
+            "PROJECT BLUE: DEEP DRIFT  v" + GameConfig.VERSION,
+            "Blueborn Games",
+            "Support: ykucukcinar@gmail.com",
             "",
             "ART",
             "Underwater Diving art by Luis Zuno (Ansimuz)",

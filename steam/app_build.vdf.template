@@ -1,7 +1,7 @@
 "appbuild"
 {
     "appid" "{{APP_ID}}"
-    "desc" "DeepDive Drift {{VERSION}}"
+    "desc" "Project Blue: Deep Drift {{VERSION}}"
     "buildoutput" "{{BUILD_OUTPUT}}"
     "contentroot" "{{PROJECT_ROOT}}"
     "setlive" "{{SET_LIVE_BRANCH}}"

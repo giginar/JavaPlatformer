@@ -83,7 +83,7 @@ public class MainMenuScreen extends BaseScreen {
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "DEEP DIVE DRIFT", 644f, Color.WHITE);
+        drawCentered(largeFont, "PROJECT BLUE: DEEP DRIFT", 644f, Color.WHITE);
         drawCentered(smallFont, "SURVIVE THE ABYSS", 580f, ACCENT_COLOR);
 
         for (int i = 0; i < menuOptions.length; i++) {

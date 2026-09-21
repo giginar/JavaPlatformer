@@ -417,7 +417,7 @@ function New-KeyArt([int]$Width, [int]$Height, [bool]$Portrait, [bool]$Branded) 
                     Draw-Bubbles $graphics $Width $Height 48 8812
                     if ($Branded) {
                         Set-SmoothGraphics $graphics
-                        Draw-Title $graphics 'DEEP DIVE DRIFT' ([System.Drawing.RectangleF]::new(45, 70, $Width - 90, 260)) 92 5
+                        Draw-Title $graphics 'PROJECT BLUE: DEEP DRIFT' ([System.Drawing.RectangleF]::new(45, 70, $Width - 90, 260)) 74 5
                     }
                 } else {
                     Draw-Sprite $graphics $leviathan ($Width * 0.76) ($Height * 0.60) ($Width * 0.53) ($Width * 0.41) -5
@@ -427,7 +427,7 @@ function New-KeyArt([int]$Width, [int]$Height, [bool]$Portrait, [bool]$Branded) 
                     Draw-Bubbles $graphics $Width $Height 52 4221
                     if ($Branded) {
                         Set-SmoothGraphics $graphics
-                        Draw-Title $graphics 'DEEP DIVE DRIFT' ([System.Drawing.RectangleF]::new(70, 30, $Width - 140, 220)) 118 6
+                        Draw-Title $graphics 'PROJECT BLUE: DEEP DRIFT' ([System.Drawing.RectangleF]::new(70, 30, $Width - 140, 220)) 88 6
                     }
                 }
             } finally {
@@ -458,7 +458,7 @@ function New-Wordmark([bool]$Transparent) {
             } else {
                 $graphics.Clear([System.Drawing.Color]::FromArgb(255, 255, 0, 255))
             }
-            Draw-Title $graphics 'DEEP DIVE DRIFT' ([System.Drawing.RectangleF]::new(30, 20, 1540, 380)) 132 6
+            Draw-Title $graphics 'PROJECT BLUE: DEEP DRIFT' ([System.Drawing.RectangleF]::new(30, 20, 1540, 380)) 96 6
         } finally {
             $graphics.Dispose()
         }

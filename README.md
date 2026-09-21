@@ -1,6 +1,16 @@
-# DeepDive Drift
+# Project Blue: Deep Drift
 
-DeepDive Drift, libGDX ile geliştirilen hızlı tempolu bir su altı hayatta kalma oyunudur. Dalgıcın yüksekliğini kontrol et, zıpkınla avlan, derinlik yükseltmelerini seç ve Abyssal Octopus’a ulaş.
+Project Blue: Deep Drift, Blueborn Games tarafından yayımlanan ve libGDX ile geliştirilen hızlı tempolu bir su altı hayatta kalma oyunudur. Dalgıcın yüksekliğini kontrol et, zıpkınla avlan, derinlik yükseltmelerini seç ve Abyssal Octopus’a ulaş.
+
+Destek: [ykucukcinar@gmail.com](mailto:ykucukcinar@gmail.com)
+
+GitHub Pages hazırlığı tamamlanmıştır ancak URL henüz canlı olarak doğrulanmamıştır:
+
+- `EXPECTED GITHUB PAGES URL`: https://giginar.github.io/JavaPlatformer/
+- Beklenen gizlilik politikası: https://giginar.github.io/JavaPlatformer/privacy.html
+- Beklenen destek sayfası: https://giginar.github.io/JavaPlatformer/support.html
+- `GITHUB PAGES MANUAL ACTIVATION REQUIRED`
+- `GITHUB PAGES ACTIVATION/URL VERIFICATION REQUIRED`
 
 ## Desteklenen hedefler
 

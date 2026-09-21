@@ -1,12 +1,16 @@
 # Google Play mağaza metni — Türkçe
 
-> Yalnızca geçici addır. Yayımdan önce `STORE NAME DECISION REQUIRED`.
->
 > Bu Türkçe mağaza metni, oyun içi arayüzün Türkçe olduğu anlamına gelmez. Mevcut oyun içi arayüz İngilizcedir. `STORE LANGUAGE DECISION REQUIRED`.
+
+- Yayıncı/stüdyo: Blueborn Games
+- Destek: ykucukcinar@gmail.com
+- Android application ID: `com.game.diver.deepdivedrift`
+- Beklenen gizlilik URL'si: https://giginar.github.io/JavaPlatformer/privacy.html
+- `GITHUB PAGES ACTIVATION/URL VERIFICATION REQUIRED`
 
 ## Uygulama adı
 
-DeepDive Drift
+Project Blue: Deep Drift
 
 ## Kısa açıklama
 
@@ -16,7 +20,7 @@ Beş tehlikeli bölgeye dal ve Abyssal Octopus karşısında hayatta kal
 
 Beş tehlikeli bölge boyunca derinlere in, oksijenini koru ve zıpkınınla karşılık ver.
 
-DeepDive Drift, kolay öğrenilen kontrolleri giderek artan baskıyla birleştiren tek oyunculu bir su altı arcade hayatta kalma oyunudur. Yüzmek için basılı tut, alçalmak için bırak; deniz yaratıklarından sıyrıl, zıpkınını ateşle, oksijen tüplerini topla, skor komboları kur ve derinlere indikçe koşuna özel yükseltmeler seç.
+Project Blue: Deep Drift, kolay öğrenilen kontrolleri giderek artan baskıyla birleştiren tek oyunculu bir su altı arcade hayatta kalma oyunudur. Yüzmek için basılı tut, alçalmak için bırak; deniz yaratıklarından sıyrıl, zıpkınını ateşle, oksijen tüplerini topla, skor komboları kur ve derinlere indikçe koşuna özel yükseltmeler seç.
 
 Sunlit Reef, Sinking Ruins, Current Maze, Blackwater Trench ve Abyssal Rift bölgelerini tamamla; ardından çok aşamalı Abyssal Octopus ile yüzleş. Kolay, Normal veya Zor seviyeyi seç ya da zıpkını, oksijen tüplerini, özel güçleri veya yükseltmeleri devre dışı bırakabilen isteğe bağlı meydan okuma kuralları ekle.
 

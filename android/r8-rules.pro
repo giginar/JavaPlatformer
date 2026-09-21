@@ -1,4 +1,4 @@
-# Deep Drift application rules for the standalone R8 release pipeline.
+# Project Blue: Deep Drift application rules for the standalone R8 release pipeline.
 
 # Preserve useful crash-deobfuscation metadata and reflection annotations used by SDKs.
 -keepattributes SourceFile,LineNumberTable,Signature,InnerClasses,EnclosingMethod

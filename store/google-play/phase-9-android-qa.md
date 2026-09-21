@@ -80,12 +80,12 @@ The ignored `.asset-work/phase9-qa/` directory contains the cited screenshots an
 
 | Severity | Source | Finding | Action |
 |---|---|---|---|
-| INFORMATIONAL | Deep Drift | TEST advertising mode and Google demo identifiers logged; GMA initialized; TEST ads cached | Retain as QA evidence |
+| INFORMATIONAL | Project Blue: Deep Drift | TEST advertising mode and Google demo identifiers logged; GMA initialized; TEST ads cached | Retain as QA evidence |
 | EXPECTED TEST SDK OUTPUT | Google UMP | Offline request failed with `Error making request` | Verified app fallback; no code action |
 | EXPECTED TEST SDK OUTPUT | Google Mobile Ads | TEST creative WebView/network/resource diagnostics | No code action |
 | ANDROID SYSTEM NOISE | Android/WebView/emulator | Isolated WebView process exits and platform/property diagnostics | Excluded from app defects |
 | INFORMATIONAL | ActivityManager | App exit history contains requested force stops used for process-death testing | No code action |
-| ACTIONABLE | Deep Drift | System bars could remain transiently visible immediately after lifecycle return on modern Android | Fixed with focus/resume insets restoration and delayed retry, gated while full-screen ad content is active |
+| ACTIONABLE | Project Blue: Deep Drift | System bars could remain transiently visible immediately after lifecycle return on modern Android | Fixed with focus/resume insets restoration and delayed retry, gated while full-screen ad content is active |
 
 No uncaught exception, ANR, leaked-window error, actionable OpenGL error, actionable audio failure, or unexpected application exit was found. The final emulator app-log pattern scan and both crash buffers were empty for those categories.
 

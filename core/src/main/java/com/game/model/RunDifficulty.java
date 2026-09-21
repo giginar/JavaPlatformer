@@ -14,7 +14,7 @@ public enum RunDifficulty {
         GameConfig.EASY_OXYGEN_DRAIN_MULTIPLIER,
         GameConfig.EASY_REWARD_MULTIPLIER
     ),
-    NORMAL("NORMAL", "The intended Deep Dive Drift balance", 1f, 1f, 1f, 1f, 1f, 1f),
+    NORMAL("NORMAL", "The intended Project Blue: Deep Drift balance", 1f, 1f, 1f, 1f, 1f, 1f),
     HARD(
         "HARD",
         "Faster threats, heavier hits, weaker upgrades",

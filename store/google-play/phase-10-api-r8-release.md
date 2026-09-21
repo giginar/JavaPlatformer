@@ -3,7 +3,7 @@
 Date: 2026-09-21
 Status: **CONDITIONALLY READY**
 
-Deep Drift retains `minSdk 24`, `compileSdk 36`, and `targetSdk 36`. The normal
+Project Blue: Deep Drift retains `minSdk 24`, `compileSdk 36`, and `targetSdk 36`. The normal
 Android workflow remains unoptimized, while the separate optimized profile produces
 R8-shrunk, optimized, and obfuscated TEST APK/AAB artifacts. Static package, native,
 R8, update, and focused API 29/API 36 runtime checks pass. API 24/API 26 runtime and
@@ -13,7 +13,7 @@ a true 16 KB page-size runtime are blocked by the locally installed environment.
 
 On 2026-09-21, the official Google Play target API policy says that, beginning
 2026-08-31, new Android mobile apps and app updates must target Android 16 / API 36
-or higher. Deep Drift targets API 36.
+or higher. Project Blue: Deep Drift targets API 36.
 
 **TARGET SDK POLICY: COMPLIANT**
 

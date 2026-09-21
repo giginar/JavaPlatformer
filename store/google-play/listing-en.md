@@ -1,10 +1,14 @@
 # Google Play store listing — English
 
-> Working title only. `STORE NAME DECISION REQUIRED` before publication.
+- Publisher/studio: Blueborn Games
+- Support: ykucukcinar@gmail.com
+- Android application ID: `com.game.diver.deepdivedrift`
+- Expected privacy URL: https://giginar.github.io/JavaPlatformer/privacy.html
+- `GITHUB PAGES ACTIVATION/URL VERIFICATION REQUIRED`
 
 ## App name
 
-DeepDive Drift
+Project Blue: Deep Drift
 
 ## Short description
 
@@ -14,7 +18,7 @@ Dive through five hostile stages and survive the Abyssal Octopus
 
 Descend through five hostile stages, protect your oxygen, and fight back with your harpoon.
 
-DeepDive Drift is a single-player underwater arcade survival game built around quick controls and escalating pressure. Hold to swim, release to sink, dodge hostile sea creatures, fire your harpoon, collect oxygen tanks, build score combos, and choose a run upgrade as you descend.
+Project Blue: Deep Drift is a single-player underwater arcade survival game built around quick controls and escalating pressure. Hold to swim, release to sink, dodge hostile sea creatures, fire your harpoon, collect oxygen tanks, build score combos, and choose a run upgrade as you descend.
 
 Complete Sunlit Reef, Sinking Ruins, Current Maze, Blackwater Trench, and Abyssal Rift before facing the multi-stage Abyssal Octopus. Choose Easy, Normal, or Hard difficulty, or add optional challenge modifiers that can disable harpoons, oxygen pickups, special powers, or upgrades.
 

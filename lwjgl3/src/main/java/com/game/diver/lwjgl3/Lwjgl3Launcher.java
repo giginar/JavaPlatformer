@@ -33,7 +33,7 @@ public final class Lwjgl3Launcher {
 
     private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-        configuration.setTitle("DeepDive Drift");
+        configuration.setTitle("Project Blue: Deep Drift");
         configuration.setHdpiMode(HdpiMode.Logical);
         configuration.useVsync(DisplaySettingsStore.vsyncEnabled());
         configuration.setForegroundFPS(DisplaySettingsStore.fpsLimit());

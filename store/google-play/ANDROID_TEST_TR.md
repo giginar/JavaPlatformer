@@ -14,7 +14,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Tar
 1. Derleme sonunda yolu yazdırılan `android/target/store/google-play/DeepDiveDrift-<sürüm>-universal.apk` dosyasını USB dosya aktarımıyla telefonun İndirilenler klasörüne kopyalayın. Dosyadaki sürüm Windows kurulumuyla aynı hesaptan gelir.
 2. Telefonda Dosyalar / Dosyalarım uygulamasından APK'yı açın.
 3. Android isterse bu dosya yöneticisi için **Bilinmeyen uygulamaları yükle / Bu kaynaktan izin ver** seçeneğini açıp kuruluma dönün. Menü adı Android sürümüne göre değişebilir.
-4. **Yükle**, ardından **Aç** düğmesine dokunun. Oyunun adı **DeepDive Drift**.
+4. **Yükle**, ardından **Aç** düğmesine dokunun. Oyunun adı **Project Blue: Deep Drift**.
 
 Bu yerel test Google Play hesabı ve Android Studio gerektirmez.
 Derleme bilgisayarında Java 21, Android SDK Platform 36 ve Build Tools 36.0.0 gerekir;
@@ -117,7 +117,7 @@ gerçek telefondan menü ve oynanış ekran görüntüleri alın.
 ## Google Play'e geçiş
 
 1. Telefon testlerini tamamlayın. [Yayın kontrol listesindeki](../RELEASE_CHECKLIST_TR.md) destek adresi, gizlilik politikası ve varlık hakları gibi eksikleri kapatın.
-2. Google Play geliştirici hesabını ve istenen kimlik/cihaz doğrulamalarını tamamlayın. Uygulamayı **DeepDive Drift**, türünü **Oyun** olarak oluşturun.
+2. Google Play geliştirici hesabını ve istenen kimlik/cihaz doğrulamalarını tamamlayın. Uygulamayı **Project Blue: Deep Drift**, türünü **Oyun** olarak oluşturun. Herkese açık yayıncı/stüdyo adı olarak **Blueborn Games**, destek adresi olarak **ykucukcinar@gmail.com** kullanılır; yasal geliştirici kimliği ayrıca doğrulanmalıdır.
 3. Paket kimliğini (`com.game.diver.deepdivedrift`) ilk yüklemeden önce kesinleştirin; [Google Play paket adları kalıcıdır](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en).
 4. Özel upload anahtarı oluşturun:
 

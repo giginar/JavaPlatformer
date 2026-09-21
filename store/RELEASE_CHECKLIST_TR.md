@@ -1,6 +1,11 @@
-# DeepDive Drift yayın kontrol listesi (geçici ürün adı)
+# Project Blue: Deep Drift yayın kontrol listesi
 
-`STORE NAME DECISION REQUIRED`
+- Yayıncı/stüdyo: `Blueborn Games`
+- Destek: `ykucukcinar@gmail.com`
+- Android application ID: `com.game.diver.deepdivedrift`
+- Beklenen Pages taban URL'si: `https://giginar.github.io/JavaPlatformer/`
+- `GITHUB PAGES MANUAL ACTIVATION REQUIRED`
+- `GITHUB PAGES ACTIVATION/URL VERIFICATION REQUIRED`
 
 ## Ortak
 
@@ -12,7 +17,9 @@
 - [ ] AI boss sağlayıcı/dağıtım koşullarını sonuçlandırma; boss varlığı ve boss içeren pazarlama görselleri bu adıma bağlıdır
 - [ ] Ses ve müzik haklarının belgelenmesi veya dosyaların lisanslı alternatiflerle değiştirilmesi
 - [ ] Gerçek cihazlarda son kalite testi
-- [ ] Yayıncı/yasal adını, destek-gizlilik e-postasını ve destek sitesini onaylama
+- [x] Herkese açık yayıncı/stüdyo markası `Blueborn Games` ve destek-gizlilik e-postası `ykucukcinar@gmail.com` olarak belirlendi
+- [ ] Yasal geliştirici/veri sorumlusu adını ve hesap adresi/telefon doğrulamasını tamamlama (`LEGAL NAME INPUT REQUIRED`)
+- [ ] GitHub Pages'ı GitHub Actions kaynağıyla etkinleştirip beklenen destek/gizlilik URL'lerini canlı olarak doğrulama
 - [ ] JLayer/JOrbis bildirim ve hukuk incelemesini tamamlama
 
 ## Google Play
@@ -24,11 +31,11 @@
 - [x] Veri Güvenliği çalışma sayfası ile EN/TR mağaza ve gizlilik taslakları hazırlandı
 - [x] 512×512 Play ikon taslağı mevcut; dosya biçimi ve boyutu doğrulandı
 - [x] 1024×500 özellik görseli taslağı mevcut; dosya biçimi ve boyutu doğrulandı
-- [ ] Nihai mağaza adını seçip ikon, özellik görseli, uygulama etiketi, About/Legal ve mağaza metinlerinde aynı adı kullanma
+- [x] Nihai mağaza adı `Project Blue: Deep Drift`; uygulama etiketi, About/Legal, mağaza metinleri ve oluşturulan başlık görsellerinde aynı ad kullanılıyor
 - [ ] Android için uyarlanabilir (adaptive) launcher icon foreground/background kaynaklarını hazırlama ve maske önizlemelerini doğrulama
 - [ ] Google Play geliştirici hesabı ve kimlik doğrulaması
 - [ ] Özel upload keystore oluşturma ve güvenli yedek
-- [ ] Gizlilik politikasındaki yayıncı adı, e-posta, web sitesi, yürürlük tarihi ve URL alanlarını doldurup etkin HTTPS adresinde yayınlama
+- [ ] Gizlilik politikasındaki yasal veri sorumlusu ve yürürlük tarihi alanlarını doldurup beklenen Pages URL'sini etkin HTTPS adresi olarak doğrulama
 - [ ] Pixel 8 Android sürümünden 7–8 yatay telefon ekran görüntüsü alma; en az ilk üçü 1920×1080 gerçek oynanış olmalı
 - [ ] Eski `05-leviathan.png` görüntüsünü mağaza setinden çıkarma; hak engeli çözülmedikçe boss ekran görüntüsü kullanmama
 - [ ] İsteğe bağlı tablet ekran görüntülerini yalnızca gerçek tablet düzeninden hazırlama
