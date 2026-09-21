@@ -16,7 +16,11 @@ $versionCode = $androidVersion.VersionCode
 $buildToolsVersion = [string]$projectPom.project.properties.'android.build-tools'
 $bundletoolVersion = [string]$projectPom.project.properties.'bundletool.version'
 $expectedMinSdk = [string]$projectPom.project.properties.'android.min-sdk'
+$expectedCompileSdk = [string]$projectPom.project.properties.'android.compile-sdk'
 $expectedTargetSdk = [string]$projectPom.project.properties.'android.target-sdk'
+if ($expectedCompileSdk -ne $expectedTargetSdk) {
+    throw "The custom Android pipeline compiles with android.target-sdk; compileSdk ($expectedCompileSdk) and targetSdk ($expectedTargetSdk) must agree."
+}
 [xml]$sourceManifest = Get-Content -LiteralPath `
     (Join-Path $projectRootPath 'android\src\main\AndroidManifest.xml') -Raw
 $expectedApplicationId = [string]$sourceManifest.manifest.package
@@ -107,12 +111,37 @@ $requiredManifestValues = @(
     'com.google.android.gms.common.api.GoogleApiActivity',
     'androidx.startup.InitializationProvider',
     'androidx.work.impl.background.systemjob.SystemJobService',
+    'com.game.diver.android.AndroidLauncher',
+    'com.game.diver.deepdivedrift.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION',
     'com.game.diver.deepdivedrift.ADS_MODE'
 )
 foreach ($requiredManifestValue in $requiredManifestValues) {
     if (-not $apkManifestText.Contains($requiredManifestValue)) {
         throw "Merged APK manifest is missing $requiredManifestValue"
     }
+}
+if ($apkManifestText.Contains('android.permission.RECEIVE_BOOT_COMPLETED')) {
+    throw 'Merged APK manifest must not request RECEIVE_BOOT_COMPLETED.'
+}
+[xml]$apkManifest = $apkManifestText
+$androidNamespace = 'http://schemas.android.com/apk/res/android'
+$launcherActivities = @($apkManifest.manifest.application.activity | Where-Object {
+    $_.GetAttribute('name', $androidNamespace) -eq 'com.game.diver.android.AndroidLauncher'
+})
+if ($launcherActivities.Count -ne 1 -or
+    $launcherActivities[0].GetAttribute('exported', $androidNamespace) -ne 'true') {
+    throw 'Merged APK manifest must contain exactly one exported AndroidLauncher.'
+}
+$componentNames = @(
+    @($apkManifest.manifest.application.activity) +
+    @($apkManifest.manifest.application.service) +
+    @($apkManifest.manifest.application.provider) +
+    @($apkManifest.manifest.application.receiver) |
+        ForEach-Object { $_.GetAttribute('name', $androidNamespace) }
+)
+$duplicateComponents = @($componentNames | Group-Object | Where-Object { $_.Count -gt 1 })
+if ($duplicateComponents.Count -gt 0) {
+    throw "Merged APK manifest contains duplicate components: $($duplicateComponents.Name -join ', ')"
 }
 if ($apkManifestText -match 'android:value="(DISABLED|TEST|PRODUCTION)"') {
     $adsMode = $Matches[1]
@@ -136,6 +165,8 @@ if ($adsMode -eq 'PRODUCTION' -and
 $dexPackages = (& $apkAnalyzerPath dex packages $releaseApk.FullName | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect APK DEX classes' }
 foreach ($requiredClass in @(
+    'com.game.DeepDiveDrift',
+    'com.game.diver.android.AndroidLauncher',
     'com.google.android.libraries.ads.mobile.sdk.MobileAds',
     'com.google.android.ump.UserMessagingPlatform',
     'com.game.diver.android.AndroidAdvertisingService'
@@ -150,6 +181,16 @@ if ($dexPackages.Contains('com.google.firebase.analytics')) {
 
 $apkEntries = @(& jar.exe tf $releaseApk.FullName)
 foreach ($requiredEntry in @(
+    'assets/background.png',
+    'assets/enemy_octopus_boss.png',
+    'assets/fonts/Orbitron-Regular.ttf',
+    'assets/shaders/diver-outline.frag',
+    'assets/ASSET_PROVENANCE_AUDIT.md',
+    'assets/AUDIO_RIGHTS_AUDIT.md',
+    'assets/fonts/OFL.txt',
+    'assets/licenses/LWJGL-BSD-3-Clause.txt',
+    'assets/THIRD_PARTY_NOTICES.md',
+    'assets/THIRD_PARTY_SOFTWARE_NOTICES.md',
     'res/drawable/admob_close_button_white_cross.xml',
     'res/layout/hsdp_shim_activity.xml',
     'META-INF/services/kotlinx.coroutines.internal.MainDispatcherFactory',
@@ -195,10 +236,24 @@ if ($LASTEXITCODE -ne 0) {
     throw 'bundletool validation failed'
 }
 
+$bundleEntries = @(& jar.exe tf $releaseBundle.FullName)
+foreach ($requiredBundleEntry in @(
+    'base/dex/classes.dex',
+    'base/assets/background.png',
+    'base/assets/enemy_octopus_boss.png',
+    'base/assets/fonts/Orbitron-Regular.ttf',
+    'base/assets/shaders/diver-outline.frag',
+    'base/assets/THIRD_PARTY_NOTICES.md',
+    'base/assets/THIRD_PARTY_SOFTWARE_NOTICES.md'
+)) {
+    if ($requiredBundleEntry -notin $bundleEntries) {
+        throw "AAB is missing required content $requiredBundleEntry"
+    }
+}
+
 $bundleManifestText = (& java.exe -jar $bundletoolPath.FullName dump manifest "--bundle=$($releaseBundle.FullName)" --module=base | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Unable to read the AAB version metadata' }
 [xml]$bundleManifest = $bundleManifestText
-$androidNamespace = 'http://schemas.android.com/apk/res/android'
 if ($bundleManifest.manifest.GetAttribute('versionName', $androidNamespace) -ne $version -or
     $bundleManifest.manifest.GetAttribute('versionCode', $androidNamespace) -ne [string]$versionCode) {
     throw "AAB version does not match $version (versionCode $versionCode). Rebuild the Android package."
@@ -308,7 +363,7 @@ if (($RequireSignedBundle -or (Test-Path -LiteralPath (Join-Path $projectRootPat
 
 Write-Host 'Android verification passed:'
 Write-Host "  APK and AAB version: $version (versionCode $versionCode)"
-Write-Host "  Package: $expectedApplicationId; minSdk $expectedMinSdk; targetSdk $expectedTargetSdk"
+Write-Host "  Package: $expectedApplicationId; minSdk $expectedMinSdk; compileSdk $expectedCompileSdk; targetSdk $expectedTargetSdk"
 Write-Host "  Advertising mode: $adsMode; GMA/UMP classes, resources, and merged manifest verified"
 Write-Host '  Java service/resources and consumer-rule inventory: present'
 Write-Host '  Audio assets: present and uncompressed for Android openFd'

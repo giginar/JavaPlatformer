@@ -150,7 +150,7 @@ Dahili test bu şartın yerine geçmez. [Google Play test koşulları](https://s
 
 ## Bu çalışma sırasında doğrulanan durum
 
-- 21 Eylül 2026: 148 birim testi geçti; Android `1.0.46` (versionCode `47`) release paketi ve bağımsız doğrulayıcı başarıyla tamamlandı.
+- 21 Eylül 2026: Phase 8 doğrulamasında 150 test geçti; Android `1.0.47` (versionCode `48`) DISABLED ve TEST paketleri ile bağımsız doğrulayıcı başarıyla tamamlandı.
 - Evrensel test APK'sının imzası, 16 KB ZIP hizalaması, AAB yapısı, sıkıştırılmamış sesler ve dört ABI'nin ELF hizalaması doğrulandı.
 - GMA Next-Gen/UMP sınıfları, kaynakları ve birleşik manifesti `DISABLED` reklam modu paketinde doğrulandı.
 - AAB şu anda imzasızdır; özel upload anahtarı henüz yapılandırılmamıştır.

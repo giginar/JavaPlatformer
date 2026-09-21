@@ -110,6 +110,7 @@ public final class Lwjgl3Launcher {
                 case "--debug" -> System.setProperty(DEBUG_PROPERTY, "true");
                 case "--autostart" -> System.setProperty("deepdive.autostart", "true");
                 case "--open-options" -> System.setProperty("deepdive.openOptions", "true");
+                case "--open-controls" -> System.setProperty("deepdive.openControls", "true");
                 case "--open-about" -> System.setProperty("deepdive.openAbout", "true");
                 case "--open-store" -> System.setProperty("deepdive.openStore", "true");
                 case "--open-setup" -> System.setProperty("deepdive.openSetup", "true");

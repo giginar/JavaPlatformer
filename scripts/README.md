@@ -63,6 +63,9 @@ dağıtılan paketlerin sürümü yukarıdaki ortak hesapla belirlenir.
 | `build-android-test.ps1` | APK/AAB üretir ve doğrular. USB üzerinden kurmak için ayrıca `-Install` kullanılabilir. |
 | `build-android-release.ps1` | Maven Android profilinin çağırdığı paketleme yardımcısı; SDK parametrelerini Maven verir. Günlük kullanımda `build.ps1 -Target Android` seçin. |
 | `verify-android-release.ps1` | Android paketi üretir ve doğrular; `-SkipBuild` mevcut paketi doğrular. `-RequireSignedBundle` Google Play yükleme imzasını zorunlu tutar. |
+| `verify-android-dependency-lock.ps1` | Kilitli reklam bağımlılıklarının tam envanterini ve SHA-256 değerlerini doğrular. |
+| `verify-desktop-smoke.ps1` | Paketlenmiş masaüstü JAR'ını sekiz güvenli ekranda başlatır, gerçek kare yakalar ve temiz çıkışı doğrular. |
+| `verify-project.ps1` | Testleri, masaüstü paketi/smoke geçişini, Android DISABLED/TEST yapılarını, paket doğrulamasını ve beklenen PRODUCTION hatalarını tek komutta çalıştırır. |
 | `build-steam-packages.ps1` | Maven Steam profilinin çağırdığı paketleme yardımcısı. Günlük kullanımda `build.ps1 -Target Steam` seçin. |
 | `prepare-steam-release.ps1` | App/Depot ID'leriyle Steam paketlerini ve yükleme VDF dosyalarını üretir. |
 | `upload-steam-build.ps1` | Hazırlanan VDF ile Steam'e yükler; paket derlemez. |

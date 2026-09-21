@@ -75,6 +75,8 @@ public class DeepDiveDrift extends Game {
             showMainMenu();
             if (Boolean.getBoolean("deepdive.openAbout")) {
                 openAbout();
+            } else if (Boolean.getBoolean("deepdive.openControls")) {
+                openControls();
             } else if (Boolean.getBoolean("deepdive.openOptions")) {
                 openOptions();
             }
