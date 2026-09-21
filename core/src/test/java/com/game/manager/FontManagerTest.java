@@ -19,42 +19,30 @@ class FontManagerTest {
     void actualRuntimeFontGenerationProducesEveryTurkishGlyphAtEveryUiSize() {
         GdxNativesLoader.load();
         Path fontDirectory = projectRoot().resolve("assets/fonts");
-        FreeTypeFontGenerator orbitron = generator(fontDirectory.resolve("Orbitron-Regular.ttf"));
-        FreeTypeFontGenerator fallback = generator(fontDirectory.resolve("Oxanium-Regular.ttf"));
+        FreeTypeFontGenerator generator = generator(fontDirectory.resolve("Oxanium-Regular.ttf"));
         try {
             for (int size : new int[] {18, 28, 56}) {
-                assertGeneratedGlyphsAtSize(orbitron, fallback, size);
+                assertGeneratedGlyphsAtSize(generator, size);
             }
         } finally {
-            orbitron.dispose();
-            fallback.dispose();
+            generator.dispose();
         }
     }
 
-    private static void assertGeneratedGlyphsAtSize(FreeTypeFontGenerator orbitron,
-                                                     FreeTypeFontGenerator fallback,
-                                                     int size) {
-        PixmapPacker orbitronPacker = packer();
-        PixmapPacker fallbackPacker = packer();
+    private static void assertGeneratedGlyphsAtSize(FreeTypeFontGenerator generator, int size) {
+        PixmapPacker packer = packer();
         try {
             FreeTypeFontGenerator.FreeTypeFontParameter parameter = parameter(size);
-            parameter.packer = orbitronPacker;
-            FreeTypeFontGenerator.FreeTypeBitmapFontData orbitronData = orbitron.generateData(parameter);
-
-            parameter.characters = FontManager.FALLBACK_GLYPHS;
-            parameter.packer = fallbackPacker;
-            FreeTypeFontGenerator.FreeTypeBitmapFontData fallbackData = fallback.generateData(parameter);
+            parameter.packer = packer;
+            FreeTypeFontGenerator.FreeTypeBitmapFontData fontData = generator.generateData(parameter);
 
             for (char character : FontManager.TURKISH_GLYPHS.toCharArray()) {
-                BitmapFont.Glyph glyph = orbitronData.getGlyph(character);
-                if (!FontManager.isRenderable(glyph)) glyph = fallbackData.getGlyph(character);
-                BitmapFont.Glyph renderedGlyph = glyph;
+                BitmapFont.Glyph renderedGlyph = fontData.getGlyph(character);
                 assertTrue(FontManager.isRenderable(renderedGlyph),
                     () -> String.format("U+%04X did not render at %d px", (int) character, size));
             }
         } finally {
-            orbitronPacker.dispose();
-            fallbackPacker.dispose();
+            packer.dispose();
         }
     }
 
