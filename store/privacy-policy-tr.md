@@ -2,13 +2,21 @@
 
 Son inceleme: 21 Eylül 2026
 
-**POLİTİKA YAPILANDIRMASI BEKLİYOR. Hedef kitle, yayın ülkeleri, mağaza dilleri, üretim reklam yapılandırması ve yayıncı bilgileri onaylanmadan bu taslağı yayımlamayın.**
+Yürürlük tarihi: `YURURLUK_TARIHI_BURAYA`
+
+**POLİTİKA YAPILANDIRMASI BEKLİYOR. Uygulamanın yayımlanacak adı, hedef kitle, yayın ülkeleri, mağaza dilleri, üretim reklam yapılandırması ve yayıncı bilgileri onaylanmadan bu taslağı yayımlamayın.**
+
+Yayımlanacak uygulama adı: `NIHAI_MAGAZA_ADI_BURAYA` (mevcut geçici ad: DeepDive Drift)
+
+Android paket adı: `com.game.diver.deepdivedrift`
 
 Yayıncı/veri sorumlusu: `YAYINCI_YASAL_ADI_BURAYA`
 
 Gizlilik iletişim adresi: `YAYINCI_EPOSTASI_BURAYA`
 
 Yayımlanmış politika URL'si: `GIZLILIK_POLITIKASI_URL_BURAYA`
+
+Yayıncı/destek sitesi: `YAYINCI_WEB_SITESI_BURAYA`
 
 ## Cihazdaki oyun verileri
 
@@ -47,4 +55,4 @@ Yayıncı tarafından tutulan bir hesap veya yerel oyun verilerinin sunucu kopya
 
 ## Değişiklikler
 
-Yayımlanan politika yürürlük tarihini ve çalışan bir gizlilik iletişim adresini göstermelidir. Uygulamanın hedef kitlesi, ülkeleri, reklam yapılandırması, SDK sürümleri veya veri uygulamaları değiştiğinde bu taslak yeniden incelenmelidir.
+Yayımlanan politika nihai uygulama adını, yürürlük tarihini, yayıncı/veri sorumlusu kimliğini, çalışan bir gizlilik iletişim adresini ve etkin genel URL'yi göstermelidir. Uygulamanın hedef kitlesi, ülkeleri, reklam yapılandırması, SDK sürümleri veya veri uygulamaları değiştiğinde bu taslak yeniden incelenmelidir.

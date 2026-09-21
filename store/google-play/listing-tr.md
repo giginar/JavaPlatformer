@@ -1,36 +1,48 @@
 # Google Play mağaza metni — Türkçe
 
+> Yalnızca geçici addır. Yayımdan önce `STORE NAME DECISION REQUIRED`.
+>
+> Bu Türkçe mağaza metni, oyun içi arayüzün Türkçe olduğu anlamına gelmez. Mevcut oyun içi arayüz İngilizcedir. `STORE LANGUAGE DECISION REQUIRED`.
+
 ## Uygulama adı
 
 DeepDive Drift
 
 ## Kısa açıklama
 
-Yüz, zıpkınını ateşle ve Abyssal Octopus ortaya çıkana kadar hayatta kal.
+Beş tehlikeli bölgeye dal ve Abyssal Octopus karşısında hayatta kal
 
 ## Tam açıklama
 
-Derinlik seni aşağı çekerken oksijenini koru, deniz yaratıklarının saldırılarından sıyrıl ve zıpkınınla karşılık ver.
+Beş tehlikeli bölge boyunca derinlere in, oksijenini koru ve zıpkınınla karşılık ver.
 
-DeepDive Drift, tek dokunuşla öğrenilen ama ustalaşması giderek zorlaşan bir su altı hayatta kalma oyunudur. Temel oynanış ağ bağlantısı olmadan da kullanılabilir. Yüzmek için basılı tut, alçalmak için bırak ve yaklaşan tehditleri zıpkınla avla. Oksijen tüplerini topla, kombonu büyüt ve her yeni derinlik seviyesinde dalgıcını güçlendiren yükseltmelerden birini seç.
+DeepDive Drift, kolay öğrenilen kontrolleri giderek artan baskıyla birleştiren tek oyunculu bir su altı arcade hayatta kalma oyunudur. Yüzmek için basılı tut, alçalmak için bırak; deniz yaratıklarından sıyrıl, zıpkınını ateşle, oksijen tüplerini topla, skor komboları kur ve derinlere indikçe koşuna özel yükseltmeler seç.
+
+Sunlit Reef, Sinking Ruins, Current Maze, Blackwater Trench ve Abyssal Rift bölgelerini tamamla; ardından çok aşamalı Abyssal Octopus ile yüzleş. Kolay, Normal veya Zor seviyeyi seç ya da zıpkını, oksijen tüplerini, özel güçleri veya yükseltmeleri devre dışı bırakabilen isteğe bağlı meydan okuma kuralları ekle.
+
+Dalışlarla yerel ilerlemede kullanılan Pressure Pearls kazan. Bunları kalıcı ekipman için harca, farklı bonuslar sunan dalış kostümlerinin kilidini açıp istediğini kuşan ve 40 başarımın izini sür.
 
 Öne çıkanlar:
 
-- Hızlı, tekrar oynanabilir hayatta kalma koşuları
+- Beş bölgeli, tek oyunculu hayatta kalma koşuları
 - Farklı hareket ve saldırı düzenlerine sahip deniz canlıları
-- Rapid Fire, Piercing, Air Recycler, Pressurized Tanks ve Hydro Fins yükseltmeleri
+- Zıpkın, oksijen ve hareket özelliklerini değiştiren koşu yükseltmeleri
+- Kalıcı ekipman ve seçilebilen dört dalış kostümü
+- Üç zorluk seviyesi ve dört isteğe bağlı meydan okuma kuralı
+- Yerel olarak izlenen 40 başarım
 - Çok aşamalı Abyssal Octopus boss savaşı
-- Yerel en yüksek skor kaydı
+- Yerel Pressure Pearls, ilerleme, başarım ve en yüksek skor kaydı
 - Ekran sarsıntısını ve flaş efektlerini kapatma seçenekleri
-- Hesap gerektirmeyen ve çevrimdışı kullanılabilen temel oynanış
+- Hesap ve uygulama içi satın alma yok
+- Temel oynanış ağ bağlantısı olmadan kullanılabilir
 
 Ne kadar derine inebilirsin?
 
 ## Sınıflandırma önerisi
 
 - Kategori: Oyun / Arcade
-- Etiketler: Arcade, Tek oyunculu, Çevrimdışı
-- Reklam: Android'de var (üretim yapılandırması bekliyor)
+- Etiketler: Arcade, Tek oyunculu
+- Reklam: Var — Play Console'da `Reklam içerir` beyanı gereklidir (üretim yapılandırması bekliyor)
 - Uygulama içi satın alma: Yok
 
-Yaş derecesi ve hedef kitle, Play Console anketindeki nihai cevaplara göre belirlenmelidir.
+Yaş derecesi ve hedef kitle, Play Console anketindeki nihai cevaplara göre belirlenmelidir. Bu metin uygulamanın hiç ağ kullanmadığını iddia etmez; reklam ve izin işlemleri ağ bağlantısı gerektirir.

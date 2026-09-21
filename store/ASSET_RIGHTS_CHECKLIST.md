@@ -7,7 +7,7 @@
 | Oyun görselleri | **İNCELEME** | CC0 kaynak zincirine ek olarak `enemy_octopus_boss.png` üretken AI ile oluşturuldu; kayıt `assets/GENERATED_ASSETS.md` içinde |
 | Windows/macOS/Android ikonları | **HAZIR** | CC0 dalgıçtan ve projeye özgü geometrilerden deterministik üretim |
 | Steam ve Google Play görselleri | **HAZIR** | Yalnızca doğrulanmış CC0/OFL kaynaklarından deterministik üretim |
-| Masaüstü ekran görüntüleri | **HAZIR** | Gerçek oyun framebuffer çıktısı; yalnızca doğrulanmış oyun görsellerini içerir |
+| Masaüstü ekran görüntüleri | **İNCELEME** | Gerçek oyun framebuffer çıktısıdır; `05-leviathan.png` eski adı ve hakları çözülmemiş AI boss varlığını içerir. Diğerleri nihai Android telefon setinin yerine geçmez |
 | Fontlar | **HAZIR** | Orbitron, SIL Open Font License 1.1; tam metin dağıtımda |
 | Sesler ve müzik | **BEKLİYOR** | Mevcut WAV/MP3 dosyalarının kaynak veya satın alma kayıtları bulunamadı |
 
@@ -33,6 +33,7 @@ zinciriyle değiştirilmiştir. Kullanılmayan `libgdx.png` ve `white_pixel.png`
 ## Onay kutuları
 
 - [ ] Üretken AI ile oluşturulan ahtapot varlığı için platform beyanı ve dağıtım koşulları doğrulandı
+- [ ] Ahtapot varlığının sağlayıcı/dağıtım koşulları doğrulanana kadar boss içeren ekran görüntülerini üretim pazarlamasından hariç tutma
 - [x] Uygulama ikonlarının kaynak ve üretim kaydı eklendi
 - [x] Steam ve Google Play mağaza görsellerinde lisanssız içerik yok
 - [x] Font lisansı dağıtıma eklendi

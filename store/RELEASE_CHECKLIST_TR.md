@@ -1,15 +1,19 @@
-# DeepDive Drift yayın kontrol listesi
+# DeepDive Drift yayın kontrol listesi (geçici ürün adı)
+
+`STORE NAME DECISION REQUIRED`
 
 ## Ortak
 
 - [x] Windows ve Android için ortak otomatik sürüm; `versionName` commit sayısından, Android `versionCode` temel değer + commit sayısından üretilir
 - [x] Otomatik birim testleri
 - [x] Klavye, fare, gamepad ve dokunmatik girişleri
-- [ ] Temel çevrimdışı çalışma yeniden doğrulanacak; Google Ads + UMP var, analitik ve hesap SDK’sı yok
-- [x] Görsel, ikon ve mağaza görseli haklarının belgelenmesi (CC0/OFL kaynak zinciri eklendi)
+- [x] Temel çevrimdışı çalışma Phase 9 Pixel 8 testinde doğrulandı; Google Ads + UMP var, bağımsız analitik ve hesap SDK’sı yok
+- [x] Boss dışındaki görsel, ikon ve mağaza görseli haklarının belgelenmesi (CC0/OFL kaynak zinciri eklendi)
+- [ ] AI boss sağlayıcı/dağıtım koşullarını sonuçlandırma; boss varlığı ve boss içeren pazarlama görselleri bu adıma bağlıdır
 - [ ] Ses ve müzik haklarının belgelenmesi veya dosyaların lisanslı alternatiflerle değiştirilmesi
 - [ ] Gerçek cihazlarda son kalite testi
-- [ ] Yayıncı destek e-postası ve destek sayfası
+- [ ] Yayıncı/yasal adını, destek-gizlilik e-postasını ve destek sitesini onaylama
+- [ ] JLayer/JOrbis bildirim ve hukuk incelemesini tamamlama
 
 ## Google Play
 
@@ -17,12 +21,17 @@
 - [x] `targetSdk 36`, dört ABI ve AAB üretimi
 - [x] APK ZIP hizalaması ve dört ABI için 16 KB ELF uyumluluğu doğrulandı
 - [x] Android ses dosyaları sıkıştırılmadan paketleniyor; evrensel APK ve örnek ARM64 split üzerinde doğrulandı
-- [x] Veri güvenliği ve mağaza metni taslakları
-- [x] 512×512 ikon ve 1024×500 özellik görseli üretildi
+- [x] Veri Güvenliği çalışma sayfası ile EN/TR mağaza ve gizlilik taslakları hazırlandı
+- [x] 512×512 Play ikon taslağı mevcut; dosya biçimi ve boyutu doğrulandı
+- [x] 1024×500 özellik görseli taslağı mevcut; dosya biçimi ve boyutu doğrulandı
+- [ ] Nihai mağaza adını seçip ikon, özellik görseli, uygulama etiketi, About/Legal ve mağaza metinlerinde aynı adı kullanma
+- [ ] Android için uyarlanabilir (adaptive) launcher icon foreground/background kaynaklarını hazırlama ve maske önizlemelerini doğrulama
 - [ ] Google Play geliştirici hesabı ve kimlik doğrulaması
 - [ ] Özel upload keystore oluşturma ve güvenli yedek
-- [ ] Gizlilik politikasındaki e-posta alanını doldurma ve HTTPS üzerinde yayınlama
-- [ ] Gerçek Android cihazdan telefon ekran görüntüleri alma
+- [ ] Gizlilik politikasındaki yayıncı adı, e-posta, web sitesi, yürürlük tarihi ve URL alanlarını doldurup etkin HTTPS adresinde yayınlama
+- [ ] Pixel 8 Android sürümünden 7–8 yatay telefon ekran görüntüsü alma; en az ilk üçü 1920×1080 gerçek oynanış olmalı
+- [ ] Eski `05-leviathan.png` görüntüsünü mağaza setinden çıkarma; hak engeli çözülmedikçe boss ekran görüntüsü kullanmama
+- [ ] İsteğe bağlı tablet ekran görüntülerini yalnızca gerçek tablet düzeninden hazırlama
 - [ ] İkonu, özellik görselini ve telefon ekran görüntülerini Play Console’a yükleme
 - [ ] İçerik derecelendirmesi, hedef kitle ve uygulama erişimi anketleri
 - [ ] Amaçlanan hedef yaş gruplarını seçme; çocuklar dahilse Families, nötr yaş ekranı ve reklam SDK uygunluğunu tamamlama
@@ -31,12 +40,15 @@
 - [ ] Advertising ID beyanını son hedef kitle ve `AD_ID` izniyle doğrulama
 - [ ] AdMob Privacy & Messaging bölgesel mesajlarını yayımlama ve gizlilik seçeneklerini gerçek cihazda doğrulama
 - [ ] Ödüllü reklam faydasını ayrıca onaylama; onaya kadar oyuncuya gösterilen yerleşimi kapalı tutma
+- [ ] Gerçek AdMob yapılandırmasını ve üretim reklam birimi kimliklerini ekleme/doğrulama
 - [ ] Kapalı test/üretim erişimi için hesabın istediği test koşullarını tamamlama
 - [ ] İmzalı AAB'yi yükleyip Play App Signing'i etkinleştirme
+- [ ] 16 KB sayfa boyutlu gerçek çalışma ortamında runtime doğrulaması
+- [ ] Ertelenen Phase 11 uzun süre/endurance QA ve belirlenmiş düşük seviye cihaz sürdürülebilir performans QA'sı
 
 Phase 7 iç politika çalışma sayfası: [Google Play politika, hedef kitle ve Veri Güvenliği denetimi](google-play/phase-7-policy-audit.md).
 
-Yayına engel durumlar geçerlidir: sekiz ses varlığının ticari kullanım kanıtı, AI boss sağlayıcı/dağıtım koşulları, JLayer/JOrbis bildirim incelemesi, fiziksel cihaz ve reklam/UMP QA'sı, gerçek AdMob yapılandırması/üretim kimlikleri ve üretim imzalama tamamlanmamıştır.
+Yayına engel durumlar geçerlidir: sekiz ses varlığının ticari kullanım kanıtı, AI boss sağlayıcı/dağıtım koşulları, JLayer/JOrbis bildirim incelemesi, gerçek AdMob yapılandırması ve üretim kimlikleri, üretim imzalama, imzasız üretim AAB'si, gerçek 16 KB çalışma ortamı, ertelenen Phase 11 uzun süre/endurance QA'sı, belirlenmiş düşük seviye cihaz sürdürülebilir performans QA'sı ve eski boss ekran görüntüsünün değiştirilmesi tamamlanmamıştır.
 
 ## Steam
 
@@ -44,7 +56,7 @@ Yayına engel durumlar geçerlidir: sekiz ses varlığının ticari kullanım ka
 - [x] Açılmış depot klasörleri ve SteamPipe VDF üreticisi
 - [x] Klavye/fare ve gamepad desteği
 - [x] Türkçe/İngilizce mağaza açıklaması taslakları
-- [x] Güncel Steam grafik varlıkları ve beş adet 1920×1080 gerçek oyun ekran görüntüsü
+- [ ] Steam grafik varlıkları ile dört boss dışı 1920×1080 masaüstü görüntüsü mevcut; eski boss görüntüsü ad ve hak engeli nedeniyle kullanılmamalı
 - [x] Windows paketinde yerel açılış testi
 - [ ] Steamworks ortak hesabı, banka/vergi ve Steam Direct işlemleri
 - [ ] App ID ile Windows/Linux Depot ID’lerini betiğe verme

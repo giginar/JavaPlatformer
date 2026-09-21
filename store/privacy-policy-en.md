@@ -2,13 +2,21 @@
 
 Last reviewed: September 21, 2026
 
-**POLICY CONFIGURATION PENDING. Do not publish this draft until the target audience, launch countries, store languages, production advertising configuration, and publisher details are approved.**
+Effective date: `REPLACE_WITH_EFFECTIVE_DATE`
+
+**POLICY CONFIGURATION PENDING. Do not publish this draft until the public app name, target audience, launch countries, store languages, production advertising configuration, and publisher details are approved.**
+
+Public app name: `REPLACE_WITH_FINAL_STORE_NAME` (current working title: DeepDive Drift)
+
+Android package: `com.game.diver.deepdivedrift`
 
 Publisher/controller: `REPLACE_WITH_PUBLISHER_LEGAL_NAME`
 
 Privacy contact: `REPLACE_WITH_PUBLISHER_EMAIL`
 
 Published policy URL: `REPLACE_WITH_PRIVACY_POLICY_URL`
+
+Publisher/support website: `REPLACE_WITH_PUBLISHER_WEBSITE`
 
 ## Local game data
 
@@ -47,4 +55,4 @@ There is no publisher-held account or server copy of local game data. Players ca
 
 ## Changes
 
-The published policy must show its effective date and a working privacy contact. This draft must be reviewed whenever the app's audience, countries, advertising configuration, SDK versions, or data practices change.
+The published policy must show its final app name, effective date, publisher/controller identity, working privacy contact, and active public URL. This draft must be reviewed whenever the app's audience, countries, advertising configuration, SDK versions, or data practices change.
