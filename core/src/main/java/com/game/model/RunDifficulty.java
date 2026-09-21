@@ -1,6 +1,8 @@
 package com.game.model;
 
 import com.game.GameConfig;
+import com.game.i18n.Localization;
+import java.util.Locale;
 
 /** Player-selected difficulty layered on top of the five-stage depth curve. */
 public enum RunDifficulty {
@@ -50,11 +52,11 @@ public enum RunDifficulty {
     }
 
     public String title() {
-        return title;
+        return Localization.textOr(key("title"), title);
     }
 
     public String description() {
-        return description;
+        return Localization.textOr(key("description"), description);
     }
 
     public float enemySpeedMultiplier() {
@@ -79,5 +81,9 @@ public enum RunDifficulty {
 
     public float rewardMultiplier() {
         return rewardMultiplier;
+    }
+
+    private String key(String part) {
+        return "difficulty." + name().toLowerCase(Locale.ROOT) + "." + part;
     }
 }

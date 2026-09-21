@@ -1,5 +1,8 @@
 package com.game.model;
 
+import com.game.i18n.Localization;
+import java.util.Locale;
+
 public enum ChallengeModifier {
     NO_WEAPON("NO HARPOON", "Harpoon firing is completely disabled"),
     NO_OXYGEN_PICKUPS("NO OXYGEN PICKUPS",
@@ -16,10 +19,14 @@ public enum ChallengeModifier {
     }
 
     public String title() {
-        return title;
+        return Localization.textOr(key("title"), title);
     }
 
     public String description() {
-        return description;
+        return Localization.textOr(key("description"), description);
+    }
+
+    private String key(String part) {
+        return "challenge." + name().toLowerCase(Locale.ROOT) + "." + part;
     }
 }

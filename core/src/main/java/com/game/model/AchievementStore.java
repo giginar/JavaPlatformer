@@ -1,6 +1,7 @@
 package com.game.model;
 
 import com.badlogic.gdx.Preferences;
+import com.game.i18n.Localization;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -176,7 +177,9 @@ public final class AchievementStore {
             case HUNTER_250 -> boundedProgress(KILLS_KEY, 250);
             case OXYGEN_25 -> boundedProgress(OXYGEN_KEY, 25);
             case POWER_UPS_25 -> boundedProgress(POWER_UP_KEY, 25);
-            default -> isUnlocked(achievement) ? "UNLOCKED" : "LOCKED";
+            default -> isUnlocked(achievement)
+                ? Localization.textOr("common.unlocked", "UNLOCKED")
+                : Localization.textOr("common.locked", "LOCKED");
         };
     }
 

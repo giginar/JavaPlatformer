@@ -10,6 +10,7 @@ import com.game.GameConfig;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.Localization;
 import com.game.model.Achievement;
 import com.game.model.AchievementStore;
 
@@ -76,17 +77,17 @@ public final class AchievementScreen extends BaseScreen {
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "ACHIEVEMENTS", 700f, Color.WHITE);
-        drawCentered(mediumFont, achievements.unlockedCount() + " / " + ACHIEVEMENTS.length
-            + " UNLOCKED", 651f, Color.GOLD);
+        drawCentered(largeFont, Localization.text("achievements.title"), 700f, Color.WHITE);
+        drawCentered(mediumFont, Localization.text("achievements.count",
+            achievements.unlockedCount(), ACHIEVEMENTS.length), 651f, Color.GOLD);
         for (int i = 0; i < visible; i++) {
             drawAchievement(first + i, i);
         }
-        drawCentered(smallFont, "PAGE " + (page() + 1) + " / " + pageCount(),
+        drawCentered(smallFont, Localization.text("common.page", page() + 1, pageCount()),
             91f, Color.CYAN);
-        drawUiButtonLabel(smallFont, "< PREV", previousPageButton, Color.LIGHT_GRAY);
-        drawUiButtonLabel(smallFont, "BACK TO MENU", backButton, Color.WHITE);
-        drawUiButtonLabel(smallFont, "NEXT >", nextPageButton, Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, Localization.text("common.previous"), previousPageButton, Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, Localization.text("common.back_to_menu"), backButton, Color.WHITE);
+        drawUiButtonLabel(smallFont, Localization.text("common.next"), nextPageButton, Color.LIGHT_GRAY);
         batch.end();
     }
 

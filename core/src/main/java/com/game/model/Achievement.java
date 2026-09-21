@@ -1,5 +1,8 @@
 package com.game.model;
 
+import com.game.i18n.Localization;
+import java.util.Locale;
+
 public enum Achievement {
     FIRST_BLOOD("FIRST BLOOD", "Defeat your first enemy"),
     HUNTER_10("REEF HUNTER", "Defeat 10 enemies across all dives"),
@@ -51,10 +54,14 @@ public enum Achievement {
     }
 
     public String title() {
-        return title;
+        return Localization.textOr(key("title"), title);
     }
 
     public String description() {
-        return description;
+        return Localization.textOr(key("description"), description);
+    }
+
+    private String key(String part) {
+        return "achievement." + name().toLowerCase(Locale.ROOT) + "." + part;
     }
 }

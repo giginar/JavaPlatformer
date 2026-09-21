@@ -15,6 +15,7 @@ import com.game.input.GameInput;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 import com.game.manager.GameAssets;
+import com.game.i18n.Localization;
 import com.game.screen.GameScreen;
 import com.game.screen.AchievementScreen;
 import com.game.screen.AboutScreen;
@@ -24,6 +25,7 @@ import com.game.screen.OptionsScreen;
 import com.game.screen.ControlsScreen;
 import com.game.screen.StoreScreen;
 import com.game.screen.SoundChoiceScreen;
+import com.game.screen.LanguageSelectionScreen;
 import com.game.settings.DisplaySettings;
 import com.game.model.RunSettings;
 import com.game.model.SaveSchema;
@@ -31,6 +33,7 @@ import com.game.model.SaveSchema;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Objects;
+import java.util.Locale;
 
 public class DeepDiveDrift extends Game {
     private final Deque<Screen> suspendedScreens = new ArrayDeque<>();
@@ -53,14 +56,24 @@ public class DeepDiveDrift extends Game {
     @Override
     public void create() {
         DisplaySettings.initialize();
-        SaveSchema.migrate(Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME));
+        var preferences = Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME);
+        SaveSchema.migrate(preferences);
+        Localization.initialize(preferences, Locale.getDefault());
         input = new GameInput();
         Gdx.input.setCatchKey(Input.Keys.BACK, true);
         GameAssets.initialize();
         FontManager.initialize();
         AudioManager.initialize();
+        if (Localization.selectionRequired() || Boolean.getBoolean("deepdive.chooseLanguage")) {
+            setScreen(new LanguageSelectionScreen(this));
+            return;
+        }
+        continueStartup();
+    }
+
+    public void continueStartup() {
         if (AudioManager.needsStartupSoundChoice()) {
-            setScreen(new SoundChoiceScreen(this));
+            replaceScreen(new SoundChoiceScreen(this));
             return;
         }
         if (Boolean.getBoolean("deepdive.openAchievements")) {

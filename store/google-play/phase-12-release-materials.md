@@ -34,7 +34,7 @@ to a single character and include the line breaks/bullet markers in the full cop
 Official source: [Create and set up your app](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en-NZ).
 
 The Turkish listing is a localized store draft. It does not claim a Turkish in-game
-interface; the current in-game UI is English. `STORE LANGUAGE DECISION REQUIRED`.
+interface; the current in-game UI supports English and Turkish. The Play Store primary language and published listing languages remain unresolved. `STORE LANGUAGE DECISION REQUIRED`.
 
 ## Feature claim audit
 

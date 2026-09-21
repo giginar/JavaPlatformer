@@ -9,58 +9,37 @@ import com.game.GameConfig;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.Localization;
 
 /** In-game credits and an honest summary of repository legal records. */
 public final class AboutScreen extends BaseScreen {
     private static final String[][] PAGES = {
         {
-            "CREDITS",
-            "PROJECT BLUE: DEEP DRIFT  v" + GameConfig.VERSION,
-            "Blueborn Games",
-            "Support: ykucukcinar@gmail.com",
+            "about.credits",
+            "brand.version",
+            "brand.studio",
+            "about.support",
             "",
-            "ART",
-            "Underwater Diving art by Luis Zuno (Ansimuz)",
-            "Released under Creative Commons Zero 1.0",
+            "about.art", "about.art.credit", "about.art.license",
             "",
-            "FONT",
-            "Orbitron by The Orbitron Project Authors",
-            "Used under the SIL Open Font License 1.1",
+            "about.font", "about.font.credit", "about.font.license",
             "",
-            "BOSS ART",
-            "AI-generated project asset; repository provenance is recorded",
-            "Provider and distribution terms still require release review"
+            "about.boss_art", "about.boss.line1", "about.boss.line2"
         },
         {
-            "NOTICES",
-            "AUDIO RIGHTS",
-            "Music and sound source or purchase records are incomplete",
-            "Audio is not marked as cleared for production distribution",
+            "about.notices", "about.audio", "about.audio.line1", "about.audio.line2",
             "",
-            "SOFTWARE",
-            "Built with libGDX, LWJGL, AndroidX, Kotlin and related libraries",
-            "License inventory and notice requirements accompany the game",
+            "about.software", "about.software.line1", "about.software.line2",
             "",
-            "ASSET RECORDS",
-            "CC0 sprite and background sources are retained with hashes",
-            "Generated icons and store art have deterministic build records",
-            "See the distributed third-party notices for details"
+            "about.assets", "about.assets.line1", "about.assets.line2", "about.assets.line3"
         },
         {
-            "PRIVACY & RELEASE STATUS",
-            "Android includes Google ads and Google's consent form",
-            "No standalone analytics, billing, account or crash-reporting SDK",
-            "Google ads process network, device, interaction and diagnostics data",
-            "Game progress and settings stay locally on the device",
-            "Privacy disclosures must accompany any production store listing",
+            "about.privacy", "about.privacy.line1", "about.privacy.line2",
+            "about.privacy.line3", "about.privacy.line4", "about.privacy.line5",
             "",
-            "RELEASE REVIEW",
-            "Audio commercial-rights records: incomplete",
-            "AI boss provider and distribution terms: manual verification",
-            "Physical-device accessibility and safe areas: manual verification",
+            "about.release", "about.release.line1", "about.release.line2", "about.release.line3",
             "",
-            "These notices describe current records and do not make",
-            "unsupported ownership or legal-compliance claims"
+            "about.release.line4", "about.release.line5"
         }
     };
 
@@ -102,13 +81,13 @@ public final class AboutScreen extends BaseScreen {
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "ABOUT / LEGAL", 700f, Color.WHITE);
+        drawCentered(largeFont, Localization.text("about.title"), 700f, Color.WHITE);
         drawPage();
-        drawCentered(smallFont, "PAGE " + (page + 1) + " / " + PAGES.length,
+        drawCentered(smallFont, Localization.text("common.page", page + 1, PAGES.length),
             91f, Color.CYAN);
-        drawUiButtonLabel(smallFont, "< PREV", previousButton, Color.LIGHT_GRAY);
-        drawUiButtonLabel(smallFont, "BACK", backButton, Color.WHITE);
-        drawUiButtonLabel(smallFont, "NEXT >", nextButton, Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, Localization.text("common.previous"), previousButton, Color.LIGHT_GRAY);
+        drawUiButtonLabel(smallFont, Localization.text("common.back"), backButton, Color.WHITE);
+        drawUiButtonLabel(smallFont, Localization.text("common.next"), nextButton, Color.LIGHT_GRAY);
         batch.end();
     }
 
@@ -151,15 +130,20 @@ public final class AboutScreen extends BaseScreen {
         String[] lines = PAGES[page];
         float y = 586f;
         for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
-            if (line.isEmpty()) {
+            String key = lines[i];
+            if (key.isEmpty()) {
                 y -= 14f;
                 continue;
             }
-            boolean heading = i == 0 || line.equals("ART") || line.equals("FONT")
-                || line.equals("BOSS ART") || line.equals("AUDIO RIGHTS")
-                || line.equals("SOFTWARE") || line.equals("ASSET RECORDS")
-                || line.equals("RELEASE REVIEW");
+            boolean heading = i == 0 || key.equals("about.art") || key.equals("about.font")
+                || key.equals("about.boss_art") || key.equals("about.audio")
+                || key.equals("about.software") || key.equals("about.assets")
+                || key.equals("about.release");
+            String line = switch (key) {
+                case "brand.version" -> "PROJECT BLUE: DEEP DRIFT  v" + GameConfig.VERSION;
+                case "brand.studio" -> "Blueborn Games";
+                default -> Localization.text(key);
+            };
             drawCentered(heading ? mediumFont : smallFont, line, y,
                 heading ? Color.CYAN : Color.LIGHT_GRAY);
             y -= heading ? 42f : 30f;

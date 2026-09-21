@@ -24,6 +24,8 @@ class RuntimeResourceInventoryTest {
         "enemy_octopus_boss.png",
         "fonts/Orbitron-Regular.ttf",
         "fonts/Orbitron-Bold.ttf",
+        "i18n/messages.properties",
+        "i18n/messages_tr.properties",
         "shaders/diver-outline.vert",
         "shaders/diver-outline.frag",
         "underwater.mp3",

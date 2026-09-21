@@ -9,45 +9,22 @@ import com.game.GameConfig;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.Localization;
 
 /** Shows the bindings for the input device currently in use. */
 public final class ControlsScreen extends BaseScreen {
     private static final String[] ACTIONS = {
-        "SWIM", "FIRE", "DASH", "PAUSE", "HELP",
-        "NAVIGATE", "SELECT / BUY", "CHANGE / TABS", "BACK"
+        "swim", "fire", "dash", "pause", "help",
+        "navigate", "select", "change", "back"
     };
     private static final String[] KEYBOARD_BINDINGS = {
-        "Hold SPACE / W / UP or LEFT MOUSE",
-        "Press Z / X or RIGHT MOUSE",
-        "C (requires a dash charge)",
-        "P / ESC",
-        "T / F1 to show the starting hints again",
-        "Arrow keys / W-A-S-D or mouse",
-        "ENTER / SPACE or click an option",
-        "LEFT / RIGHT or A / D",
-        "ESC or the BACK button"
+        "swim", "fire", "dash", "pause", "help", "navigate", "select", "change", "back"
     };
     private static final String[] CONTROLLER_BINDINGS = {
-        "Hold A / LEFT STICK UP / D-PAD UP",
-        "X / B / RB / RT",
-        "LB (requires a dash charge)",
-        "START",
-        "Y to show the starting hints again",
-        "D-PAD / LEFT STICK",
-        "A",
-        "D-PAD LEFT / RIGHT",
-        "B / BACK"
+        "swim", "fire", "dash", "pause", "help", "navigate", "select", "change", "back"
     };
     private static final String[] TOUCH_BINDINGS = {
-        "Hold anywhere along the LEFT edge",
-        "Tap anywhere along the RIGHT edge",
-        "Tap DASH when a charge is available",
-        "Tap the pause icon at the top right",
-        "Pause > OPTIONS > CONTROLS",
-        "Tap an option or a page button",
-        "Tap the item to buy or equip it",
-        "Tap a setting, a tab, or - / +",
-        "Tap the BACK button"
+        "swim", "fire", "dash", "pause", "help", "navigate", "select", "change", "back"
     };
 
     private final Background background = new Background(12f);
@@ -75,7 +52,9 @@ public final class ControlsScreen extends BaseScreen {
         boolean controller = game.input().usingController();
         boolean touch = game.input().usingTouch();
         String[] bindings = controller ? CONTROLLER_BINDINGS : touch ? TOUCH_BINDINGS : KEYBOARD_BINDINGS;
-        String device = controller ? "GAMEPAD" : touch ? "TOUCH" : "KEYBOARD & MOUSE";
+        String bindingPrefix = controller ? "controls.gamepad." : touch ? "controls.touch." : "controls.keyboard.";
+        String device = Localization.text(controller ? "controls.gamepad"
+            : touch ? "controls.touch" : "controls.keyboard");
         background.update(Math.min(delta, 0.1f));
         batch.begin();
         background.render(batch);
@@ -99,18 +78,18 @@ public final class ControlsScreen extends BaseScreen {
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "CONTROLS", 672f, Color.WHITE);
+        drawCentered(largeFont, Localization.text("controls.title"), 672f, Color.WHITE);
         drawCentered(smallFont, device, 616f, Color.CYAN);
         mediumFont.setColor(Color.WHITE);
-        mediumFont.draw(batch, "IN THE WATER", 194f, 560f);
-        mediumFont.draw(batch, "MENUS & SHOP", 194f, 290f);
+        mediumFont.draw(batch, Localization.text("controls.water"), 194f, 560f);
+        mediumFont.draw(batch, Localization.text("controls.menus"), 194f, 290f);
         for (int i = 0; i < ACTIONS.length; i++) {
             smallFont.setColor(Color.CYAN);
-            smallFont.draw(batch, ACTIONS[i], 194f, rowY(i));
+            smallFont.draw(batch, Localization.text("controls.action." + ACTIONS[i]), 194f, rowY(i));
             smallFont.setColor(Color.WHITE);
-            smallFont.draw(batch, bindings[i], 460f, rowY(i));
+            smallFont.draw(batch, Localization.text(bindingPrefix + bindings[i]), 460f, rowY(i));
         }
-        drawUiButtonLabel(smallFont, "BACK", backButton, Color.WHITE);
+        drawUiButtonLabel(smallFont, Localization.text("common.back"), backButton, Color.WHITE);
         batch.end();
     }
 

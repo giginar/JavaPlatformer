@@ -222,6 +222,8 @@ foreach ($requiredEntry in @(
     'assets/background.png',
     'assets/enemy_octopus_boss.png',
     'assets/fonts/Orbitron-Regular.ttf',
+    'assets/i18n/messages.properties',
+    'assets/i18n/messages_tr.properties',
     'assets/shaders/diver-outline.frag',
     'assets/ASSET_PROVENANCE_AUDIT.md',
     'assets/AUDIO_RIGHTS_AUDIT.md',
@@ -414,6 +416,8 @@ foreach ($requiredBundleEntry in @(
     'base/assets/background.png',
     'base/assets/enemy_octopus_boss.png',
     'base/assets/fonts/Orbitron-Regular.ttf',
+    'base/assets/i18n/messages.properties',
+    'base/assets/i18n/messages_tr.properties',
     'base/assets/shaders/diver-outline.frag',
     'base/assets/THIRD_PARTY_NOTICES.md',
     'base/assets/THIRD_PARTY_SOFTWARE_NOTICES.md'

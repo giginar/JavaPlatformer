@@ -9,6 +9,8 @@ import com.game.GameConfig;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.GameLanguage;
+import com.game.i18n.Localization;
 import com.game.settings.DisplaySettings;
 import com.game.settings.DisplaySettingsStore.WindowMode;
 
@@ -23,6 +25,7 @@ public class OptionsScreen extends BaseScreen {
         Option.SCREEN_SHAKE,
         Option.FLASH_EFFECTS,
         Option.TEXT_SIZE,
+        Option.LANGUAGE,
         Option.CONTROLS,
         Option.ABOUT,
         Option.BACK
@@ -109,7 +112,7 @@ public class OptionsScreen extends BaseScreen {
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "OPTIONS", 625f, Color.WHITE);
+        drawCentered(largeFont, Localization.text("options.title"), 625f, Color.WHITE);
 
         for (int i = 0; i < options.length; i++) {
             Color color = !optionEnabled(options[i]) ? Color.GRAY
@@ -121,10 +124,10 @@ public class OptionsScreen extends BaseScreen {
 
         if (options[selectedIndex] == Option.RESOLUTION
             && DisplaySettings.windowMode() == WindowMode.BORDERLESS) {
-            drawCentered(smallFont, "BORDERLESS MODE USES THE DESKTOP RESOLUTION",
+            drawCentered(smallFont, Localization.text("options.borderless_note"),
                 34f, Color.LIGHT_GRAY);
         } else if (DisplaySettings.restartRequired()) {
-            drawCentered(smallFont, "ANTIALIASING APPLIES AFTER RESTART",
+            drawCentered(smallFont, Localization.text("options.restart_note"),
                 34f, Color.LIGHT_GRAY);
         }
         batch.end();
@@ -206,6 +209,8 @@ public class OptionsScreen extends BaseScreen {
                 DisplaySettings.cycleTextScale(direction);
                 FontManager.setTextScale(DisplaySettings.textScale().multiplier());
             }
+            case LANGUAGE -> Localization.select(Localization.language() == GameLanguage.ENGLISH
+                ? GameLanguage.TURKISH : GameLanguage.ENGLISH);
             case CONTROLS, PRIVACY, ABOUT, BACK -> {
                 return;
             }
@@ -215,22 +220,29 @@ public class OptionsScreen extends BaseScreen {
 
     private String optionLabel(Option option) {
         return switch (option) {
-            case MUSIC -> option.label + ":  " + onOff(AudioManager.isMusicEnabled());
-            case SOUND_EFFECTS -> option.label + ":  " + onOff(AudioManager.isSfxEnabled());
-            case WINDOW_MODE -> option.label + ":  " + DisplaySettings.windowMode().name().replace('_', ' ');
-            case RESOLUTION -> option.label + ":  "
+            case MUSIC -> label(option) + ":  " + onOff(AudioManager.isMusicEnabled());
+            case SOUND_EFFECTS -> label(option) + ":  " + onOff(AudioManager.isSfxEnabled());
+            case WINDOW_MODE -> label(option) + ":  "
+                + Localization.text("options." + DisplaySettings.windowMode().name().toLowerCase(java.util.Locale.ROOT));
+            case RESOLUTION -> label(option) + ":  "
                 + (DisplaySettings.windowMode() == WindowMode.BORDERLESS
-                ? "DESKTOP" : DisplaySettings.resolution());
-            case VSYNC -> option.label + ":  " + onOff(DisplaySettings.vsyncEnabled());
-            case FPS_LIMIT -> option.label + ":  "
-                + (DisplaySettings.fpsLimit() == 0 ? "UNLIMITED" : DisplaySettings.fpsLimit());
-            case ANTIALIASING -> option.label + ":  "
-                + (DisplaySettings.desiredMsaaSamples() >= 4 ? "4X MSAA" : "OFF");
-            case SCREEN_SHAKE -> option.label + ":  " + onOff(DisplaySettings.screenShakeEnabled());
-            case FLASH_EFFECTS -> option.label + ":  " + onOff(DisplaySettings.flashEffectsEnabled());
-            case TEXT_SIZE -> option.label + ":  " + DisplaySettings.textScale().name();
-            case CONTROLS, PRIVACY, ABOUT, BACK -> option.label;
+                ? Localization.text("options.desktop") : DisplaySettings.resolution());
+            case VSYNC -> label(option) + ":  " + onOff(DisplaySettings.vsyncEnabled());
+            case FPS_LIMIT -> label(option) + ":  "
+                + (DisplaySettings.fpsLimit() == 0 ? Localization.text("options.unlimited") : DisplaySettings.fpsLimit());
+            case ANTIALIASING -> label(option) + ":  "
+                + (DisplaySettings.desiredMsaaSamples() >= 4 ? "4X MSAA" : Localization.text("common.off"));
+            case SCREEN_SHAKE -> label(option) + ":  " + onOff(DisplaySettings.screenShakeEnabled());
+            case FLASH_EFFECTS -> label(option) + ":  " + onOff(DisplaySettings.flashEffectsEnabled());
+            case TEXT_SIZE -> label(option) + ":  "
+                + Localization.text("options." + DisplaySettings.textScale().name().toLowerCase(java.util.Locale.ROOT));
+            case LANGUAGE -> label(option) + ":  " + Localization.language().nativeName();
+            case CONTROLS, PRIVACY, ABOUT, BACK -> label(option);
         };
+    }
+
+    private String label(Option option) {
+        return Localization.text(option.key);
     }
 
     private boolean optionEnabled(Option option) {
@@ -254,7 +266,7 @@ public class OptionsScreen extends BaseScreen {
     }
 
     private String onOff(boolean enabled) {
-        return enabled ? "ON" : "OFF";
+        return Localization.text(enabled ? "common.on" : "common.off");
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {
@@ -264,25 +276,26 @@ public class OptionsScreen extends BaseScreen {
     }
 
     private enum Option {
-        MUSIC("MUSIC"),
-        SOUND_EFFECTS("SOUND EFFECTS"),
-        WINDOW_MODE("WINDOW MODE"),
-        RESOLUTION("RESOLUTION"),
-        VSYNC("VSYNC"),
-        FPS_LIMIT("FPS LIMIT"),
-        ANTIALIASING("ANTIALIASING"),
-        SCREEN_SHAKE("SCREEN SHAKE"),
-        FLASH_EFFECTS("FLASH EFFECTS"),
-        TEXT_SIZE("TEXT SIZE"),
-        CONTROLS("CONTROLS"),
-        PRIVACY("PRIVACY OPTIONS"),
-        ABOUT("ABOUT / LEGAL"),
-        BACK("BACK");
+        MUSIC("options.music"),
+        SOUND_EFFECTS("options.sound_effects"),
+        WINDOW_MODE("options.window_mode"),
+        RESOLUTION("options.resolution"),
+        VSYNC("options.vsync"),
+        FPS_LIMIT("options.fps_limit"),
+        ANTIALIASING("options.antialiasing"),
+        SCREEN_SHAKE("options.screen_shake"),
+        FLASH_EFFECTS("options.flash_effects"),
+        TEXT_SIZE("options.text_size"),
+        LANGUAGE("options.language"),
+        CONTROLS("options.controls"),
+        PRIVACY("options.privacy"),
+        ABOUT("options.about"),
+        BACK("options.back");
 
-        private final String label;
+        private final String key;
 
-        Option(String label) {
-            this.label = label;
+        Option(String key) {
+            this.key = key;
         }
     }
 }

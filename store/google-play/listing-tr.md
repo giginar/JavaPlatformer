@@ -1,6 +1,6 @@
 # Google Play mağaza metni — Türkçe
 
-> Bu Türkçe mağaza metni, oyun içi arayüzün Türkçe olduğu anlamına gelmez. Mevcut oyun içi arayüz İngilizcedir. `STORE LANGUAGE DECISION REQUIRED`.
+> Oyun içi arayüz İngilizce ve Türkçe destekler. Play Store ana dili ve yayımlanacak mağaza dilleri ayrıca seçilmelidir. `STORE LANGUAGE DECISION REQUIRED`.
 
 - Yayıncı/stüdyo: Blueborn Games
 - Destek: ykucukcinar@gmail.com

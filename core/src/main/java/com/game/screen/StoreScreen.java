@@ -11,6 +11,7 @@ import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 import com.game.manager.GameAssets;
+import com.game.i18n.Localization;
 import com.game.model.DiverSuit;
 import com.game.model.PermanentUpgrade;
 import com.game.model.ProgressionStore;
@@ -45,7 +46,7 @@ public final class StoreScreen extends BaseScreen {
 
     private StoreTab activeTab = StoreTab.EQUIPMENT;
     private int selected;
-    private String status = "DISTANCE EARNS 1 PEARL PER 100 M";
+    private String status = Localization.text("store.distance_hint");
     private float statusTimer;
 
     public StoreScreen(DeepDiveDrift game) {
@@ -98,8 +99,8 @@ public final class StoreScreen extends BaseScreen {
 
         batch.begin();
         largeFont.setColor(Color.WHITE);
-        largeFont.draw(batch, "DIVE SHOP", 180f, 672f);
-        drawCenteredAt(mediumFont, "PEARLS  " + progression.pearls(), 928f, 663f, Color.GOLD);
+        largeFont.draw(batch, Localization.text("store.title"), 180f, 672f);
+        drawCenteredAt(mediumFont, Localization.text("store.balance", progression.pearls()), 928f, 663f, Color.GOLD);
         drawTabs();
         for (int i = 0; i < itemCount(); i++) {
             if (activeTab == StoreTab.EQUIPMENT) {
@@ -109,15 +110,14 @@ public final class StoreScreen extends BaseScreen {
             }
         }
         String defaultStatus = activeTab == StoreTab.EQUIPMENT
-            ? "INSTALL TIME: LV 1 = 5 MIN  |  LV 2 = 10 MIN  |  LV 3 = 15 MIN"
-            : "UNLOCK A SUIT, THEN EQUIP IT FOR YOUR NEXT DIVE";
+            ? Localization.text("store.install_times") : Localization.text("store.suit_hint");
         drawCentered(smallFont, statusTimer > 0f ? status : defaultStatus, 128f,
             statusTimer > 0f ? Color.YELLOW : Color.LIGHT_GRAY);
         if (activeTab == StoreTab.EQUIPMENT) {
-            drawCentered(smallFont, "TIMERS CONTINUE OFFLINE. READY GEAR APPLIES TO YOUR NEXT DIVE.",
+            drawCentered(smallFont, Localization.text("store.offline_hint"),
                 102f, Color.LIGHT_GRAY);
         }
-        drawUiButtonLabel(smallFont, "BACK TO MENU", backButton, Color.WHITE);
+        drawUiButtonLabel(smallFont, Localization.text("common.back_to_menu"), backButton, Color.WHITE);
         batch.end();
     }
 
@@ -181,8 +181,7 @@ public final class StoreScreen extends BaseScreen {
         activeTab = tab;
         selected = 0;
         status = tab == StoreTab.DIVE_SUITS
-            ? "UNLOCK A SUIT, THEN EQUIP IT FOR YOUR NEXT DIVE"
-            : "PERMANENT EQUIPMENT APPLIES TO EVERY SUIT";
+            ? Localization.text("store.suit_hint") : Localization.text("store.equipment_hint");
         statusTimer = 0f;
         AudioManager.playSelect();
     }
@@ -204,15 +203,15 @@ public final class StoreScreen extends BaseScreen {
         PermanentUpgrade upgrade = UPGRADES[selected];
         long remaining = progression.remainingInstallMillis(upgrade);
         if (remaining > 0L) {
-            showStatus("INSTALLING LV " + (progression.level(upgrade) + 1)
-                + " - " + formatDuration(remaining) + " LEFT", false);
+            showStatus(Localization.text("store.install_left", progression.level(upgrade) + 1,
+                formatDuration(remaining)), false);
         } else if (progression.level(upgrade) >= upgrade.maxLevel()) {
-            showStatus("ALREADY AT MAX LEVEL", false);
+            showStatus(Localization.text("store.already_max"), false);
         } else if (progression.purchase(upgrade)) {
-            showStatus(upgrade.title() + " LV " + (progression.level(upgrade) + 1)
-                + " - INSTALL STARTED", true);
+            showStatus(Localization.text("store.install_started", upgrade.title(),
+                progression.level(upgrade) + 1), true);
         } else {
-            showStatus("NOT ENOUGH PRESSURE PEARLS", false);
+            showStatus(Localization.text("store.not_enough"), false);
         }
     }
 
@@ -220,15 +219,15 @@ public final class StoreScreen extends BaseScreen {
         DiverSuit suit = SUITS[selected];
         if (progression.isSuitUnlocked(suit)) {
             if (progression.selectedSuit() == suit) {
-                showStatus(suit.title() + " IS ALREADY EQUIPPED", false);
+                showStatus(Localization.text("store.already_equipped", suit.title()), false);
             } else {
                 progression.selectSuit(suit);
-                showStatus(suit.title() + " EQUIPPED", true);
+                showStatus(Localization.text("store.equipped_status", suit.title()), true);
             }
         } else if (progression.purchaseSuit(suit)) {
-            showStatus(suit.title() + " UNLOCKED + EQUIPPED", true);
+            showStatus(Localization.text("store.unlocked_equipped", suit.title()), true);
         } else {
-            showStatus("NOT ENOUGH PRESSURE PEARLS", false);
+            showStatus(Localization.text("store.not_enough"), false);
         }
     }
 
@@ -243,9 +242,9 @@ public final class StoreScreen extends BaseScreen {
     }
 
     private void drawTabs() {
-        drawUiButtonLabel(smallFont, "EQUIPMENT", equipmentTab,
+        drawUiButtonLabel(smallFont, Localization.text("store.equipment"), equipmentTab,
             activeTab == StoreTab.EQUIPMENT ? Color.YELLOW : Color.LIGHT_GRAY);
-        drawUiButtonLabel(smallFont, "DIVE SUITS  " + unlockedSuitCount() + "/" + SUITS.length, suitsTab,
+        drawUiButtonLabel(smallFont, Localization.text("store.suits", unlockedSuitCount(), SUITS.length), suitsTab,
             activeTab == StoreTab.DIVE_SUITS ? Color.YELLOW : Color.LIGHT_GRAY);
     }
 
@@ -256,23 +255,23 @@ public final class StoreScreen extends BaseScreen {
         rowBounds(index);
         Color titleColor = index == selected ? Color.YELLOW : Color.WHITE;
         smallFont.setColor(titleColor);
-        drawFittedText(upgrade.title() + "  LV " + level + "/" + upgrade.maxLevel(),
+        drawFittedText(upgrade.title() + "  " + Localization.text("common.level") + " " + level + "/" + upgrade.maxLevel(),
             205f, row.y + 52f, 450f, false);
         smallFont.setColor(Color.LIGHT_GRAY);
         drawFittedText(upgrade.description(), 205f, row.y + 24f, 450f, false);
         String action;
         String detail;
         if (remaining > 0L) {
-            action = "INSTALLING LV " + (level + 1);
-            detail = "READY IN " + formatDuration(remaining);
+            action = Localization.text("store.installing", level + 1);
+            detail = Localization.text("store.ready_in", formatDuration(remaining));
             smallFont.setColor(Color.GOLD);
         } else if (level >= upgrade.maxLevel()) {
-            action = "MAX LEVEL";
-            detail = "READY FOR NEXT DIVE";
+            action = Localization.text("store.max_level");
+            detail = Localization.text("store.ready_next");
             smallFont.setColor(Color.CYAN);
         } else {
-            action = "BUY LV " + (level + 1) + "  |  " + progression.cost(upgrade) + " PEARLS";
-            detail = "INSTALL " + formatDuration(upgrade.installDurationMillis(level + 1));
+            action = Localization.text("store.buy", level + 1, progression.cost(upgrade));
+            detail = Localization.text("store.install", formatDuration(upgrade.installDurationMillis(level + 1)));
             smallFont.setColor(progression.pearls() >= progression.cost(upgrade)
                 ? Color.GOLD : Color.LIGHT_GRAY);
         }
@@ -332,9 +331,9 @@ public final class StoreScreen extends BaseScreen {
         smallFont.setColor(Color.LIGHT_GRAY);
         smallFont.draw(batch, suit.description(), 285f, row.y + 24f);
 
-        String state = equipped ? "EQUIPPED"
-            : unlocked ? "OWNED  |  EQUIP"
-            : suit.cost() + " PEARLS";
+        String state = equipped ? Localization.text("store.equipped")
+            : unlocked ? Localization.text("store.owned_equip")
+            : suit.cost() + " " + Localization.text("common.pearls");
         smallFont.setColor(equipped ? Color.CYAN : unlocked ? Color.LIME : Color.GOLD);
         smallFont.draw(batch, state, 865f, row.y + 38f);
     }

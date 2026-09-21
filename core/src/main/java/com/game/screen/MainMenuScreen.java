@@ -9,13 +9,16 @@ import com.game.GameConfig;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.Localization;
 
 public class MainMenuScreen extends BaseScreen {
-    private static final String[] DESKTOP_MENU_OPTIONS = {
-        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "SOUND", "CONTROLS", "OPTIONS", "EXIT"
+    private static final MenuOption[] DESKTOP_MENU_OPTIONS = {
+        MenuOption.PLAY, MenuOption.STORE, MenuOption.ACHIEVEMENTS, MenuOption.SOUND,
+        MenuOption.CONTROLS, MenuOption.OPTIONS, MenuOption.EXIT
     };
-    private static final String[] MOBILE_MENU_OPTIONS = {
-        "PLAY", "DIVE SHOP", "ACHIEVEMENTS", "SOUND", "CONTROLS", "OPTIONS"
+    private static final MenuOption[] MOBILE_MENU_OPTIONS = {
+        MenuOption.PLAY, MenuOption.STORE, MenuOption.ACHIEVEMENTS, MenuOption.SOUND,
+        MenuOption.CONTROLS, MenuOption.OPTIONS
     };
     private static final float TRANSITION_DURATION = 0.45f;
     private static final Color ACCENT_COLOR = new Color(0.55f, 0.9f, 1f, 1f);
@@ -31,7 +34,7 @@ public class MainMenuScreen extends BaseScreen {
     private final BitmapFont largeFont;
     private final GlyphLayout layout;
     private final Rectangle menuRow = new Rectangle();
-    private final String[] menuOptions;
+    private final MenuOption[] menuOptions;
 
     private int selectedIndex;
     private boolean transitioning;
@@ -84,18 +87,19 @@ public class MainMenuScreen extends BaseScreen {
 
         batch.begin();
         drawCentered(largeFont, "PROJECT BLUE: DEEP DRIFT", 644f, Color.WHITE);
-        drawCentered(smallFont, "SURVIVE THE ABYSS", 580f, ACCENT_COLOR);
+        drawCentered(smallFont, Localization.text("main.subtitle"), 580f, ACCENT_COLOR);
 
         for (int i = 0; i < menuOptions.length; i++) {
             rowBounds(i);
             Color color = i == selectedIndex ? Color.YELLOW : Color.LIGHT_GRAY;
             String prefix = i == selectedIndex ? ">  " : "   ";
-            if ("SOUND".equals(menuOptions[i])) {
+            if (menuOptions[i] == MenuOption.SOUND) {
                 int volume = Math.round(AudioManager.getMasterVolume() * 100f);
-                drawUiButtonLabel(mediumFont, volume == 0 ? "SOUND OFF" : "SOUND " + volume + "%",
+                drawUiButtonLabel(mediumFont, volume == 0 ? Localization.text("main.sound_off")
+                    : Localization.text("main.sound_percent", volume),
                     menuRow, color);
             } else {
-                drawUiButtonLabel(mediumFont, prefix + menuOptions[i], menuRow, color);
+                drawUiButtonLabel(mediumFont, prefix + Localization.text(menuOptions[i].key), menuRow, color);
             }
         }
         drawUiButtonLabel(mediumFont, "-", VOLUME_DOWN, Color.WHITE);
@@ -129,7 +133,7 @@ public class MainMenuScreen extends BaseScreen {
         }
         for (int i = 0; i < menuOptions.length; i++) {
             rowBounds(i);
-            if ("SOUND".equals(menuOptions[i]) && game.input().buttonJustReleased(menuRow)) {
+            if (menuOptions[i] == MenuOption.SOUND && game.input().buttonJustReleased(menuRow)) {
                 selectedIndex = i;
                 AudioManager.toggleMute();
                 return false;
@@ -144,9 +148,9 @@ public class MainMenuScreen extends BaseScreen {
             }
         }
 
-        if ("SOUND".equals(menuOptions[selectedIndex]) && game.input().menuLeftJustPressed()) {
+        if (menuOptions[selectedIndex] == MenuOption.SOUND && game.input().menuLeftJustPressed()) {
             changeVolume(-0.25f);
-        } else if ("SOUND".equals(menuOptions[selectedIndex]) && game.input().menuRightJustPressed()) {
+        } else if (menuOptions[selectedIndex] == MenuOption.SOUND && game.input().menuRightJustPressed()) {
             changeVolume(0.25f);
         } else if (game.input().menuDownJustPressed()) {
             selectedIndex = (selectedIndex + 1) % menuOptions.length;
@@ -163,31 +167,31 @@ public class MainMenuScreen extends BaseScreen {
     }
 
     private boolean activateSelected() {
-        if ("SOUND".equals(menuOptions[selectedIndex])) {
+        if (menuOptions[selectedIndex] == MenuOption.SOUND) {
             AudioManager.toggleMute();
             return false;
         }
         AudioManager.playConfirm();
         switch (menuOptions[selectedIndex]) {
-            case "PLAY" -> transitioning = true;
-            case "DIVE SHOP" -> {
+            case PLAY -> transitioning = true;
+            case STORE -> {
                 game.showStore();
                 return true;
             }
-            case "ACHIEVEMENTS" -> {
+            case ACHIEVEMENTS -> {
                 game.showAchievements();
                 return true;
             }
-            case "OPTIONS" -> {
+            case OPTIONS -> {
                 game.openOptions();
                 return true;
             }
-            case "CONTROLS" -> {
+            case CONTROLS -> {
                 game.openControls();
                 return true;
             }
-            case "EXIT" -> com.badlogic.gdx.Gdx.app.exit();
-            default -> throw new IllegalStateException("Unknown menu option: " + menuOptions[selectedIndex]);
+            case EXIT -> com.badlogic.gdx.Gdx.app.exit();
+            case SOUND -> throw new IllegalStateException("Sound handled before activation");
         }
         return false;
     }
@@ -212,5 +216,16 @@ public class MainMenuScreen extends BaseScreen {
         font.setColor(color);
         layout.setText(font, text);
         font.draw(batch, layout, centerX - layout.width / 2f, y);
+    }
+
+    private enum MenuOption {
+        PLAY("main.play"), STORE("main.store"), ACHIEVEMENTS("main.achievements"),
+        SOUND("main.sound"), CONTROLS("main.controls"), OPTIONS("main.options"), EXIT("main.exit");
+
+        private final String key;
+
+        MenuOption(String key) {
+            this.key = key;
+        }
     }
 }

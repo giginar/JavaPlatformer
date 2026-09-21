@@ -124,6 +124,7 @@ public final class Lwjgl3Launcher {
                 case "--capture-autoplay" -> System.setProperty("deepdive.capture.autoplay", "true");
                 case "--capture-boss" -> System.setProperty("deepdive.capture.boss", "true");
                 case "--hide-tutorial" -> System.setProperty("deepdive.hideTutorial", "true");
+                case "--choose-language" -> System.setProperty("deepdive.chooseLanguage", "true");
                 case "--windowed" -> DisplaySettingsStore.setWindowMode(WindowMode.WINDOWED);
                 case "--borderless" -> DisplaySettingsStore.setWindowMode(WindowMode.BORDERLESS);
                 case "--fullscreen" -> DisplaySettingsStore.setWindowMode(WindowMode.FULLSCREEN);
@@ -203,6 +204,16 @@ public final class Lwjgl3Launcher {
                 // The warning below also covers non-numeric values.
             }
             System.err.println("Ignoring unsupported FPS limit: " + argument);
+            return;
+        }
+
+        if (argument.regionMatches(true, 0, "--language=", 0, 11)) {
+            String language = argument.substring(11).trim().toLowerCase(Locale.ROOT);
+            if (language.equals("en") || language.equals("tr")) {
+                System.setProperty("deepdive.language", language);
+            } else {
+                System.err.println("Ignoring unsupported language: " + argument);
+            }
         }
     }
 }

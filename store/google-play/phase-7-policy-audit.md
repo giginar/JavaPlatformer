@@ -37,7 +37,7 @@ All sources below were accessed September 21, 2026.
 
 ## Product facts
 
-Project Blue: Deep Drift is a single-player, English-language arcade survival game. The player controls a diver, manages oxygen, fires a harpoon at hostile fish, sharks, piranhas, eels, sea mines, and a multi-stage Abyssal Octopus boss, collects power-ups, and can fail from damage or oxygen loss. Presentation is pixel/cartoon style with impact particles, flashes, screen shake, and tense boss presentation, without blood or gore. Flashing and screen-shake effects can be disabled.
+Project Blue: Deep Drift is a single-player arcade survival game with English and Turkish in-game UI. The player controls a diver, manages oxygen, fires a harpoon at hostile fish, sharks, piranhas, eels, sea mines, and a multi-stage Abyssal Octopus boss, collects power-ups, and can fail from damage or oxygen loss. Presentation is pixel/cartoon style with impact particles, flashes, screen shake, and tense boss presentation, without blood or gore. Flashing and screen-shake effects can be disabled.
 
 Pressure Pearls are earned through play and spent on local equipment and suit progression. There is no billing, real-money purchase, loot box, gambling, account, chat, social feature, user-generated content, location sharing, cloud save, or in-game external link. Difficulty and challenge modes increase reaction and survival demands. The Android build contains ads; the player-facing rewarded placement remains disabled.
 
@@ -168,7 +168,7 @@ This matches the documented UMP flow. Production readiness still depends on crea
 | App access | No account, login, membership, or restricted area; all game content is directly accessible | Game implementation | Confirm current build in Console |
 | In-app purchases | No | No billing SDK; local Pearls only | No |
 | Countries/regions | Unanswered | No launch decision in repository | Yes — countries |
-| Store languages | EN and TR drafts exist; game UI is English only | Assets and store files | Yes — final listing/policy languages |
+| Store languages | EN and TR drafts exist; game UI supports English and Turkish | Assets and store files | Yes — final listing/policy languages |
 
 ## Content-rating questionnaire input
 
@@ -193,7 +193,7 @@ No explicit country/region choice exists: `PUBLISHING COUNTRIES DECISION REQUIRE
 
 EEA, UK, and Switzerland distribution makes the configured certified-CMP consent flow material; relevant US states can require state-privacy messages. Countries also affect legal definitions of a child and age-of-consent treatment. Continue using UMP/Google Privacy & Messaging for supported geographic flows; do not build a custom geo-consent system.
 
-The game UI is English-only. English and Turkish store listings and privacy-policy drafts exist, but those documents do not create Turkish in-game support: `STORE LANGUAGE DECISION REQUIRED`.
+The game UI supports English and Turkish. English and Turkish store listings and privacy-policy drafts exist, but the final Play Store language selection remains a product decision: `STORE LANGUAGE DECISION REQUIRED`.
 
 ## SDK policy inventory
 

@@ -8,6 +8,7 @@ import com.game.DeepDiveDrift;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.Localization;
 
 /** The first mobile launch stays silent until the player makes an explicit choice. */
 public final class SoundChoiceScreen extends BaseScreen {
@@ -56,11 +57,11 @@ public final class SoundChoiceScreen extends BaseScreen {
         endShapes();
 
         batch.begin();
-        drawCentered(FontManager.getLargeFont(), "BEFORE YOU DIVE", 474f, 640f, Color.WHITE);
-        drawCentered(FontManager.getSmallFont(), "Would you like to play with sound?", 403f, 640f, Color.LIGHT_GRAY);
-        drawUiButtonLabel(FontManager.getMediumFont(), "PLAY SILENTLY", SILENT_BUTTON, Color.WHITE);
-        drawUiButtonLabel(FontManager.getMediumFont(), "ENABLE SOUND", SOUND_BUTTON, Color.WHITE);
-        drawCentered(FontManager.getSmallFont(), "Change sound anytime from the main menu.", 221f, 640f, Color.LIGHT_GRAY);
+        drawCentered(FontManager.getLargeFont(), Localization.text("sound.title"), 474f, 640f, Color.WHITE);
+        drawCentered(FontManager.getSmallFont(), Localization.text("sound.question"), 403f, 640f, Color.LIGHT_GRAY);
+        drawUiButtonLabel(FontManager.getMediumFont(), Localization.text("sound.silent"), SILENT_BUTTON, Color.WHITE);
+        drawUiButtonLabel(FontManager.getMediumFont(), Localization.text("sound.enable"), SOUND_BUTTON, Color.WHITE);
+        drawCentered(FontManager.getSmallFont(), Localization.text("sound.note"), 221f, 640f, Color.LIGHT_GRAY);
         batch.end();
     }
 

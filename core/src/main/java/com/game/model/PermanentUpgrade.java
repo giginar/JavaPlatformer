@@ -1,5 +1,8 @@
 package com.game.model;
 
+import com.game.i18n.Localization;
+import java.util.Locale;
+
 public enum PermanentUpgrade {
     PRESSURE_TANK("PRESSURE TANK", "+10 starting oxygen capacity per level", 8),
     REINFORCED_SUIT("REINFORCED SUIT", "+1.5 sec starting shield per level", 10),
@@ -20,11 +23,11 @@ public enum PermanentUpgrade {
     }
 
     public String title() {
-        return title;
+        return Localization.textOr(key("title"), title);
     }
 
     public String description() {
-        return description;
+        return Localization.textOr(key("description"), description);
     }
 
     public int costForLevel(int currentLevel) {
@@ -40,5 +43,9 @@ public enum PermanentUpgrade {
             throw new IllegalArgumentException("Invalid equipment level: " + targetLevel);
         }
         return targetLevel * 5L * 60_000L;
+    }
+
+    private String key(String part) {
+        return "permanent." + name().toLowerCase(Locale.ROOT) + "." + part;
     }
 }

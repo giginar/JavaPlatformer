@@ -1,6 +1,8 @@
 package com.game.model;
 
 import com.game.GameConfig;
+import com.game.i18n.Localization;
+import java.util.Locale;
 
 /** Unlockable diver suits. Each suit trades its color identity for one specialization. */
 public enum DiverSuit {
@@ -68,11 +70,11 @@ public enum DiverSuit {
     }
 
     public String title() {
-        return title;
+        return Localization.textOr(key("title"), title);
     }
 
     public String description() {
-        return description;
+        return Localization.textOr(key("description"), description);
     }
 
     public int cost() {
@@ -97,5 +99,9 @@ public enum DiverSuit {
 
     public float reloadMultiplier() {
         return reloadMultiplier;
+    }
+
+    private String key(String part) {
+        return "suit." + name().toLowerCase(Locale.ROOT) + "." + part;
     }
 }

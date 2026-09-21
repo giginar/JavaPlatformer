@@ -1,5 +1,8 @@
 package com.game.model;
 
+import com.game.i18n.Localization;
+import java.util.Locale;
+
 public enum PowerUpType {
     PRESSURE_SHIELD("PRESSURE SHIELD", 7f, true,
         "AUTO-ACTIVE  |  BLOCKS DAMAGE"),
@@ -25,7 +28,7 @@ public enum PowerUpType {
     }
 
     public String title() {
-        return title;
+        return Localization.textOr(key("title"), title);
     }
 
     public float duration() {
@@ -37,6 +40,10 @@ public enum PowerUpType {
     }
 
     public String usageHint() {
-        return usageHint;
+        return Localization.textOr(key("hint"), usageHint);
+    }
+
+    private String key(String part) {
+        return "powerup." + name().toLowerCase(Locale.ROOT) + "." + part;
     }
 }

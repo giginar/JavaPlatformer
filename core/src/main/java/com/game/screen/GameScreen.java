@@ -33,6 +33,7 @@ import com.game.hazards.SeaMine;
 import com.game.hazards.ThermalVent;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.Localization;
 import com.game.model.Achievement;
 import com.game.model.AchievementStore;
 import com.game.model.ChallengeModifier;
@@ -58,7 +59,7 @@ import java.util.Locale;
 import java.util.Random;
 
 public class GameScreen extends BaseScreen {
-    private static final String[] PAUSE_OPTIONS = {"CONTINUE", "OPTIONS", "MAIN MENU"};
+    private static final String[] PAUSE_OPTIONS = {"game.continue", "game.options", "game.main_menu"};
     private static final boolean DEBUG_MODE = GameConfig.developmentShortcutsEnabled();
     private static final boolean CAPTURE_AUTOPLAY = Boolean.getBoolean("deepdive.capture.autoplay");
     private static final Color BOSS_TEXT_COLOR = new Color(0.9f, 0.55f, 1f, 1f);
@@ -360,7 +361,7 @@ public class GameScreen extends BaseScreen {
         UpgradeType selected = upgradeChoices.get(selectedUpgradeIndex);
         if (session.applyUpgrade(selected)) {
             choosingUpgrade = false;
-            showBanner(selected.title() + " INSTALLED");
+            showBanner(Localization.text("game.installed", selected.title()));
             particles.spawnOxygenBurst(diver.getX() + Diver.WIDTH / 2f,
                 diver.getY() + Diver.HEIGHT / 2f);
             AudioManager.playConfirm();
@@ -553,15 +554,15 @@ public class GameScreen extends BaseScreen {
             background.setDepthStage(difficulty.level(), difficulty.scrollSpeedMultiplier());
             descentMotionTimer = CELEBRATION_DURATION + 1.2f;
             String stageSubtitle = difficulty.level() == GameBalance.stageCount()
-                ? "ANY HIT IS FATAL"
-                : "DESCENDING TO " + runDirector.displayDepthMeters() + " M";
+                ? Localization.text("game.fatal")
+                : Localization.text("game.descending", runDirector.displayDepthMeters());
             beginCelebration(difficulty.name(), stageSubtitle);
         } else {
             difficulty = nextDifficulty;
         }
         if (update.milestoneMeters() > 0) {
             String distance = formatDistance(update.milestoneMeters());
-            beginCelebration(distance + " REACHED", "NEW DIVE MILESTONE");
+            beginCelebration(Localization.text("game.reached", distance), Localization.text("game.milestone"));
         }
         if (update.finaleReady() && !finalePending) {
             if (!finalStageAchievementRecorded) {
@@ -569,7 +570,7 @@ public class GameScreen extends BaseScreen {
                 finalStageAchievementRecorded = true;
             }
             finalePending = true;
-            beginCelebration("THE ABYSS OPENS", "COLOSSAL OCTOPUS SIGNAL DETECTED");
+            beginCelebration(Localization.text("game.abyss_opens"), Localization.text("game.boss_signal"));
         }
     }
 
@@ -781,9 +782,9 @@ public class GameScreen extends BaseScreen {
         enemyProjectiles.clear();
         enemies.add(new AbyssalOctopus());
         if (!runSettings.allowsWeapon()) {
-            bannerText = "ENDURANCE FINALE";
-            bannerSubtitle = "SURVIVE THE OCTOPUS FOR "
-                + Math.round(GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS) + "s";
+            bannerText = Localization.text("game.endurance");
+            bannerSubtitle = Localization.text("game.survive_for",
+                Math.round(GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS));
             bannerTimer = POWER_UP_BANNER_DURATION;
         }
         triggerShake(13f, 0.65f);
@@ -944,7 +945,7 @@ public class GameScreen extends BaseScreen {
         particles.spawnOxygenBurst(bounds.x + bounds.width / 2f,
             bounds.y + bounds.height / 2f);
         triggerShake(11f, 0.4f);
-        showBanner("TORPEDO DASH!");
+        showBanner(Localization.text("game.dash_ready"));
         game.input().vibrateController(120, 0.7f);
         AudioManager.playConfirm();
     }
@@ -1052,10 +1053,11 @@ public class GameScreen extends BaseScreen {
     }
 
     private void showPowerUpBanner(PowerUpType type) {
-        bannerText = type.title() + (type.activatesOnPickup() ? " ACTIVE" : " READY");
+        bannerText = type.title() + " " + Localization.text(type.activatesOnPickup()
+            ? "game.active" : "game.ready");
         bannerSubtitle = type == PowerUpType.TORPEDO_DASH
             ? type.usageHint() + "  |  " + dashInstruction()
-            : type.usageHint() + " FOR " + Math.round(type.duration()) + "s";
+            : Localization.text("game.for_seconds", type.usageHint(), Math.round(type.duration()));
         bannerTimer = POWER_UP_BANNER_DURATION;
     }
 
@@ -1151,16 +1153,16 @@ public class GameScreen extends BaseScreen {
 
     private String dashInstruction() {
         if (game.input().usingController()) {
-            return "PRESS [LB] TO DASH";
+            return Localization.text("game.press_dash_controller");
         }
         if (game.input().usingTouch()) {
-            return "TAP THE DASH BUTTON";
+            return Localization.text("game.press_dash_touch");
         }
-        return "PRESS [C] TO DASH";
+        return Localization.text("game.press_dash_keyboard");
     }
 
     private String dashStatusText() {
-        return "DASH x" + dashCharges + (game.input().usingController() ? "  [LB]"
+        return Localization.text("game.dash_count", dashCharges) + (game.input().usingController() ? "  [LB]"
             : game.input().usingTouch() ? "" : "  [C]");
     }
 
@@ -1465,12 +1467,13 @@ public class GameScreen extends BaseScreen {
         }
 
         smallFont.setColor(Color.WHITE);
-        smallFont.draw(batch, "SCORE  " + session.getDisplayScore(), 26f, 694f);
-        smallFont.draw(batch, "BEST   " + highScore, 26f, 668f);
-        smallFont.draw(batch, "OXYGEN " + Math.round(session.getOxygen()) + " / "
-            + Math.round(session.getMaxOxygen()), 54f, 645f);
-        drawCentered(smallFont, "DIST  " + formatDistance(runDirector.displayMeters())
-            + "    |    NEXT  " + formatDistance(runDirector.nextMilestoneMeters()), 694f, Color.WHITE);
+        smallFont.draw(batch, Localization.text("game.score", session.getDisplayScore()), 26f, 694f);
+        smallFont.draw(batch, Localization.text("game.best", highScore), 26f, 668f);
+        smallFont.draw(batch, Localization.text("game.oxygen", Math.round(session.getOxygen()),
+            Math.round(session.getMaxOxygen())), 54f, 645f);
+        drawCentered(smallFont, Localization.text("game.distance_next",
+            formatDistance(runDirector.displayMeters()), formatDistance(runDirector.nextMilestoneMeters())),
+            694f, Color.WHITE);
         drawCentered(smallFont, difficulty.name() + "  |  " + runSettings.difficulty().title(),
             670f, Color.CYAN);
 
@@ -1488,29 +1491,29 @@ public class GameScreen extends BaseScreen {
         }
         if (difficulty.level() == GameBalance.stageCount() && !gameOver) {
             smallFont.setColor(Color.SCARLET);
-            smallFont.draw(batch, "ANY HIT IS FATAL", 24f, powerStatusY);
+            smallFont.draw(batch, Localization.text("game.fatal"), 24f, powerStatusY);
             powerStatusY -= 26f;
         }
         if (runSettings.isChallengeRun() && !gameOver) {
             smallFont.setColor(Color.YELLOW);
-            smallFont.draw(batch, "CHALLENGE x" + runSettings.modifiers().size()
-                + "  |  REWARD x" + String.format(Locale.ROOT, "%.2f",
-                runSettings.rewardMultiplier()), 24f, powerStatusY);
+            smallFont.draw(batch, Localization.text("game.challenge_reward",
+                runSettings.modifiers().size(), String.format(Locale.ROOT, "%.2f",
+                    runSettings.rewardMultiplier())), 24f, powerStatusY);
         }
 
         EnemyFish boss = activeBoss();
         if (boss != null) {
             String bossText = runSettings.has(ChallengeModifier.NO_WEAPON)
-                ? "SURVIVE OCTOPUS  " + Math.max(0, Math.round(
-                    GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS - unarmedBossSurvivalTimer)) + "s"
-                : "ABYSSAL OCTOPUS";
+                ? Localization.text("game.survive_boss", Math.max(0, Math.round(
+                    GameConfig.UNARMED_BOSS_SURVIVAL_SECONDS - unarmedBossSurvivalTimer)))
+                : Localization.text("game.boss");
             drawCentered(smallFont, bossText, 642f, BOSS_TEXT_COLOR);
         }
 
         if (session.getCombo() > 1) {
             smallFont.setColor(Color.YELLOW);
-            layout.setText(smallFont, String.format(Locale.ROOT, "COMBO x%.2f",
-                session.getComboMultiplier()));
+            layout.setText(smallFont, Localization.text("game.combo",
+                String.format(Locale.ROOT, "%.2f", session.getComboMultiplier())));
             smallFont.draw(batch, layout,
                 TOUCH_PAUSE_BUTTON.x + TOUCH_PAUSE_BUTTON.width - layout.width,
                 TOUCH_PAUSE_BUTTON.y - 16f);
@@ -1518,18 +1521,18 @@ public class GameScreen extends BaseScreen {
 
         if (showTutorial && !game.input().usingTouch()) {
             if (runSettings.has(ChallengeModifier.NO_WEAPON)) {
-                drawCentered(smallFont, "NO HARPOON CHALLENGE  |  SURVIVE BY MOVEMENT ALONE",
+                drawCentered(smallFont, Localization.text("game.tutorial.no_weapon"),
                     76f, Color.YELLOW);
-                drawCentered(smallFont, "AVOID THE SEABED  |  DASH IF AVAILABLE  |  PAUSE FOR OPTIONS",
+                drawCentered(smallFont, Localization.text("game.tutorial.no_weapon_hint"),
                     47f, Color.LIGHT_GRAY);
             } else if (game.input().usingController()) {
-                drawCentered(smallFont, "[A] / STICK UP SWIM  |  [X / B / RB] FIRE", 76f, Color.WHITE);
-                drawCentered(smallFont, "AVOID THE SEABED  |  [LB] DASH  |  [START] PAUSE  |  [Y] HELP",
+                drawCentered(smallFont, Localization.text("game.tutorial.controller"), 76f, Color.WHITE);
+                drawCentered(smallFont, Localization.text("game.tutorial.controller_hint"),
                     47f, Color.LIGHT_GRAY);
             } else {
-                drawCentered(smallFont, "SPACE / W / UP OR LEFT MOUSE TO SWIM  |  Z / X OR RIGHT MOUSE FIRE",
+                drawCentered(smallFont, Localization.text("game.tutorial.keyboard"),
                     76f, Color.WHITE);
-                drawCentered(smallFont, "AVOID THE SEABED  |  [C] DASH  |  [P / ESC] PAUSE  |  [T] HELP",
+                drawCentered(smallFont, Localization.text("game.tutorial.keyboard_hint"),
                     47f, Color.LIGHT_GRAY);
             }
         }
@@ -1538,12 +1541,14 @@ public class GameScreen extends BaseScreen {
             float hintAlpha = touchHintAlpha();
             if (hintAlpha > 0f) {
                 smallFont.setColor(1f, 1f, 1f, hintAlpha);
-                drawTouchHint(TOUCH_SWIM_HINT, "SWIM", "HOLD LEFT");
+                drawTouchHint(TOUCH_SWIM_HINT, Localization.text("game.touch.swim"),
+                    Localization.text("game.touch.hold_left"));
                 drawTouchHint(TOUCH_FIRE_HINT,
-                    runSettings.has(ChallengeModifier.NO_WEAPON) ? "LOCKED" : "FIRE", "TAP RIGHT");
+                    runSettings.has(ChallengeModifier.NO_WEAPON) ? Localization.text("common.locked")
+                        : Localization.text("game.touch.fire"), Localization.text("game.touch.tap_right"));
             }
             if (dashCharges > 0) {
-                drawCenteredAt(smallFont, "DASH x" + dashCharges,
+                drawCenteredAt(smallFont, Localization.text("game.dash_count", dashCharges),
                     TOUCH_DASH_BUTTON.x + TOUCH_DASH_BUTTON.width / 2f,
                     TOUCH_DASH_BUTTON.y + 38f, Color.WHITE);
             }
@@ -1565,10 +1570,10 @@ public class GameScreen extends BaseScreen {
                 ? 0.65f + MathUtils.sin(bossWarningTimer * 18f) * 0.35f
                 : 1f;
             mediumFont.setColor(1f, 0.2f, 0.18f, alpha);
-            drawFittedCentered(mediumFont, "ABYSSAL OCTOPUS AWAKENS", 588f, 540f);
+            drawFittedCentered(mediumFont, Localization.text("game.boss_awakens"), 588f, 540f);
         }
         if (displayedAchievement != null) {
-            drawCentered(smallFont, "ACHIEVEMENT UNLOCKED", 524f, Color.GOLD);
+            drawCentered(smallFont, Localization.text("game.achievement_unlocked"), 524f, Color.GOLD);
             smallFont.setColor(Color.WHITE);
             drawFittedCentered(smallFont, displayedAchievement.title(), 500f, 472f);
         }
@@ -1608,7 +1613,7 @@ public class GameScreen extends BaseScreen {
     }
 
     private void drawUpgradeSelection() {
-        drawCentered(largeFont, "CHOOSE AN UPGRADE", 625f, Color.WHITE);
+        drawCentered(largeFont, Localization.text("game.choose_upgrade"), 625f, Color.WHITE);
 
         for (int i = 0; i < upgradeChoices.size(); i++) {
             UpgradeType type = upgradeChoices.get(i);
@@ -1619,7 +1624,7 @@ public class GameScreen extends BaseScreen {
             drawCenteredAt(smallFont, scaledUpgradeDescription(type), centerX, 382f,
                 Color.LIGHT_GRAY);
             int currentLevel = session.getUpgradeLevel(type);
-            drawCenteredAt(smallFont, "LEVEL " + currentLevel + "  >  " + (currentLevel + 1),
+            drawCenteredAt(smallFont, Localization.text("game.level_change", currentLevel, currentLevel + 1),
                 centerX, 300f, UPGRADE_TEXT_COLOR);
             drawCenteredAt(largeFont, Integer.toString(i + 1), centerX, 225f,
                 i == selectedUpgradeIndex ? Color.YELLOW : Color.DARK_GRAY);
@@ -1629,42 +1634,39 @@ public class GameScreen extends BaseScreen {
     private String scaledUpgradeDescription(UpgradeType type) {
         float scale = runSettings.difficulty().upgradeEffectMultiplier();
         return switch (type) {
-            case RAPID_FIRE -> "Harpoon cooldown -" + Math.round(18f * scale) + "%";
+            case RAPID_FIRE -> Localization.text("game.upgrade.rapid", Math.round(18f * scale));
             case PIERCING_HARPOON -> type.description();
-            case OXYGEN_EFFICIENCY -> "Oxygen drain -" + Math.round(15f * scale) + "%";
-            case LARGE_TANKS -> "Oxygen pickups restore +" + Math.round(10f * scale);
-            case AGILE_DIVER -> "Swimming agility +" + Math.round(12f * scale) + "%";
+            case OXYGEN_EFFICIENCY -> Localization.text("game.upgrade.oxygen", Math.round(15f * scale));
+            case LARGE_TANKS -> Localization.text("game.upgrade.tanks", Math.round(10f * scale));
+            case AGILE_DIVER -> Localization.text("game.upgrade.agility", Math.round(12f * scale));
         };
     }
 
     private void drawPauseMenu() {
-        drawCentered(largeFont, "PAUSED", 485f, Color.WHITE);
+        drawCentered(largeFont, Localization.text("game.paused"), 485f, Color.WHITE);
         for (int i = 0; i < PAUSE_OPTIONS.length; i++) {
             Color color = i == selectedPauseIndex ? Color.YELLOW : Color.LIGHT_GRAY;
             String prefix = i == selectedPauseIndex ? ">  " : "   ";
             pauseRowBounds(i);
-            drawUiButtonLabel(mediumFont, prefix + PAUSE_OPTIONS[i], interactiveRow, color);
+            drawUiButtonLabel(mediumFont, prefix + Localization.text(PAUSE_OPTIONS[i]), interactiveRow, color);
         }
     }
 
     private void drawGameOverScreen() {
-        drawCentered(largeFont, victory ? "ABYSS CONQUERED" : "DIVE OVER", 485f,
+        drawCentered(largeFont, Localization.text(victory ? "game.victory" : "game.over"), 485f,
             victory ? Color.CYAN : Color.WHITE);
-        drawCentered(mediumFont, "SCORE  " + session.getDisplayScore(), 385f, Color.YELLOW);
-        drawCentered(smallFont, "DISTANCE  " + formatDistance(runDirector.displayMeters()),
+        drawCentered(mediumFont, Localization.text("game.score", session.getDisplayScore()), 385f, Color.YELLOW);
+        drawCentered(smallFont, Localization.text("game.distance", formatDistance(runDirector.displayMeters())),
             348f, Color.CYAN);
-        drawCentered(smallFont, "+" + earnedPearls + " PEARLS  |  WALLET "
-            + progression.pearls(), 316f, Color.GOLD);
-        drawCentered(smallFont, "BEST " + highScore + "  |  "
-            + runSettings.difficulty().title() + "  |  REWARD x"
-            + String.format(Locale.ROOT, "%.2f", runSettings.rewardMultiplier()),
+        drawCentered(smallFont, Localization.text("game.pearls_wallet", earnedPearls,
+            progression.pearls()), 316f, Color.GOLD);
+        drawCentered(smallFont, Localization.text("game.result_best", highScore,
+            runSettings.difficulty().title(), String.format(Locale.ROOT, "%.2f", runSettings.rewardMultiplier())),
             286f, runSettings.isChallengeRun() ? Color.YELLOW : Color.LIGHT_GRAY);
-        String retry = game.input().usingController() ? "[A] DIVE AGAIN"
-            : game.input().usingTouch() ? "TAP TO DIVE AGAIN"
-            : "[ENTER / SPACE / R] OR CLICK TO DIVE AGAIN";
-        String menu = game.input().usingController() ? "[B] RETURN TO MENU"
-            : game.input().usingTouch() ? "TAP TO RETURN TO MENU"
-            : "[ESC] OR CLICK TO RETURN TO MENU";
+        String retry = Localization.text(game.input().usingController() ? "game.retry.controller"
+            : game.input().usingTouch() ? "game.retry.touch" : "game.retry.keyboard");
+        String menu = Localization.text(game.input().usingController() ? "game.menu.controller"
+            : game.input().usingTouch() ? "game.menu.touch" : "game.menu.keyboard");
         drawUiButtonLabel(smallFont, retry, GAME_OVER_RETRY_BUTTON, Color.WHITE);
         drawUiButtonLabel(smallFont, menu, GAME_OVER_MENU_BUTTON, Color.LIGHT_GRAY);
     }
@@ -1784,8 +1786,8 @@ public class GameScreen extends BaseScreen {
         touchHintTimer = 0f;
         bannerTimer = CELEBRATION_DURATION;
         bannerText = difficulty.name();
-        bannerSubtitle = runSettings.difficulty().title() + "  |  DESCENDING TO "
-            + runDirector.displayDepthMeters() + " M";
+        bannerSubtitle = runSettings.difficulty().title() + "  |  "
+            + Localization.text("game.descending", runDirector.displayDepthMeters());
         bossWarningTimer = 0f;
         hitStopTimer = 0f;
         shakeTimer = 0f;

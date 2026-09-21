@@ -21,7 +21,7 @@ if (-not (Test-Path -LiteralPath $jarPath -PathType Leaf)) {
 }
 
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
-$routes = @(
+$screens = @(
     [pscustomobject]@{ Name = 'main-menu'; Arguments = @() },
     [pscustomobject]@{ Name = 'dive-setup'; Arguments = @('--open-setup') },
     [pscustomobject]@{ Name = 'store'; Arguments = @('--open-store') },
@@ -31,6 +31,20 @@ $routes = @(
     [pscustomobject]@{ Name = 'about'; Arguments = @('--open-about') },
     [pscustomobject]@{ Name = 'gameplay'; Arguments = @('--autostart', '--hide-tutorial') }
 )
+$routes = @([pscustomobject]@{
+    Name = 'language-chooser'; Arguments = @('--choose-language')
+})
+foreach ($language in @('en', 'tr')) {
+    foreach ($screen in $screens) {
+        $largeText = if ($language -eq 'tr' -and $screen.Name -in @('store', 'achievements', 'options')) {
+            @('--large-text')
+        } else { @('--default-text') }
+        $routes += [pscustomobject]@{
+            Name = "$($screen.Name)-$language"
+            Arguments = @("--language=$language") + $largeText + $screen.Arguments
+        }
+    }
+}
 
 foreach ($route in $routes) {
     $capturePath = Join-Path $outputPath "$($route.Name).png"

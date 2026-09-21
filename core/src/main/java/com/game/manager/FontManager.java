@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.game.settings.DisplaySettings;
 
 public class FontManager {
+    public static final String TURKISH_GLYPHS = "çÇğĞıİöÖşŞüÜ";
     private static BitmapFont smallFont;
     private static BitmapFont mediumFont;
     private static BitmapFont largeFont;
@@ -21,6 +22,7 @@ public class FontManager {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
         parameter.color = Color.WHITE;
+        parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS + TURKISH_GLYPHS;
         parameter.minFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear;
         parameter.magFilter = com.badlogic.gdx.graphics.Texture.TextureFilter.Linear;
         parameter.size = 18;
@@ -33,6 +35,9 @@ public class FontManager {
         largeFont = generator.generateFont(parameter);
 
         generator.dispose();
+        verifyTurkishGlyphs(smallFont);
+        verifyTurkishGlyphs(mediumFont);
+        verifyTurkishGlyphs(largeFont);
         setTextScale(DisplaySettings.textScale().multiplier());
         initialized = true;
     }
@@ -68,5 +73,13 @@ public class FontManager {
         mediumFont = null;
         largeFont = null;
         initialized = false;
+    }
+
+    private static void verifyTurkishGlyphs(BitmapFont font) {
+        for (char glyph : TURKISH_GLYPHS.toCharArray()) {
+            if (!font.getData().hasGlyph(glyph)) {
+                throw new IllegalStateException("Orbitron font is missing required Turkish glyph: " + glyph);
+            }
+        }
     }
 }

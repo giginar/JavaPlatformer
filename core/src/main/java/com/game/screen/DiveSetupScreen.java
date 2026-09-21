@@ -12,6 +12,7 @@ import com.game.GameConfig;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
+import com.game.i18n.Localization;
 import com.game.model.ChallengeModifier;
 import com.game.model.RunDifficulty;
 import com.game.model.RunSettings;
@@ -77,25 +78,25 @@ public final class DiveSetupScreen extends BaseScreen {
         endShapes();
 
         batch.begin();
-        drawCentered(largeFont, "PREPARE YOUR DIVE", 704f, Color.WHITE);
-        drawCentered(smallFont, "CHOOSE A DIFFICULTY AND OPTIONAL CHALLENGE RULES",
+        drawCentered(largeFont, Localization.text("setup.title"), 704f, Color.WHITE);
+        drawCentered(smallFont, Localization.text("setup.subtitle"),
             658f, Color.LIGHT_GRAY);
-        drawCentered(smallFont, "DIFFICULTY", 608f, Color.CYAN);
+        drawCentered(smallFont, Localization.text("setup.difficulty"), 608f, Color.CYAN);
         drawDifficulties();
-        drawCentered(smallFont, "CHALLENGE MODE MODIFIERS", 468f,
+        drawCentered(smallFont, Localization.text("setup.challenges"), 468f,
             modifiers.isEmpty() ? Color.LIGHT_GRAY : Color.YELLOW);
         drawChallenges();
 
         RunSettings settings = currentSettings();
-        String reward = String.format(Locale.ROOT, "PEARL REWARD  x%.2f",
-            settings.rewardMultiplier());
+        String reward = Localization.text("setup.reward",
+            String.format(Locale.ROOT, "%.2f", settings.rewardMultiplier()));
         drawCentered(smallFont, reward, 110f, Color.GOLD);
         if (settings.hasAllChallenges()) {
-            drawCentered(smallFont, "TOTAL LOCKDOWN ACTIVE  |  SPECIAL ACHIEVEMENTS AVAILABLE",
+            drawCentered(smallFont, Localization.text("setup.lockdown"),
                 87f, Color.SCARLET);
         }
-        drawUiButtonLabel(mediumFont, "START DIVE", startButton, Color.WHITE);
-        drawUiButtonLabel(smallFont, "BACK", backButton, Color.LIGHT_GRAY);
+        drawUiButtonLabel(mediumFont, Localization.text("setup.start"), startButton, Color.WHITE);
+        drawUiButtonLabel(smallFont, Localization.text("common.back"), backButton, Color.LIGHT_GRAY);
         batch.end();
     }
 
@@ -258,7 +259,7 @@ public final class DiveSetupScreen extends BaseScreen {
             modifierBounds(i);
             boolean enabled = modifiers.contains(modifier);
             smallFont.setColor(enabled ? Color.YELLOW : Color.LIGHT_GRAY);
-            drawFittedText((enabled ? "[ON]  " : "[OFF] ") + modifier.title(),
+            drawFittedText("[" + Localization.text(enabled ? "common.on" : "common.off") + "]  " + modifier.title(),
                 260f, interactive.y + 39f, 340f);
             smallFont.setColor(Color.LIGHT_GRAY);
             smallFont.draw(batch, modifier.description(), 635f, interactive.y + 47f,
@@ -296,14 +297,8 @@ public final class DiveSetupScreen extends BaseScreen {
     }
 
     private String difficultyDetail(RunDifficulty option, int line) {
-        return switch (option) {
-            case EASY -> line == 0 ? "SPEED -15%  DAMAGE -25%"
-                : "UPGRADES +15%  AIR +15%";
-            case NORMAL -> line == 0 ? "STANDARD THREATS"
-                : "UPGRADES 100%  REWARD x1";
-            case HARD -> line == 0 ? "SPEED +22%  DAMAGE +30%"
-                : "UPGRADES -25%  AIR -12%";
-        };
+        return Localization.text("setup." + option.name().toLowerCase(Locale.ROOT)
+            + ".line" + (line + 1));
     }
 
     private void drawCentered(BitmapFont font, String text, float y, Color color) {

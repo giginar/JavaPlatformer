@@ -1,5 +1,7 @@
 package com.game.model;
 
+import com.game.i18n.Localization;
+
 public final class GameBalance {
     private static final float BASE_HARPOON_COOLDOWN = 0.32f;
     private static final float OVERDRIVE_COOLDOWN_MULTIPLIER = 0.62f;
@@ -60,5 +62,9 @@ public final class GameBalance {
     public record Difficulty(int level, String name, float spawnInterval,
                              float enemySpeedMultiplier, float hazardInterval,
                              float scrollSpeedMultiplier) {
+        @Override
+        public String name() {
+            return Localization.textOr("stage." + level + ".title", name);
+        }
     }
 }
