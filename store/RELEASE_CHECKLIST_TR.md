@@ -36,8 +36,8 @@
 - [ ] Google Play geliştirici hesabı ve kimlik doğrulaması
 - [ ] Özel upload keystore oluşturma ve güvenli yedek
 - [ ] Gizlilik politikasındaki yasal veri sorumlusu ve yürürlük tarihi alanlarını doldurup beklenen Pages URL'sini etkin HTTPS adresi olarak doğrulama
-- [ ] Pixel 8 Android sürümünden 7–8 yatay telefon ekran görüntüsü alma; en az ilk üçü 1920×1080 gerçek oynanış olmalı
-- [ ] Eski `05-leviathan.png` görüntüsünü mağaza setinden çıkarma; hak engeli çözülmedikçe boss ekran görüntüsü kullanmama
+- [x] Pixel 8 Android API 36 sürümünden yedi yatay `en-US` telefon ekran görüntüsü alma; ilk üçü 1920×1080 gerçek oynanıştır
+- [x] Eski `05-leviathan.png` görüntüsünü güncel telefon setinden çıkarma; hak engeli çözülmedikçe boss ekran görüntüsü kullanmama
 - [ ] İsteğe bağlı tablet ekran görüntülerini yalnızca gerçek tablet düzeninden hazırlama
 - [ ] İkonu, özellik görselini ve telefon ekran görüntülerini Play Console’a yükleme
 - [ ] İçerik derecelendirmesi, hedef kitle ve uygulama erişimi anketleri

@@ -56,4 +56,16 @@ class RunDirectorTest {
         assertEquals(500, result.milestoneMeters());
         assertEquals(1000, oneStep.nextMilestoneMeters());
     }
+
+    @Test
+    void captureJumpStartsInsideRequestedStageWithoutStartingFinale() {
+        RunDirector director = new RunDirector(10f);
+
+        director.jumpToStageForCapture(5);
+
+        assertEquals(5, director.stage());
+        assertEquals(0f, director.stageProgress(), 0.0001f);
+        assertFalse(director.finaleReady());
+        assertFalse(director.update(0.1f).finaleReady());
+    }
 }

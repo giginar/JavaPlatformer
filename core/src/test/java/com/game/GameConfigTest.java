@@ -10,6 +10,8 @@ class GameConfigTest {
     @AfterEach
     void clearDevelopmentProperties() {
         System.clearProperty("deepdive.debug");
+        System.clearProperty("deepdive.debug.overlay");
+        System.clearProperty("deepdive.capture.stage");
         System.clearProperty("deepdive.stageDurationSeconds");
     }
 
@@ -21,5 +23,7 @@ class GameConfigTest {
         assertFalse(GameConfig.developmentShortcutsEnabled());
         assertEquals(GameConfig.DEFAULT_STAGE_DURATION_SECONDS,
             GameConfig.stageDurationSeconds());
+        assertEquals(1, GameConfig.screenshotCaptureStage());
+        assertFalse(GameConfig.debugOverlayEnabled());
     }
 }

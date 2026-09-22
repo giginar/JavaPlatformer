@@ -102,6 +102,12 @@ must not be treated as live until Pages activation and URL verification succeed.
 | `desktop/04-gameplay-action.png` | Harpoon action | `RECAPTURE REQUIRED` | Recapture a clear current Android action scene. |
 | `desktop/05-leviathan.png` | Old boss encounter | `DO NOT USE` | Old `ABYSS LEVIATHAN` label and unresolved boss-asset rights. |
 
+The final default-listing phone set now exists at
+`store/screenshots/google-play-phone/en-US/`: seven English, 1920×1080, 24-bit RGB PNG
+captures from the Pixel 8 Android API 36 AVD through ADB screencap. The first three
+show actual gameplay; the Abyssal Rift capture was taken before the boss appeared and
+contains no boss asset. `BOSS SCREENSHOT: RIGHTS BLOCKED` remains in force.
+
 Detailed capture order and optional captions are in
 [`store/screenshots/README.md`](../screenshots/README.md).
 
@@ -189,10 +195,10 @@ after the final brand/name decision.
 - [ ] Adaptive Android launcher icon foreground/background and mask review
 - [x] Feature graphic draft exists and meets mandatory dimensions/format
 - [ ] Feature graphic cutoff review with the final store name
-- [ ] Seven or eight current phone screenshots captured from Android
-- [ ] At least three 1920×1080 actual-gameplay phone screenshots
+- [x] Seven current phone screenshots captured from Android
+- [x] At least three 1920×1080 actual-gameplay phone screenshots
 - [ ] Optional tablet screenshots, if chosen, captured from a tablet layout
-- [ ] Stale boss screenshot excluded/replaced
+- [x] Stale boss screenshot excluded from the current phone set
 - [ ] Boss screenshot rights gate cleared before any boss marketing image is used
 - [x] Final public/store name selected: `Project Blue: Deep Drift`
 - [x] Final-draft English text within Play limits

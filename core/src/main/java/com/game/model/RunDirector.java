@@ -70,6 +70,13 @@ public final class RunDirector {
         finaleReady = true;
     }
 
+    /** Starts a development capture within a stage without advancing to its finale. */
+    public void jumpToStageForCapture(int requestedStage) {
+        stage = Math.max(1, Math.min(GameBalance.stageCount(), requestedStage));
+        elapsed = (stage - 1) * stageDuration;
+        finaleReady = false;
+    }
+
     public GameBalance.Difficulty difficulty() {
         return GameBalance.difficultyForStage(stage);
     }

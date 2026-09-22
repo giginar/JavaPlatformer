@@ -60,7 +60,8 @@ import java.util.Random;
 
 public class GameScreen extends BaseScreen {
     private static final String[] PAUSE_OPTIONS = {"game.continue", "game.options", "game.main_menu"};
-    private static final boolean DEBUG_MODE = GameConfig.developmentShortcutsEnabled();
+    private static final boolean DEVELOPMENT_SHORTCUTS = GameConfig.developmentShortcutsEnabled();
+    private static final boolean DEBUG_OVERLAY = GameConfig.debugOverlayEnabled();
     private static final boolean CAPTURE_AUTOPLAY = Boolean.getBoolean("deepdive.capture.autoplay");
     private static final Color BOSS_TEXT_COLOR = new Color(0.9f, 0.55f, 1f, 1f);
     private static final Color UPGRADE_TEXT_COLOR = new Color(0.45f, 0.92f, 1f, 1f);
@@ -202,7 +203,15 @@ public class GameScreen extends BaseScreen {
         equippedSuit = progression.selectedSuit();
         highScore = preferences.getInteger("highScore", 0);
         resetGame();
-        if (DEBUG_MODE && Boolean.getBoolean("deepdive.capture.boss")) {
+        int captureStage = GameConfig.screenshotCaptureStage();
+        if (captureStage > 1) {
+            runDirector.jumpToStageForCapture(captureStage);
+            difficulty = runDirector.difficulty();
+            background.setDepthStage(difficulty.level(), difficulty.scrollSpeedMultiplier());
+            safetyTimer = 0f;
+            bannerTimer = 0f;
+        }
+        if (DEVELOPMENT_SHORTCUTS && Boolean.getBoolean("deepdive.capture.boss")) {
             jumpToBossForDebug();
         }
     }
@@ -317,7 +326,7 @@ public class GameScreen extends BaseScreen {
             AudioManager.playSelect();
         }
 
-        if (DEBUG_MODE) {
+        if (DEVELOPMENT_SHORTCUTS) {
             handleDebugInput();
         }
         return false;
@@ -1583,7 +1592,7 @@ public class GameScreen extends BaseScreen {
     }
 
     private void drawDiagnostics() {
-        if (!DEBUG_MODE) {
+        if (!DEBUG_OVERLAY) {
             return;
         }
         smallFont.setColor(Color.ORANGE);

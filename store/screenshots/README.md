@@ -1,8 +1,28 @@
 # Google Play ekran görüntüsü planı
 
 Bu klasördeki dosyalar gerçek oyun framebuffer çıktılarıdır; üretilmiş veya kurgulanmış
-oynanış görselleri değildir. Ancak mevcut beş dosya masaüstünde alınmıştır ve nihai
-Google Play telefon seti olarak kullanılmamalıdır.
+oynanış görselleri değildir. Nihai İngilizce Google Play telefon seti Pixel 8 Android
+API 36 AVD'den ADB `screencap` ile alınmıştır. Yedi dosyanın tamamı `1920×1080`, 24-bit
+RGB PNG'dir ve varsayılan `en-US` mağaza dili için İngilizce arayüz gösterir.
+
+## Google Play telefon — en-US
+
+Yol: `google-play-phone/en-US/`
+
+| Dosya | İçerik | Kaynak | Durum |
+| --- | --- | --- | --- |
+| `01-gameplay-core.png` | Sunlit Reef temel zıpkınlı oynanış | Pixel 8 / Android API 36 / ADB screencap | `CURRENT / PLAY STORE READY` |
+| `02-deep-environment.png` | Stage 3 Current Maze oynanışı | Pixel 8 / Android API 36 / geliştirme kapılı stage yakalama / ADB screencap | `CURRENT / PLAY STORE READY` |
+| `03-abyssal-rift.png` | Stage 5 Abyssal Rift, boss öncesi oynanış | Pixel 8 / Android API 36 / geliştirme kapılı stage yakalama / ADB screencap | `CURRENT / PLAY STORE READY` |
+| `04-dive-shop.png` | Pressure Pearls ve kalıcı ekipman | Pixel 8 / Android API 36 / ADB screencap | `CURRENT / PLAY STORE READY` |
+| `05-suit-selection.png` | Dört gerçek dalış kostümü | Pixel 8 / Android API 36 / ADB screencap | `CURRENT / PLAY STORE READY` |
+| `06-achievements.png` | Mevcut achievement ilerlemesi | Pixel 8 / Android API 36 / ADB screencap | `CURRENT / PLAY STORE READY` |
+| `07-difficulty-challenges.png` | Easy/Normal/Hard ve challenge modifier seçenekleri | Pixel 8 / Android API 36 / ADB screencap | `CURRENT / PLAY STORE READY` |
+
+İlk üç dosya gerçek oynanıştır. Stage 3 ve Stage 5 kareleri yalnızca üretimde kapalı
+`TEST_SHORTCUTS_ENABLED` geliştirme kapısı üzerinden sahne başlangıcına alınmış; oyun,
+HUD, düşmanlar ve tehlikeler Android üzerinde gerçek zamanlı çizilmiştir. Debug overlay
+kapalıdır. Stage 5 karesi boss doğmadan önce alınmıştır ve hiçbir boss varlığı içermez.
 
 ## Mevcut dosyalar
 
@@ -18,9 +38,9 @@ Google Play telefon seti olarak kullanılmamalıdır.
 çözülmeden boss içeren yeni veya eski hiçbir ekran görüntüsü üretim pazarlama varlığı
 olarak onaylanamaz.
 
-## Önerilen telefon seti
+## Telefon seti kapsamı
 
-Pixel 8 Android sürümünden, birbirini tekrar etmeyen yedi ana görüntü çek:
+Pixel 8 Android sürümünden birbirini tekrar etmeyen şu yedi görüntü hazırdır:
 
 1. Oksijen, skor ve zıpkın aksiyonunu birlikte gösteren temel oynanış.
 2. Erken görüntüden belirgin biçimde farklı, daha derin bir su altı ortamı ve tehditler.
@@ -71,5 +91,7 @@ Masaüstü yakalama seçenekleri `Lwjgl3Launcher` üzerinden `--capture=<dosya>`
 geliştirme akışındadır. Boss'a atlama ve kısaltılmış stage süresi mevcut geliştirme
 kapısına bağlıdır; `TEST_SHORTCUTS_ENABLED` üretimde `false` kalır.
 
-Bu araçlar ekran kompozisyonu provası için yeterlidir. Android telefon görüntülerinin
-yerine geçmezler; Phase 12 kapsamında yeni üretim kısayolu gerekmez.
+Android `deepdive.qa.captureStage` intent extra'sı yalnızca derleme zamanı geliştirme
+kapısı açıkken Stage 2–5 başlangıcını bellekte seçer. Üretim sabiti `false` olduğunda
+etkisizdir; debug overlay ayrı bir opt-in özelliktir. Araç ilerlemeyi, ekonomiyi veya
+save verisini değiştirmez.

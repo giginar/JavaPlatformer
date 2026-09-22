@@ -9,6 +9,7 @@ import android.util.Log;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.game.DeepDiveDrift;
+import com.game.GameConfig;
 import com.game.ads.AdConfiguration;
 import com.game.ads.AdMode;
 import com.game.ads.AdvertisingService;
@@ -18,6 +19,7 @@ public final class AndroidLauncher extends AndroidApplication {
     private static final long IMMERSIVE_RETRY_DELAY_MILLIS = 250L;
     private static final String TAG = "DeepDriftQa";
     private static final String QA_REWARDED_EXTRA = "deepdive.qa.rewarded";
+    private static final String QA_CAPTURE_STAGE_EXTRA = "deepdive.qa.captureStage";
     private static final int QA_REWARDED_MAX_ATTEMPTS = 60;
 
     private AndroidAdvertisingService advertising;
@@ -35,11 +37,23 @@ public final class AndroidLauncher extends AndroidApplication {
         configuration.useWakelock = true;
         configuration.numSamples = 4;
         AdConfiguration adConfiguration = AdBuildConfiguration.create();
+        configureScreenshotCaptureIfRequested();
         advertising = new AndroidAdvertisingService(this, adConfiguration);
         DeepDiveDrift game = new DeepDiveDrift(advertising);
         initialize(game, configuration);
         advertising.start();
         startRewardedQaIfRequested(game, adConfiguration);
+    }
+
+    private void configureScreenshotCaptureIfRequested() {
+        int stage = getIntent().getIntExtra(QA_CAPTURE_STAGE_EXTRA, 1);
+        if (!GameConfig.TEST_SHORTCUTS_ENABLED || stage < 2 || stage > 5) {
+            return;
+        }
+        System.setProperty("deepdive.debug", "true");
+        System.setProperty("deepdive.debug.overlay", "false");
+        System.setProperty("deepdive.capture.stage", Integer.toString(stage));
+        System.setProperty("deepdive.language", "en");
     }
 
     @Override

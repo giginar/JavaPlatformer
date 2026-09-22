@@ -56,6 +56,21 @@ public final class GameConfig {
         return TEST_SHORTCUTS_ENABLED && Boolean.getBoolean("deepdive.debug");
     }
 
+    /** Requested in-memory starting stage for explicitly gated screenshot sessions. */
+    public static int screenshotCaptureStage() {
+        if (!developmentShortcutsEnabled()) {
+            return 1;
+        }
+        return Math.max(1, Math.min(5,
+            Integer.getInteger("deepdive.capture.stage", 1)));
+    }
+
+    /** Diagnostics are opt-in and independent from development capture shortcuts. */
+    public static boolean debugOverlayEnabled() {
+        return developmentShortcutsEnabled()
+            && Boolean.getBoolean("deepdive.debug.overlay");
+    }
+
     /**
      * Runtime override used by short balance-test runs. Desktop accepts
      * {@code --stage-duration=15}; other launchers can set the same system property.
