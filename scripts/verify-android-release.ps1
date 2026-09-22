@@ -645,19 +645,36 @@ if ($isSigned -and $signingEnvironmentComplete) {
     if (-not (Test-Path -LiteralPath $keystorePath -PathType Leaf)) {
         throw "Android upload keystore is missing: $keystorePath"
     }
+    function Invoke-KeytoolForText {
+        param(
+            [Parameter(Mandatory = $true)][object[]]$Arguments,
+            [Parameter(Mandatory = $true)][string]$FailureMessage
+        )
+        $savedErrorActionPreference = $ErrorActionPreference
+        try {
+            # Windows PowerShell surfaces keytool's harmless JKS warning on stderr as
+            # NativeCommandError when the surrounding script uses Stop.
+            $ErrorActionPreference = 'Continue'
+            $output = (& keytool.exe @Arguments 2>&1 | Out-String)
+            $exitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $savedErrorActionPreference
+        }
+        if ($exitCode -ne 0) {
+            throw $FailureMessage
+        }
+        return $output
+    }
     $keytoolCommonArguments = @('-J-Duser.language=en', '-J-Duser.country=US')
-    $bundleCertificate = (& keytool.exe @keytoolCommonArguments -printcert `
-        -jarfile $releaseBundle.FullName 2>&1 | Out-String)
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Unable to read the AAB signer certificate.'
-    }
-    $keystoreCertificate = (& keytool.exe @keytoolCommonArguments -list -v `
-        -keystore $keystorePath `
-        '-storepass:env' 'DEEPDRIFT_UPLOAD_STORE_PASSWORD' `
-        -alias $env:DEEPDRIFT_UPLOAD_KEY_ALIAS 2>&1 | Out-String)
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Unable to read the configured upload certificate.'
-    }
+    $bundleCertificate = Invoke-KeytoolForText -Arguments @(
+        $keytoolCommonArguments + @('-printcert', '-jarfile', $releaseBundle.FullName)
+    ) -FailureMessage 'Unable to read the AAB signer certificate.'
+    $keystoreCertificate = Invoke-KeytoolForText -Arguments @(
+        $keytoolCommonArguments + @(
+            '-list', '-v', '-keystore', $keystorePath,
+            '-storepass:env', 'DEEPDRIFT_UPLOAD_STORE_PASSWORD',
+            '-alias', $env:DEEPDRIFT_UPLOAD_KEY_ALIAS)
+    ) -FailureMessage 'Unable to read the configured upload certificate.'
     $bundleFingerprintMatch = [regex]::Match(
         $bundleCertificate, 'SHA256:\s*([0-9A-F:]+)', 'IgnoreCase')
     $keystoreFingerprintMatch = [regex]::Match(
