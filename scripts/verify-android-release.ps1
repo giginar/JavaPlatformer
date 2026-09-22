@@ -368,6 +368,16 @@ if ($isOptimized) {
     if (-not $hasFirstPartyObfuscation) {
         throw 'R8 mapping does not prove first-party class obfuscation.'
     }
+    $optionsScreenCode = (& $apkAnalyzerPath dex code `
+        --class com.game.screen.OptionsScreen `
+        --proguard-mappings $r8Reports.Mapping $releaseApk.FullName | Out-String)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to inspect the optimized Settings-screen DEX.'
+    }
+    if ($optionsScreenCode.Contains(
+        'Ljava/util/List;->toArray(Ljava/util/function/IntFunction;)[Ljava/lang/Object;')) {
+        throw 'Optimized Settings code calls List.toArray(IntFunction), which is unavailable before Android API 33.'
+    }
     $gdxPixmapCode = (& $apkAnalyzerPath dex code `
         --class com.badlogic.gdx.graphics.g2d.Gdx2DPixmap $releaseApk.FullName | Out-String)
     if ($LASTEXITCODE -ne 0 -or $gdxPixmapCode -notmatch

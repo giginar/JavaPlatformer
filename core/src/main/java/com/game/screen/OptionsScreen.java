@@ -68,7 +68,7 @@ public class OptionsScreen extends BaseScreen {
             if (privacyRequired) {
                 mobileOptions.add(mobileOptions.indexOf(Option.ABOUT), Option.PRIVACY);
             }
-            options = mobileOptions.toArray(Option[]::new);
+            options = mobileOptions.toArray(new Option[0]);
         } else {
             options = Arrays.stream(Option.values())
                 .filter(option -> option != Option.PRIVACY)

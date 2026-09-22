@@ -40,7 +40,7 @@ public final class Localization {
 
     private static void loadBundles() {
         FileHandle base = Gdx.files.internal(BUNDLE_PATH);
-        english = I18NBundle.createBundle(base, GameLanguage.ENGLISH.locale());
+        english = I18NBundle.createBundle(base, Locale.ROOT);
         selected = language == GameLanguage.ENGLISH
             ? english : I18NBundle.createBundle(base, language.locale());
     }
