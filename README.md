@@ -192,27 +192,37 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android
 
 Çıktılar `android/target/store/google-play` altında oluşur. Maven profili AAPT2, D8 ve Bundletool’un resmi komut satırı araçlarını kullanır; doğrulama betiği Bundletool şemasını, yerel debug anahtarıyla imzalanmış evrensel test APK’sını, ZIP hizalamasını, dört ABI için 16 KB ELF uyumluluğunu ve AAB imzasını denetler.
 
-`keystore.properties` yoksa AAB bilinçli olarak `-unsigned.aab` adıyla üretilir. Özel yükleme anahtarını oluşturmak ve imzalı paket almak için:
+Hiçbir `DEEPDRIFT_UPLOAD_*` değişkeni yoksa AAB bilinçli olarak `-unsigned.aab`
+adıyla üretilir. Değişkenlerin yalnızca bir bölümü ayarlanmışsa derleme hata verir.
+Windows'ta depo dışında özel yükleme anahtarı, DPAPI korumalı kimlik bilgileri ve
+ortam yükleyicisini bir kez oluşturmak için:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-android-upload-key.ps1
-Copy-Item keystore.properties.example keystore.properties
-# Parolaları keystore.properties içine girdikten sonra aynı Maven komutunu çalıştırın.
-.\mvnw.cmd -B -ntp -Pandroid-release -pl android -am package
 ```
 
-`keystore.properties` ve `upload-keystore.jks` Git tarafından yok sayılır. Anahtarın güvenli bir yedeğini saklayın.
+Dosyalar `%USERPROFILE%\.blueborn-games\deep-drift\signing\` altında oluşturulur.
+JKS, DPAPI kimlik dosyası ve parolalar Git'e eklenmemelidir. Tüm dış klasörün güvenli
+yedeğini saklayın. Bu anahtar Google Play'e paket yüklemek içindir; Google'ın yönettiği
+Play app-signing özel anahtarı değildir.
 
-Google Play'e göndermeden önce imzayı zorunlu tutan doğrulamayı çalıştırın:
+Sonraki derlemelerde ortamı aynı PowerShell işlemine yükleyip optimize TEST paketini
+imza zorunluluğuyla üretin ve doğrulayın:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-release.ps1 -SkipBuild -RequireSignedBundle
+& "$env:USERPROFILE\.blueborn-games\deep-drift\signing\load-signing-env.ps1"
+$env:DEEPDRIFT_ADS_MODE = 'TEST'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-optimized-release.ps1 -RequireSignedBundle
 ```
 
-Bu komut imzasız AAB için hata verir; APK/AAB içindeki sürüm bilgilerini de ortak
-sürüm hesabıyla karşılaştırır. Her yeni Play yüklemesini yeni bir committen üretin;
-`android.version-code` başlangıç değerini normal sürümlerde elle artırmak gerekmez.
-Paket doğrulaması, gerçek cihaz testi ve Play Console incelemesinin yerine geçmez.
+Yükleyici `DEEPDRIFT_UPLOAD_KEYSTORE`, `DEEPDRIFT_UPLOAD_STORE_PASSWORD`,
+`DEEPDRIFT_UPLOAD_KEY_ALIAS` ve `DEEPDRIFT_UPLOAD_KEY_PASSWORD` değişkenlerini yalnızca
+geçerli işleme ayarlar; parolaları yazdırmaz. Betikler parolaları `keytool`/`jarsigner`
+için `-storepass:env` ve `-keypass:env` ile kullanır. Doğrulama imzayı ve imzalayan
+sertifikanın seçili upload anahtarıyla eşleşmesini denetler. Her Play yüklemesini temiz,
+commitlenmiş HEAD'den üretin. `android.version-code` normal sürümlerde elle artırılmaz.
+
+**INTERNAL TEST BUILD — NOT FOR PRODUCTION PROMOTION**
 
 ## Steam paketleri
 

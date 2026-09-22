@@ -898,34 +898,47 @@ Invoke-ExternalTool -FilePath $javaPath -Arguments @(
     "--config=$bundleConfigPath", '--overwrite'
 )
 
-$keystorePropertiesPath = Join-Path $projectRootPath 'keystore.properties'
-$isSigned = Test-Path -LiteralPath $keystorePropertiesPath
+$signingVariables = @(
+    'DEEPDRIFT_UPLOAD_KEYSTORE',
+    'DEEPDRIFT_UPLOAD_STORE_PASSWORD',
+    'DEEPDRIFT_UPLOAD_KEY_ALIAS',
+    'DEEPDRIFT_UPLOAD_KEY_PASSWORD'
+)
+$presentSigningVariables = @($signingVariables | Where-Object {
+    -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_, 'Process'))
+})
+$isSigned = $presentSigningVariables.Count -eq $signingVariables.Count
+if ($presentSigningVariables.Count -gt 0 -and -not $isSigned) {
+    $missingSigningVariables = @($signingVariables | Where-Object {
+        [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_, 'Process'))
+    })
+    throw "Android upload signing is partially configured. Missing: $($missingSigningVariables -join ', ')"
+}
 if ($isSigned) {
-    $keystoreProperties = Read-PropertiesFile $keystorePropertiesPath
-    foreach ($requiredKey in @('storeFile', 'storePassword', 'keyAlias', 'keyPassword')) {
-        if (-not $keystoreProperties.ContainsKey($requiredKey) -or -not $keystoreProperties[$requiredKey]) {
-            throw "keystore.properties is missing $requiredKey"
-        }
+    if (-not [System.IO.Path]::IsPathRooted($env:DEEPDRIFT_UPLOAD_KEYSTORE)) {
+        throw 'DEEPDRIFT_UPLOAD_KEYSTORE must be an absolute path outside the repository.'
     }
-    $keystorePath = [System.IO.Path]::GetFullPath(
-        (Join-Path $projectRootPath $keystoreProperties['storeFile']))
-    if (-not (Test-Path -LiteralPath $keystorePath)) {
+    $keystorePath = [System.IO.Path]::GetFullPath($env:DEEPDRIFT_UPLOAD_KEYSTORE)
+    $projectRootPrefix = $projectRootPath.TrimEnd('\') + '\'
+    if ($keystorePath.StartsWith(
+        $projectRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'DEEPDRIFT_UPLOAD_KEYSTORE must point outside the repository.'
+    }
+    if (-not (Test-Path -LiteralPath $keystorePath -PathType Leaf)) {
         throw "Android upload keystore is missing: $keystorePath"
     }
-    $env:DEEPDIVE_STORE_PASSWORD = $keystoreProperties['storePassword']
-    $env:DEEPDIVE_KEY_PASSWORD = $keystoreProperties['keyPassword']
-    try {
-        Invoke-ExternalTool -FilePath $jarsignerPath -Arguments @(
-            '-sigalg', 'SHA256withRSA', '-digestalg', 'SHA-256',
-            '-keystore', $keystorePath,
-            '-storepass:env', 'DEEPDIVE_STORE_PASSWORD',
-            '-keypass:env', 'DEEPDIVE_KEY_PASSWORD',
-            $unsignedBundlePath, $keystoreProperties['keyAlias']
-        )
-    } finally {
-        Remove-Item Env:DEEPDIVE_STORE_PASSWORD -ErrorAction SilentlyContinue
-        Remove-Item Env:DEEPDIVE_KEY_PASSWORD -ErrorAction SilentlyContinue
-    }
+    Invoke-ExternalTool -FilePath $keytoolPath -Arguments @(
+        '-list', '-keystore', $keystorePath,
+        '-storepass:env', 'DEEPDRIFT_UPLOAD_STORE_PASSWORD',
+        '-alias', $env:DEEPDRIFT_UPLOAD_KEY_ALIAS
+    )
+    Invoke-ExternalTool -FilePath $jarsignerPath -Arguments @(
+        '-sigalg', 'SHA256withRSA', '-digestalg', 'SHA-256',
+        '-keystore', $keystorePath,
+        '-storepass:env', 'DEEPDRIFT_UPLOAD_STORE_PASSWORD',
+        '-keypass:env', 'DEEPDRIFT_UPLOAD_KEY_PASSWORD',
+        $unsignedBundlePath, $env:DEEPDRIFT_UPLOAD_KEY_ALIAS
+    )
 }
 
 $bundleName = "DeepDiveDrift-$Version$artifactQualifier-google-play$(if ($isSigned) { '' } else { '-unsigned' }).aab"

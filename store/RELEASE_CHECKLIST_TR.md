@@ -34,7 +34,7 @@
 - [x] Nihai mağaza adı `Project Blue: Deep Drift`; uygulama etiketi, About/Legal, mağaza metinleri ve oluşturulan başlık görsellerinde aynı ad kullanılıyor
 - [ ] Android için uyarlanabilir (adaptive) launcher icon foreground/background kaynaklarını hazırlama ve maske önizlemelerini doğrulama
 - [ ] Google Play geliştirici hesabı ve kimlik doğrulaması
-- [ ] Özel upload keystore oluşturma ve güvenli yedek
+- [x] Özel upload keystore oluşturma; depo dışında JKS, açık sertifika ve kullanıcıya bağlı DPAPI kimlik bilgileri hazır (üretim öncesi bağımsız güvenli yedek gerekli)
 - [ ] Gizlilik politikasındaki yasal veri sorumlusu ve yürürlük tarihi alanlarını doldurup beklenen Pages URL'sini etkin HTTPS adresi olarak doğrulama
 - [x] Pixel 8 Android API 36 sürümünden yedi yatay `en-US` telefon ekran görüntüsü alma; ilk üçü 1920×1080 gerçek oynanıştır
 - [x] Eski `05-leviathan.png` görüntüsünü güncel telefon setinden çıkarma; hak engeli çözülmedikçe boss ekran görüntüsü kullanmama

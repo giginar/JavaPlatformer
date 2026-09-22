@@ -620,8 +620,55 @@ if ($LASTEXITCODE -ne 0) {
     throw 'AAB signature verification failed'
 }
 $isSigned = $signatureOutput -match '(?m)^jar verified\.'
-if (($RequireSignedBundle -or (Test-Path -LiteralPath (Join-Path $projectRootPath 'keystore.properties'))) -and -not $isSigned) {
-    throw 'Google Play requires an upload-key signed AAB. Create the upload keystore, configure keystore.properties, and rebuild. The local test APK can still be installed.'
+$signingVariables = @(
+    'DEEPDRIFT_UPLOAD_KEYSTORE',
+    'DEEPDRIFT_UPLOAD_STORE_PASSWORD',
+    'DEEPDRIFT_UPLOAD_KEY_ALIAS',
+    'DEEPDRIFT_UPLOAD_KEY_PASSWORD'
+)
+$presentSigningVariables = @($signingVariables | Where-Object {
+    -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_, 'Process'))
+})
+if ($presentSigningVariables.Count -gt 0 -and
+    $presentSigningVariables.Count -ne $signingVariables.Count) {
+    $missingSigningVariables = @($signingVariables | Where-Object {
+        [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_, 'Process'))
+    })
+    throw "Android upload signing is partially configured. Missing: $($missingSigningVariables -join ', ')"
+}
+$signingEnvironmentComplete = $presentSigningVariables.Count -eq $signingVariables.Count
+if (($RequireSignedBundle -or $signingEnvironmentComplete) -and -not $isSigned) {
+    throw 'Google Play requires an upload-key signed AAB. Load all DEEPDRIFT_UPLOAD_* variables and rebuild. The local test APK can still be installed.'
+}
+if ($isSigned -and $signingEnvironmentComplete) {
+    $keystorePath = [System.IO.Path]::GetFullPath($env:DEEPDRIFT_UPLOAD_KEYSTORE)
+    if (-not (Test-Path -LiteralPath $keystorePath -PathType Leaf)) {
+        throw "Android upload keystore is missing: $keystorePath"
+    }
+    $keytoolCommonArguments = @('-J-Duser.language=en', '-J-Duser.country=US')
+    $bundleCertificate = (& keytool.exe @keytoolCommonArguments -printcert `
+        -jarfile $releaseBundle.FullName 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to read the AAB signer certificate.'
+    }
+    $keystoreCertificate = (& keytool.exe @keytoolCommonArguments -list -v `
+        -keystore $keystorePath `
+        '-storepass:env' 'DEEPDRIFT_UPLOAD_STORE_PASSWORD' `
+        -alias $env:DEEPDRIFT_UPLOAD_KEY_ALIAS 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Unable to read the configured upload certificate.'
+    }
+    $bundleFingerprintMatch = [regex]::Match(
+        $bundleCertificate, 'SHA256:\s*([0-9A-F:]+)', 'IgnoreCase')
+    $keystoreFingerprintMatch = [regex]::Match(
+        $keystoreCertificate, 'SHA256:\s*([0-9A-F:]+)', 'IgnoreCase')
+    if (-not $bundleFingerprintMatch.Success -or -not $keystoreFingerprintMatch.Success) {
+        throw 'Unable to determine the SHA-256 certificate fingerprint.'
+    }
+    if ($bundleFingerprintMatch.Groups[1].Value -ne
+        $keystoreFingerprintMatch.Groups[1].Value) {
+        throw 'The AAB signer does not match the configured upload certificate.'
+    }
 }
 
 Write-Host "Android $OptimizationMode verification passed:"
@@ -640,3 +687,6 @@ if ($isOptimized) {
 }
 Write-Host "  AAB: $($releaseBundle.FullName)"
 Write-Host "  AAB signature: $(if ($isSigned) { 'signed' } else { 'unsigned (upload key still required)' })"
+if ($isSigned -and $signingEnvironmentComplete) {
+    Write-Host '  AAB signer: matches configured upload certificate'
+}

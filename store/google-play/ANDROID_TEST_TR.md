@@ -119,23 +119,34 @@ gerçek telefondan menü ve oynanış ekran görüntüleri alın.
 1. Telefon testlerini tamamlayın. [Yayın kontrol listesindeki](../RELEASE_CHECKLIST_TR.md) destek adresi, gizlilik politikası ve varlık hakları gibi eksikleri kapatın.
 2. Google Play geliştirici hesabını ve istenen kimlik/cihaz doğrulamalarını tamamlayın. Uygulamayı **Project Blue: Deep Drift**, türünü **Oyun** olarak oluşturun. Herkese açık yayıncı/stüdyo adı olarak **Blueborn Games**, destek adresi olarak **ykucukcinar@gmail.com** kullanılır; yasal geliştirici kimliği ayrıca doğrulanmalıdır.
 3. Paket kimliğini (`com.game.diver.deepdivedrift`) ilk yüklemeden önce kesinleştirin; [Google Play paket adları kalıcıdır](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en).
-4. Özel upload anahtarı oluşturun:
+4. Windows'ta depo dışında özel upload anahtarı, açık sertifika ve geçerli kullanıcıya
+   bağlı DPAPI korumalı kimlik bilgilerini bir kez oluşturun:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-android-upload-key.ps1
-Copy-Item .\keystore.properties.example .\keystore.properties
 ```
 
-`keystore.properties` içindeki alanları yerelde doldurun. Parolaları sohbet veya Git'e eklemeyin;
-anahtarın ve parolaların güvenli yedeğini saklayın.
+Çıktılar `%USERPROFILE%\.blueborn-games\deep-drift\signing\` altında kalır. JKS,
+DPAPI kimlik dosyası ve parolaları sohbete veya Git'e eklemeyin; dış klasörün güvenli
+yedeğini saklayın. Bu upload anahtarı Google Play'e AAB göndermek içindir ve Google
+Play'in yönettiği app-signing özel anahtarı değildir. Anahtarı kaybetmek upload-key
+sıfırlama/kurtarma sürecini gerektirir.
 
 5. Her yeni Play yüklemesini yeni bir committen üretin. `versionName`, Windows ile aynı otomatik sürümdür (`1.0.34` gibi). `versionCode`, kök `pom.xml` içindeki `android.version-code` başlangıç değeri + Git commit sayısıdır (34 commit için `35`). Normal sürümlerde elle değiştirilmez; aynı committen tekrar derlemek sürümü artırmaz. İmzalı paketi üretip doğrulayın:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-release.ps1 -RequireSignedBundle
+& "$env:USERPROFILE\.blueborn-games\deep-drift\signing\load-signing-env.ps1"
+$env:DEEPDRIFT_ADS_MODE = 'TEST'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-optimized-release.ps1 -RequireSignedBundle
 ```
 
-6. `android/target/store/google-play/DeepDiveDrift-1.0.34-google-play.aab` dosyasını (34 commit örneği; güncel sürüm dosyasını seçin) Play Console'da **Dahili test / Internal testing** sürümüne yükleyin ve Play App Signing'i yapılandırın. `-unsigned.aab` dosyası yükleme için hazır değildir; APK yerel test içindir.
+Bu yükleyici dört `DEEPDRIFT_UPLOAD_*` değişkenini yalnızca geçerli PowerShell işlemine
+ayarlar ve parolaları yazdırmaz. Kısmi imzalama ortamı derlemeyi durdurur. İmzalı AAB'nin
+sertifikası yapılandırılmış upload sertifikasıyla karşılaştırılır.
+
+**INTERNAL TEST BUILD — NOT FOR PRODUCTION PROMOTION**
+
+6. `android/target/store/google-play/DeepDiveDrift-1.0.34-optimized-google-play.aab` dosyasını (34 commit örneği; güncel sürüm dosyasını seçin) Play Console'da **Dahili test / Internal testing** sürümüne yükleyin ve Play App Signing'i yapılandırın. `-unsigned.aab` dosyası yükleme için hazır değildir; APK yerel test içindir.
 7. Kendinizi test kullanıcısı ekleyip katılım bağlantısını aynı Google hesabıyla telefonda açın. Play Store üzerinden gelen sürümü de test edin.
 8. [Mağaza metinlerini](listing-tr.md), ikon/özellik görselini, telefon ekran görüntülerini, gizlilik politikası URL'sini, veri güvenliği, reklam, içerik derecelendirmesi ve hedef kitle beyanlarını tamamlayın.
 9. Hesabın gerektirdiği kapalı test ve üretim erişimi sürecini tamamladıktan sonra yayına başvurun.

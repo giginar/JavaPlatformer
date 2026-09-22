@@ -86,6 +86,41 @@ Steam kimlikleri ve yükleme adımları [Steam rehberinde](../steam/README.md) b
 Production identifiers remain outside tracked source. The Android dependency graph is
 versioned and checksum-locked in `android/ads-dependencies.lock`.
 
+## Secure Google Play upload signing
+
+Real signing secrets never belong in the repository. On Windows, create the dedicated
+Deep Drift upload key once with:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\create-android-upload-key.ps1
+```
+
+The helper writes `deep-drift-upload.jks`, its public certificate,
+`credentials.dpapi.json`, `load-signing-env.ps1`, and a local README below
+`%USERPROFILE%\.blueborn-games\deep-drift\signing\`. Passwords are random and the
+credential file is encrypted for the current Windows user with DPAPI. The directory ACL
+is restricted to that user and SYSTEM. Back up the entire external directory securely;
+never commit it. Losing the upload key requires Google Play upload-key recovery/reset.
+This upload key is separate from the app-signing private key held by Google Play.
+
+For a later build, load the four required process environment variables without printing
+their values, then build and verify the optimized TEST bundle:
+
+```powershell
+& "$env:USERPROFILE\.blueborn-games\deep-drift\signing\load-signing-env.ps1"
+$env:DEEPDRIFT_ADS_MODE = 'TEST'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-android-optimized-release.ps1 -RequireSignedBundle
+```
+
+The loader sets `DEEPDRIFT_UPLOAD_KEYSTORE`, `DEEPDRIFT_UPLOAD_STORE_PASSWORD`,
+`DEEPDRIFT_UPLOAD_KEY_ALIAS`, and `DEEPDRIFT_UPLOAD_KEY_PASSWORD` only for the current
+PowerShell process. `jarsigner` and `keytool` consume the passwords through
+`-storepass:env` and `-keypass:env`. With none of these variables, development builds
+remain unsigned. Providing only some variables fails the build. The signed verifier also
+checks that the AAB signer matches the configured upload certificate.
+
+**INTERNAL TEST BUILD — NOT FOR PRODUCTION PROMOTION**
+
 ## Optimized Android release verification
 
 The ordinary Android workflow remains unoptimized for development and QA. To build and

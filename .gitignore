@@ -14,7 +14,13 @@ hs_err_pid*
 ## Android SDK and signing secrets
 local.properties
 /keystore.properties
-/upload-keystore.jks
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pkcs12
+/credentials.dpapi.json
+/load-signing-env.ps1
 /.android-sdk/
 com_crashlytics_export_strings.xml
 
