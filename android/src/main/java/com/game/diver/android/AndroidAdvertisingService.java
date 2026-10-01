@@ -15,8 +15,10 @@ import com.game.ads.RewardedCallbackGate;
 import com.google.android.libraries.ads.mobile.sdk.MobileAds;
 import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback;
 import com.google.android.libraries.ads.mobile.sdk.common.AdRequest;
+import com.google.android.libraries.ads.mobile.sdk.common.AgeRestrictedTreatment;
 import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError;
 import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError;
+import com.google.android.libraries.ads.mobile.sdk.common.RequestConfiguration;
 import com.google.android.libraries.ads.mobile.sdk.initialization.InitializationConfig;
 import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAd;
 import com.google.android.libraries.ads.mobile.sdk.interstitial.InterstitialAdEventCallback;
@@ -64,7 +66,7 @@ public final class AndroidAdvertisingService implements AdvertisingService {
         } else {
             Log.i(TAG, "DISABLED mode: no consent, initialization, or ad requests");
         }
-        Log.i(TAG, "POLICY CONFIGURATION PENDING: no age or child-directed flags set");
+        Log.i(TAG, "Ad content rating: PG; age-restricted treatment: unspecified");
     }
 
     public void start() {
@@ -83,7 +85,6 @@ public final class AndroidAdvertisingService implements AdvertisingService {
                     new ConsentRequestParameters.Builder()
                         .setAdMobAppId(configuration.appId());
                 applyTestConsentDebugSettings(activity, parameterBuilder);
-                // POLICY CONFIGURATION PENDING: do not set age-related flags here.
                 ConsentRequestParameters parameters = parameterBuilder.build();
                 consentInformation.requestConsentInfoUpdate(
                     activity,
@@ -364,8 +365,14 @@ public final class AndroidAdvertisingService implements AdvertisingService {
         }
         runOnActivity(activity -> {
             try {
+                RequestConfiguration requestConfiguration = new RequestConfiguration.Builder()
+                    .setMaxAdContentRating(
+                        RequestConfiguration.MaxAdContentRating.MAX_AD_CONTENT_RATING_PG)
+                    .setAgeRestrictedTreatment(AgeRestrictedTreatment.UNSPECIFIED)
+                    .build();
                 InitializationConfig initializationConfig = new InitializationConfig.Builder(
                     configuration.appId())
+                    .setRequestConfiguration(requestConfiguration)
                     .disableSdkCrashReporting()
                     .build();
                 MobileAds.initialize(activity.getApplicationContext(), initializationConfig,

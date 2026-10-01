@@ -1,6 +1,14 @@
 $ErrorActionPreference = 'Stop'
 $resolver = Join-Path $PSScriptRoot 'resolve-android-ad-configuration.ps1'
 $testWrapper = Join-Path $PSScriptRoot 'build-android-test.ps1'
+$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$advertisingServicePath = Join-Path $projectRoot `
+    'android\src\main\java\com\game\diver\android\AndroidAdvertisingService.java'
+$privacyPaths = @(
+    (Join-Path $projectRoot 'store\privacy-policy-en.md'),
+    (Join-Path $projectRoot 'store\privacy-policy-tr.md'),
+    (Join-Path $projectRoot 'docs\privacy.html')
+)
 $environmentNames = @(
     'DEEPDRIFT_ADS_MODE',
     'DEEPDRIFT_ADMOB_APP_ID',
@@ -129,6 +137,77 @@ try {
     )) {
         if (-not $wrapperText.Contains($requiredText)) {
             throw "Routine Android test wrapper is missing safety behavior: $requiredText"
+        }
+    }
+
+    $serviceText = Get-Content -LiteralPath $advertisingServicePath -Raw -Encoding UTF8
+    foreach ($requiredText in @(
+        'new RequestConfiguration.Builder()',
+        'RequestConfiguration.MaxAdContentRating.MAX_AD_CONTENT_RATING_PG',
+        '.setAgeRestrictedTreatment(AgeRestrictedTreatment.UNSPECIFIED)',
+        '.setRequestConfiguration(requestConfiguration)',
+        'UserMessagingPlatform.loadAndShowConsentFormIfRequired',
+        'advertisingGate.updateConsent(information.canRequestAds(), privacyRequired)',
+        'if (!advertisingGate.canRequestAds())',
+        'MobileAds.initialize(activity.getApplicationContext(), initializationConfig'
+    )) {
+        if (-not $serviceText.Contains($requiredText)) {
+            throw "Android advertising policy contract is missing: $requiredText"
+        }
+    }
+    foreach ($forbiddenText in @(
+        '.setTagForChildDirectedTreatment(',
+        '.setTagForUnderAgeOfConsent(',
+        'AgeRestrictedTreatment.CHILD',
+        'AgeRestrictedTreatment.TEEN'
+    )) {
+        if ($serviceText.Contains($forbiddenText)) {
+            throw "Android advertising policy contract contains forbidden treatment: $forbiddenText"
+        }
+    }
+    $requestConfigIndex = $serviceText.IndexOf('new RequestConfiguration.Builder()')
+    $initializationConfigIndex = $serviceText.IndexOf('new InitializationConfig.Builder(')
+    $mobileAdsInitializeIndex = $serviceText.IndexOf('MobileAds.initialize(')
+    if ($requestConfigIndex -lt 0 -or $requestConfigIndex -ge $initializationConfigIndex -or
+        $initializationConfigIndex -ge $mobileAdsInitializeIndex) {
+        throw 'RequestConfiguration must be attached to InitializationConfig before Mobile Ads initialization.'
+    }
+    if ($serviceText -notmatch '(?s)requestConsentInfoUpdate\(.+?\(\) -> loadRequiredConsentForm\(activity\)') {
+        throw 'UMP consent refresh must continue into the required consent form flow.'
+    }
+    if ($serviceText -notmatch '(?s)loadAndShowConsentFormIfRequired\(.+?updateConsentStateAndAds\(\)') {
+        throw 'UMP required form completion must update consent before ad initialization.'
+    }
+    if ($serviceText -notmatch '(?s)updateConsentStateAndAds\(\).+?canRequestAds\(\).+?initializeAdsOnce\(\)') {
+        throw 'Mobile Ads initialization must remain gated by canRequestAds().'
+    }
+
+    $staleAudienceText = @(
+        'target age groups have not been selected',
+        'final audience configuration has not yet been'
+    )
+    $staleAudiencePatterns = @(
+        '(?i)hedef .+ gruplar. hen.z se.ilmemi.tir',
+        '(?i)nihai hedef kitle yap.land.rmas. hen.z se.ilmemi.tir'
+    )
+    $ageSeparator = [char]0x2013
+    foreach ($privacyPath in $privacyPaths) {
+        $privacyText = Get-Content -LiteralPath $privacyPath -Raw -Encoding UTF8
+        foreach ($audience in @("13${ageSeparator}15", "16${ageSeparator}17", '18+')) {
+            if (-not $privacyText.Contains($audience)) {
+                throw "Privacy audience is missing '$audience' in $privacyPath"
+            }
+        }
+        foreach ($staleText in $staleAudienceText) {
+            if ($privacyText.IndexOf(
+                    $staleText, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                throw "Stale audience wording remains in $privacyPath`: $staleText"
+            }
+        }
+        foreach ($stalePattern in $staleAudiencePatterns) {
+            if ($privacyText -match $stalePattern) {
+                throw "Stale audience wording remains in $privacyPath"
+            }
         }
     }
 } finally {

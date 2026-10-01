@@ -1,10 +1,10 @@
 # Project Blue: Deep Drift Privacy Policy — Draft
 
-Last reviewed: September 21, 2026
+Last reviewed: October 1, 2026
 
 Effective date: `REPLACE_WITH_EFFECTIVE_DATE`
 
-**POLICY CONFIGURATION PENDING. Do not treat this draft or its expected URL as production-ready until the effective date, legal controller name, target audience, launch countries, store languages, production advertising configuration, and live Pages URL are approved and verified.**
+**POLICY CONFIGURATION PENDING. Do not treat this draft or its expected URL as production-ready until the effective date, legal controller name, launch countries, store languages, production advertising configuration, and live Pages URL are approved and verified.**
 
 Public app name: `Project Blue: Deep Drift`
 
@@ -39,7 +39,7 @@ Google states that the Mobile Ads SDK automatically collects and shares the foll
 - diagnostic information, such as app-launch time, hang rate, and energy use; and
 - device and account identifiers, including the Android Advertising ID, App Set ID, and, where applicable, other identifiers related to signed-in accounts on the device.
 
-The Android package currently requests the Advertising ID permission because it is contributed by the Google Mobile Ads SDK. Android and Google advertising settings can limit, reset, or delete the Advertising ID. Age-related and regional privacy signals may prevent the Advertising ID from being transmitted. The final audience configuration has not yet been chosen.
+The Android package currently requests the Advertising ID permission because it is contributed by the Google Mobile Ads SDK. Android and Google advertising settings can limit, reset, or delete the Advertising ID. Age-related and regional privacy signals may prevent the Advertising ID from being transmitted.
 
 UMP requests updated consent information when the app starts, presents a consent form when Google indicates one is required, and makes privacy options available again when required. Project Blue: Deep Drift requests ads only when UMP reports that ads may be requested. The messages and choices shown depend on the user's region, the messages configured in Google's Privacy & Messaging tools, and the user's response.
 
@@ -51,7 +51,7 @@ Project Blue: Deep Drift does not include a standalone analytics, publisher cras
 
 ## Children and age treatment
 
-The intended target age groups have not been selected. The app therefore has not yet been configured as child-directed or for users under the age of consent. If the selected audience includes children, the advertising configuration and this policy must be reviewed and updated before release.
+The app is currently targeted on Google Play to users in the selected age groups 13–15, 16–17, and 18+. Some teen users may be considered children or minors depending on the jurisdiction. The app does not collect a user-entered age or operate a runtime age gate. Because the app does not know an individual user's age, Mobile Ads age-specific child or teen treatment is not globally hard-coded. The maximum ad content rating is restricted to PG. Consent and privacy messaging is handled through Google UMP where applicable.
 
 ## Questions and deletion requests
 

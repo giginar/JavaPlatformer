@@ -1,10 +1,10 @@
 # Project Blue: Deep Drift Gizlilik Politikası — Taslak
 
-Son inceleme: 21 Eylül 2026
+Son inceleme: 1 Ekim 2026
 
 Yürürlük tarihi: `YURURLUK_TARIHI_BURAYA`
 
-**POLİTİKA YAPILANDIRMASI BEKLİYOR. Yürürlük tarihi, yasal veri sorumlusu adı, hedef kitle, yayın ülkeleri, mağaza dilleri, üretim reklam yapılandırması ve canlı Pages URL'si onaylanıp doğrulanmadan bu taslağı veya beklenen URL'yi üretime hazır saymayın.**
+**POLİTİKA YAPILANDIRMASI BEKLİYOR. Yürürlük tarihi, yasal veri sorumlusu adı, yayın ülkeleri, mağaza dilleri, üretim reklam yapılandırması ve canlı Pages URL'si onaylanıp doğrulanmadan bu taslağı veya beklenen URL'yi üretime hazır saymayın.**
 
 Yayımlanacak uygulama adı: `Project Blue: Deep Drift`
 
@@ -39,7 +39,7 @@ Google, Mobile Ads SDK'nın reklam, analitik ve sahtekârlığı önleme amaçla
 - uygulama açılış süresi, takılma oranı ve enerji kullanımı gibi tanılama bilgileri; ve
 - Android Reklam Kimliği, App Set ID ve uygun olduğunda cihazdaki oturum açılmış hesaplarla ilişkili diğer kimlikler dahil cihaz ve hesap kimlikleri.
 
-Android paketi, Google Mobile Ads SDK tarafından eklendiği için Reklam Kimliği iznini şu anda ister. Android ve Google reklam ayarları Reklam Kimliği'ni sınırlayabilir, sıfırlayabilir veya silebilir. Yaşla ilgili ve bölgesel gizlilik sinyalleri Reklam Kimliği'nin iletilmesini engelleyebilir. Nihai hedef kitle yapılandırması henüz seçilmemiştir.
+Android paketi, Google Mobile Ads SDK tarafından eklendiği için Reklam Kimliği iznini şu anda ister. Android ve Google reklam ayarları Reklam Kimliği'ni sınırlayabilir, sıfırlayabilir veya silebilir. Yaşla ilgili ve bölgesel gizlilik sinyalleri Reklam Kimliği'nin iletilmesini engelleyebilir.
 
 UMP, uygulama açıldığında güncel izin bilgisini ister, Google gerekli olduğunu bildirdiğinde izin formunu gösterir ve gerektiğinde gizlilik seçeneklerini yeniden erişilebilir yapar. Project Blue: Deep Drift yalnızca UMP reklam isteğine izin verildiğini bildirdiğinde reklam ister. Gösterilen mesajlar ve seçenekler kullanıcının bölgesine, Google'ın Privacy & Messaging araçlarında yapılandırılan mesajlara ve kullanıcının seçimine bağlıdır.
 
@@ -51,7 +51,7 @@ Project Blue: Deep Drift bağımsız bir analitik, yayıncı çökme raporlama, 
 
 ## Çocuklar ve yaş uygulaması
 
-Amaçlanan hedef yaş grupları henüz seçilmemiştir. Bu nedenle uygulama çocuklara yönelik veya reşit olmayan kullanıcılar için henüz yapılandırılmamıştır. Seçilen kitle çocukları içerirse reklam yapılandırması ve bu politika yayından önce yeniden incelenmeli ve güncellenmelidir.
+Uygulama şu anda Google Play'de seçili 13–15, 16–17 ve 18+ yaş gruplarındaki kullanıcılara yöneliktir. Bazı genç kullanıcılar, yargı bölgesine bağlı olarak çocuk veya reşit olmayan kişi kabul edilebilir. Uygulama, kullanıcının girdiği bir yaş bilgisi toplamaz ve çalışma zamanında yaş kapısı işletmez. Uygulama kullanıcının bireysel yaşını bilmediği için Mobile Ads'te çocuklara veya gençlere yönelik yaşa özgü reklam işleme ayarı genel olarak sabit kodlanmamıştır. Maksimum reklam içeriği derecelendirmesi PG ile sınırlandırılmıştır. İzin ve gizlilik mesajları, geçerli olduğu durumlarda Google UMP üzerinden yönetilir.
 
 ## Sorular ve silme talepleri
 
