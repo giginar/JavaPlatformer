@@ -10,6 +10,8 @@ public interface AdvertisingService {
 
     interface RewardedCallback extends FullScreenCallback {
         void onRewardEarned();
+
+        void onFailedToShow();
     }
 
     boolean canRequestAds();

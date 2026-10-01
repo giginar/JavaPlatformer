@@ -216,14 +216,16 @@ public class DeepDiveDrift extends Game {
         });
     }
 
-    /** Technical rewarded path; no screen offers a gameplay reward until product approval. */
     public boolean showRewarded(AdvertisingService.RewardedCallback callback) {
         Objects.requireNonNull(callback, "callback");
         return advertising.showRewarded(new AdvertisingService.RewardedCallback() {
             @Override
             public void onOpened() {
-                interstitialPolicy.recordRewardedDisplay();
-                postToGameThread(callback::onOpened);
+                postToGameThread(() -> {
+                    interstitialPolicy.recordRewardedDisplay();
+                    pauseForFullScreenContent();
+                    callback.onOpened();
+                });
             }
 
             @Override
@@ -233,7 +235,15 @@ public class DeepDiveDrift extends Game {
 
             @Override
             public void onClosed() {
-                postToGameThread(callback::onClosed);
+                postToGameThread(() -> {
+                    resumeAfterFullScreenContent();
+                    callback.onClosed();
+                });
+            }
+
+            @Override
+            public void onFailedToShow() {
+                postToGameThread(callback::onFailedToShow);
             }
         });
     }

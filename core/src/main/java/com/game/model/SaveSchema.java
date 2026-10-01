@@ -8,12 +8,17 @@ import java.util.Objects;
 public final class SaveSchema {
     public static final String VERSION_KEY = "save.schemaVersion";
     public static final int LEGACY_VERSION = 0;
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
 
     static final String PEARLS_KEY = "progression.pearls";
     static final String SELECTED_SUIT_KEY = "progression.suit.selected";
     static final String RUN_SEQUENCE_KEY = "progression.run.sequence";
     static final String LAST_REWARDED_RUN_KEY = "progression.run.lastRewarded";
+    static final String LAST_REWARDED_RUN_PEARLS_KEY = "progression.run.lastRewardedPearls";
+    static final String DAILY_SALVAGE_LAST_UTC_EPOCH_DAY_KEY =
+        "progression.rewarded.dailySalvage.lastUtcEpochDay";
+    static final String RESULTS_LAST_CLAIMED_RUN_KEY =
+        "progression.rewarded.results.lastClaimedRun";
 
     private static final String DIFFICULTY_KEY = "runSetup.difficulty";
     private static final String KILLS_KEY = "achievement.stats.kills";
@@ -37,6 +42,7 @@ public final class SaveSchema {
             int nextVersion = version + 1;
             switch (nextVersion) {
                 case 1 -> migrateLegacyToVersionOne(preferences);
+                case 2 -> migrateVersionOneToVersionTwo(preferences);
                 default -> throw new IllegalStateException("Missing save migration for version "
                     + nextVersion);
             }
@@ -49,6 +55,10 @@ public final class SaveSchema {
         if (validateCurrentFields(preferences)) {
             preferences.flush();
         }
+    }
+
+    private static void migrateVersionOneToVersionTwo(Preferences preferences) {
+        validateCurrentFields(preferences);
     }
 
     private static void migrateLegacyToVersionOne(Preferences preferences) {
@@ -96,8 +106,24 @@ public final class SaveSchema {
         long sequence = Math.max(0L, preferences.getLong(RUN_SEQUENCE_KEY, 0L));
         long lastRewarded = Math.max(0L, preferences.getLong(LAST_REWARDED_RUN_KEY, 0L));
         lastRewarded = Math.min(lastRewarded, sequence);
+        int lastRewardedPearls = nonNegative(
+            preferences.getInteger(LAST_REWARDED_RUN_PEARLS_KEY, 0));
+        if (lastRewarded == 0L) {
+            lastRewardedPearls = 0;
+        }
+        long lastDailyEpochDay = Math.max(0L,
+            preferences.getLong(DAILY_SALVAGE_LAST_UTC_EPOCH_DAY_KEY, 0L));
+        long lastClaimedResultsRun = Math.max(0L,
+            preferences.getLong(RESULTS_LAST_CLAIMED_RUN_KEY, 0L));
+        lastClaimedResultsRun = Math.min(lastClaimedResultsRun, lastRewarded);
         changed |= putIfDifferent(preferences, RUN_SEQUENCE_KEY, sequence);
         changed |= putIfDifferent(preferences, LAST_REWARDED_RUN_KEY, lastRewarded);
+        changed |= putIfDifferent(preferences, LAST_REWARDED_RUN_PEARLS_KEY,
+            lastRewardedPearls);
+        changed |= putIfDifferent(preferences, DAILY_SALVAGE_LAST_UTC_EPOCH_DAY_KEY,
+            lastDailyEpochDay);
+        changed |= putIfDifferent(preferences, RESULTS_LAST_CLAIMED_RUN_KEY,
+            lastClaimedResultsRun);
 
         for (PermanentUpgrade upgrade : PermanentUpgrade.values()) {
             String levelKey = levelKey(upgrade);

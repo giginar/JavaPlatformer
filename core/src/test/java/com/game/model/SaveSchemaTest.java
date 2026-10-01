@@ -22,6 +22,10 @@ class SaveSchemaTest {
             preferences.getString("progression.suit.selected"));
         assertEquals(RunDifficulty.NORMAL.name(),
             preferences.getString("runSetup.difficulty"));
+        assertEquals(0L, preferences.getLong(
+            "progression.rewarded.dailySalvage.lastUtcEpochDay"));
+        assertEquals(0L, preferences.getLong(
+            "progression.rewarded.results.lastClaimedRun"));
     }
 
     @Test
@@ -67,6 +71,29 @@ class SaveSchemaTest {
     }
 
     @Test
+    void versionOneSaveRetainsExistingProgressionWhenRewardedFieldsAreAdded() {
+        MemoryPreferences preferences = populatedLegacySave();
+        preferences.putInteger(SaveSchema.VERSION_KEY, 1);
+        preferences.putLong("progression.run.sequence", 12L);
+        preferences.putLong("progression.run.lastRewarded", 11L);
+        Map<String, ?> before = preferences.get();
+
+        SaveSchema.migrate(preferences);
+
+        for (Map.Entry<String, ?> entry : before.entrySet()) {
+            if (!entry.getKey().equals(SaveSchema.VERSION_KEY)) {
+                assertEquals(entry.getValue(), preferences.get().get(entry.getKey()), entry.getKey());
+            }
+        }
+        assertEquals(SaveSchema.CURRENT_VERSION,
+            preferences.getInteger(SaveSchema.VERSION_KEY));
+        assertEquals(0L, preferences.getLong(
+            "progression.rewarded.dailySalvage.lastUtcEpochDay"));
+        assertEquals(0L, preferences.getLong(
+            "progression.rewarded.results.lastClaimedRun"));
+    }
+
+    @Test
     void corruptFieldsAreRepairedIndividuallyWithoutErasingValidData() {
         MemoryPreferences preferences = new MemoryPreferences();
         preferences.putInteger("progression.pearls", -20);
@@ -82,6 +109,9 @@ class SaveSchemaTest {
         preferences.putBoolean("achievement.unlocked.FIRST_BLOOD", true);
         preferences.putLong("progression.run.sequence", -4L);
         preferences.putLong("progression.run.lastRewarded", Long.MAX_VALUE);
+        preferences.putInteger("progression.run.lastRewardedPearls", -25);
+        preferences.putLong("progression.rewarded.dailySalvage.lastUtcEpochDay", -8L);
+        preferences.putLong("progression.rewarded.results.lastClaimedRun", Long.MAX_VALUE);
 
         SaveSchema.migrate(preferences);
 
@@ -99,6 +129,11 @@ class SaveSchemaTest {
         assertTrue(preferences.getBoolean("achievement.unlocked.FIRST_BLOOD"));
         assertEquals(0L, preferences.getLong("progression.run.sequence"));
         assertEquals(0L, preferences.getLong("progression.run.lastRewarded"));
+        assertEquals(0, preferences.getInteger("progression.run.lastRewardedPearls"));
+        assertEquals(0L, preferences.getLong(
+            "progression.rewarded.dailySalvage.lastUtcEpochDay"));
+        assertEquals(0L, preferences.getLong(
+            "progression.rewarded.results.lastClaimedRun"));
     }
 
     @Test

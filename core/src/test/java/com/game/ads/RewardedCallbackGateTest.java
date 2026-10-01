@@ -22,6 +22,7 @@ class RewardedCallbackGateTest {
         assertEquals(1, counters.opened.get());
         assertEquals(1, counters.rewarded.get());
         assertEquals(1, counters.closed.get());
+        assertEquals(0, counters.failed.get());
     }
 
     @Test
@@ -34,6 +35,7 @@ class RewardedCallbackGateTest {
 
         assertEquals(0, counters.rewarded.get());
         assertEquals(1, counters.closed.get());
+        assertEquals(0, counters.failed.get());
     }
 
     @Test
@@ -47,12 +49,26 @@ class RewardedCallbackGateTest {
 
         assertEquals(0, counters.rewarded.get());
         assertEquals(1, counters.closed.get());
+        assertEquals(1, counters.failed.get());
+    }
+
+    @Test
+    void lateRewardAfterDismissalIsIgnored() {
+        Counters counters = new Counters();
+        RewardedCallbackGate gate = new RewardedCallbackGate(counters);
+
+        gate.opened();
+        gate.dismissed();
+        gate.rewardEarned();
+
+        assertEquals(0, counters.rewarded.get());
     }
 
     private static final class Counters implements AdvertisingService.RewardedCallback {
         private final AtomicInteger opened = new AtomicInteger();
         private final AtomicInteger rewarded = new AtomicInteger();
         private final AtomicInteger closed = new AtomicInteger();
+        private final AtomicInteger failed = new AtomicInteger();
 
         @Override
         public void onOpened() {
@@ -67,6 +83,11 @@ class RewardedCallbackGateTest {
         @Override
         public void onClosed() {
             closed.incrementAndGet();
+        }
+
+        @Override
+        public void onFailedToShow() {
+            failed.incrementAndGet();
         }
     }
 }

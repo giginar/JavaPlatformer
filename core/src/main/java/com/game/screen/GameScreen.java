@@ -11,6 +11,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.game.DeepDiveDrift;
 import com.game.GameConfig;
+import com.game.ads.AdvertisingService;
+import com.game.ads.RewardedRequestGate;
 import com.game.diver.Background;
 import com.game.diver.Diver;
 import com.game.diver.Harpoon;
@@ -88,8 +90,9 @@ public class GameScreen extends BaseScreen {
     private static final float TOUCH_PAUSE_HEIGHT = 64f;
     private static final Rectangle TOUCH_PAUSE_BUTTON = new Rectangle(1192f, 644f,
         TOUCH_PAUSE_WIDTH, TOUCH_PAUSE_HEIGHT);
-    private static final Rectangle GAME_OVER_RETRY_BUTTON = new Rectangle(405f, 236f, 470f, 48f);
-    private static final Rectangle GAME_OVER_MENU_BUTTON = new Rectangle(405f, 194f, 470f, 38f);
+    private static final Rectangle RESULTS_REWARDED_BUTTON = new Rectangle(405f, 240f, 470f, 44f);
+    private static final Rectangle GAME_OVER_RETRY_BUTTON = new Rectangle(405f, 190f, 470f, 44f);
+    private static final Rectangle GAME_OVER_MENU_BUTTON = new Rectangle(405f, 150f, 470f, 36f);
 
     private final BitmapFont smallFont;
     private final BitmapFont mediumFont;
@@ -116,6 +119,7 @@ public class GameScreen extends BaseScreen {
     private final ArrayDeque<Achievement> achievementQueue;
     private final Rectangle interactiveRow = new Rectangle();
     private final StringBuilder diagnosticsText = new StringBuilder(160);
+    private final RewardedRequestGate resultsRewardRequest = new RewardedRequestGate();
 
     private Diver diver;
     private RunDirector runDirector;
@@ -173,6 +177,8 @@ public class GameScreen extends BaseScreen {
     private boolean progressionRewardGranted;
     private boolean captureSwimmingUp;
     private boolean finalStageAchievementRecorded;
+    private String resultsRewardStatus = "";
+    private float resultsRewardStatusTimer;
 
     public GameScreen(DeepDiveDrift game) {
         this(game, RunSettings.standard());
@@ -229,6 +235,7 @@ public class GameScreen extends BaseScreen {
         layoutTouchControls();
         updateInput();
         updateAchievementPopup(frameDelta);
+        resultsRewardStatusTimer = Math.max(0f, resultsRewardStatusTimer - frameDelta);
 
         if (handleInput()) {
             return;
@@ -268,7 +275,13 @@ public class GameScreen extends BaseScreen {
         }
 
         if (gameOver) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.R)
+            if (resultsRewardRequest.isInFlight()) {
+                return false;
+            }
+            if (showResultsRewardOffer()
+                && game.input().buttonJustReleased(RESULTS_REWARDED_BUTTON)) {
+                requestResultsBonus();
+            } else if (Gdx.input.isKeyJustPressed(Input.Keys.R)
                 || game.input().confirmJustPressed()
                 || game.input().buttonJustReleased(GAME_OVER_RETRY_BUTTON)) {
                 AudioManager.playConfirm();
@@ -330,6 +343,57 @@ public class GameScreen extends BaseScreen {
             handleDebugInput();
         }
         return false;
+    }
+
+    private void requestResultsBonus() {
+        if (!progression.isResultsBonusEligible(rewardRunSequence)
+            || !game.advertising().canRequestAds()
+            || !game.advertising().isRewardedAvailable()) {
+            showResultsRewardStatus(Localization.text("rewarded.ad_unavailable"));
+            return;
+        }
+        if (!resultsRewardRequest.tryBegin()) {
+            return;
+        }
+        boolean accepted = game.showRewarded(new AdvertisingService.RewardedCallback() {
+            @Override public void onOpened() {
+            }
+
+            @Override
+            public void onRewardEarned() {
+                int credited = progression.claimResultsBonus(rewardRunSequence);
+                if (credited > 0) {
+                    showResultsRewardStatus(Localization.text(
+                        "rewarded.results.granted", credited));
+                    AudioManager.playConfirm();
+                }
+            }
+
+            @Override
+            public void onClosed() {
+                resultsRewardRequest.finish();
+            }
+
+            @Override
+            public void onFailedToShow() {
+                resultsRewardRequest.finish();
+                showResultsRewardStatus(Localization.text("rewarded.ad_unavailable"));
+            }
+        });
+        if (!accepted) {
+            resultsRewardRequest.finish();
+            showResultsRewardStatus(Localization.text("rewarded.ad_unavailable"));
+        }
+    }
+
+    private void showResultsRewardStatus(String message) {
+        resultsRewardStatus = message;
+        resultsRewardStatusTimer = 4f;
+    }
+
+    private boolean showResultsRewardOffer() {
+        return game.input().isMobile()
+            && progression.isResultsBonusEligible(rewardRunSequence);
     }
 
     private void handleUpgradeInput() {
@@ -1402,7 +1466,8 @@ public class GameScreen extends BaseScreen {
             shapeRenderer.setColor(0f, 0f, 0f, 0.62f);
             shapeRenderer.rect(0f, 0f, GameConfig.WORLD_WIDTH, GameConfig.WORLD_HEIGHT);
             shapeRenderer.setColor(0.01f, 0.04f, 0.09f, 0.96f);
-            shapeRenderer.rect(365f, 175f, 550f, 370f);
+            shapeRenderer.rect(365f, gameOver ? 115f : 175f, 550f,
+                gameOver ? 430f : 370f);
             shapeRenderer.setColor(0.1f, 0.75f, 0.9f, 0.9f);
             shapeRenderer.rect(365f, 540f, 550f, 5f);
             if (paused) {
@@ -1411,6 +1476,9 @@ public class GameScreen extends BaseScreen {
                     drawUiButton(interactiveRow, i == selectedPauseIndex);
                 }
             } else {
+                if (showResultsRewardOffer()) {
+                    drawUiButton(RESULTS_REWARDED_BUTTON, false);
+                }
                 drawUiButton(GAME_OVER_RETRY_BUTTON, false);
                 drawUiButton(GAME_OVER_MENU_BUTTON, false);
             }
@@ -1672,12 +1740,21 @@ public class GameScreen extends BaseScreen {
         drawCentered(smallFont, Localization.text("game.result_best", highScore,
             runSettings.difficulty().title(), String.format(Locale.ROOT, "%.2f", runSettings.rewardMultiplier())),
             286f, runSettings.isChallengeRun() ? Color.YELLOW : Color.LIGHT_GRAY);
+        if (showResultsRewardOffer()) {
+            drawUiButtonLabel(smallFont, Localization.text("rewarded.results.cta"),
+                RESULTS_REWARDED_BUTTON,
+                game.advertising().isRewardedAvailable() && !resultsRewardRequest.isInFlight()
+                    ? Color.GOLD : Color.GRAY);
+        }
         String retry = Localization.text(game.input().usingController() ? "game.retry.controller"
             : game.input().usingTouch() ? "game.retry.touch" : "game.retry.keyboard");
         String menu = Localization.text(game.input().usingController() ? "game.menu.controller"
             : game.input().usingTouch() ? "game.menu.touch" : "game.menu.keyboard");
         drawUiButtonLabel(smallFont, retry, GAME_OVER_RETRY_BUTTON, Color.WHITE);
         drawUiButtonLabel(smallFont, menu, GAME_OVER_MENU_BUTTON, Color.LIGHT_GRAY);
+        if (resultsRewardStatusTimer > 0f) {
+            drawCentered(smallFont, resultsRewardStatus, 128f, Color.YELLOW);
+        }
     }
 
     private Rectangle pauseRowBounds(int index) {
@@ -1833,6 +1910,9 @@ public class GameScreen extends BaseScreen {
         victory = false;
         finalePending = false;
         progressionRewardGranted = false;
+        resultsRewardRequest.finish();
+        resultsRewardStatus = "";
+        resultsRewardStatusTimer = 0f;
         captureSwimmingUp = false;
         finalStageAchievementRecorded = false;
         centerCamera();

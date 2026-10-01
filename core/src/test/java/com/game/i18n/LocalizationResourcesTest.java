@@ -23,8 +23,13 @@ class LocalizationResourcesTest {
         Set<String> representative = Set.of("main.play", "setup.title", "store.title",
             "achievements.title", "options.language", "controls.title", "about.title",
             "game.paused", "game.choose_upgrade", "stage.5.title",
-            "powerup.pressure_shield.title", "achievement.total_lockdown.description");
+            "powerup.pressure_shield.title", "achievement.total_lockdown.description",
+            "rewarded.daily.cta", "rewarded.results.cta", "rewarded.ad_unavailable");
         assertTrue(english.stringPropertyNames().containsAll(representative));
+        assertEquals("WATCH AD: +5 DAILY PEARLS", english.getProperty("rewarded.daily.cta"));
+        assertEquals("REKLAM İZLE: +5 GÜNLÜK İNCİ", turkish.getProperty("rewarded.daily.cta"));
+        assertEquals("WATCH AD: +20% PEARLS", english.getProperty("rewarded.results.cta"));
+        assertEquals("REKLAM İZLE: +%20 İNCİ", turkish.getProperty("rewarded.results.cta"));
         assertFalse(english.values().stream().anyMatch(value -> value.toString().isBlank()));
         assertFalse(turkish.values().stream().anyMatch(value -> value.toString().isBlank()));
     }

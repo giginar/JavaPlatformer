@@ -146,6 +146,11 @@ public final class AndroidLauncher extends AndroidApplication {
             public void onClosed() {
                 Log.i(TAG, "Rewarded TEST QA closed");
             }
+
+            @Override
+            public void onFailedToShow() {
+                Log.w(TAG, "Rewarded TEST QA failed to show");
+            }
         });
         Log.i(TAG, "Rewarded TEST QA show accepted: " + accepted);
     }

@@ -4,6 +4,8 @@ import com.badlogic.gdx.Preferences;
 
 /** Persistent pearl wallet and equipment installations that continue while offline. */
 public final class ProgressionStore {
+    public static final int DAILY_SALVAGE_REWARD = 5;
+    private static final long MILLIS_PER_DAY = 86_400_000L;
     @FunctionalInterface
     public interface TimeSource {
         long currentTimeMillis();
@@ -65,31 +67,109 @@ public final class ProgressionStore {
 
     /** Starts a new locally persisted reward transaction for a new dive or retry. */
     public long beginRun() {
-        long sequence = Math.max(0L, preferences.getLong(SaveSchema.RUN_SEQUENCE_KEY, 0L));
-        if (sequence == Long.MAX_VALUE) {
-            sequence = 0L;
-            preferences.putLong(SaveSchema.LAST_REWARDED_RUN_KEY, 0L);
+        synchronized (preferences) {
+            long sequence = Math.max(0L, preferences.getLong(SaveSchema.RUN_SEQUENCE_KEY, 0L));
+            if (sequence == Long.MAX_VALUE) {
+                sequence = 0L;
+                preferences.putLong(SaveSchema.LAST_REWARDED_RUN_KEY, 0L);
+                preferences.putInteger(SaveSchema.LAST_REWARDED_RUN_PEARLS_KEY, 0);
+                preferences.putLong(SaveSchema.RESULTS_LAST_CLAIMED_RUN_KEY, 0L);
+            }
+            sequence++;
+            preferences.putLong(SaveSchema.RUN_SEQUENCE_KEY, sequence);
+            preferences.flush();
+            return sequence;
         }
-        sequence++;
-        preferences.putLong(SaveSchema.RUN_SEQUENCE_KEY, sequence);
-        preferences.flush();
-        return sequence;
     }
 
     /** Awards one completion reward at most once for the supplied persisted run sequence. */
     public int awardRun(long runSequence, float meters, float runMultiplier,
                         EquipmentLoadout equipment) {
-        long latestSequence = Math.max(0L,
-            preferences.getLong(SaveSchema.RUN_SEQUENCE_KEY, 0L));
-        long lastRewarded = Math.max(0L,
-            preferences.getLong(SaveSchema.LAST_REWARDED_RUN_KEY, 0L));
-        if (runSequence <= lastRewarded || runSequence <= 0L || runSequence != latestSequence) {
+        synchronized (preferences) {
+            long latestSequence = Math.max(0L,
+                preferences.getLong(SaveSchema.RUN_SEQUENCE_KEY, 0L));
+            long lastRewarded = Math.max(0L,
+                preferences.getLong(SaveSchema.LAST_REWARDED_RUN_KEY, 0L));
+            if (runSequence <= lastRewarded || runSequence <= 0L
+                || runSequence != latestSequence) {
+                return 0;
+            }
+            int reward = creditDistanceReward(meters, runMultiplier, equipment);
+            preferences.putLong(SaveSchema.LAST_REWARDED_RUN_KEY, runSequence);
+            preferences.putInteger(SaveSchema.LAST_REWARDED_RUN_PEARLS_KEY, reward);
+            preferences.flush();
+            return reward;
+        }
+    }
+
+    public boolean isDailySalvageEligible() {
+        return currentUtcEpochDay() > Math.max(0L,
+            preferences.getLong(SaveSchema.DAILY_SALVAGE_LAST_UTC_EPOCH_DAY_KEY, 0L));
+    }
+
+    /** Atomically credits the daily reward and advances the greatest claimed UTC day. */
+    public boolean claimDailySalvage() {
+        synchronized (preferences) {
+            long today = currentUtcEpochDay();
+            long lastClaimed = Math.max(0L,
+                preferences.getLong(SaveSchema.DAILY_SALVAGE_LAST_UTC_EPOCH_DAY_KEY, 0L));
+            if (today <= lastClaimed) {
+                return false;
+            }
+            preferences.putInteger(SaveSchema.PEARLS_KEY,
+                SaveSchema.saturatingAdd(pearls(), DAILY_SALVAGE_REWARD));
+            preferences.putLong(SaveSchema.DAILY_SALVAGE_LAST_UTC_EPOCH_DAY_KEY, today);
+            preferences.flush();
+            return true;
+        }
+    }
+
+    public int resultsBonus(long runSequence) {
+        if (!isResultsBonusEligible(runSequence)) {
             return 0;
         }
-        int reward = creditDistanceReward(meters, runMultiplier, equipment);
-        preferences.putLong(SaveSchema.LAST_REWARDED_RUN_KEY, runSequence);
-        preferences.flush();
-        return reward;
+        return calculateResultsBonus(preferences.getInteger(
+            SaveSchema.LAST_REWARDED_RUN_PEARLS_KEY, 0));
+    }
+
+    public boolean isResultsBonusEligible(long runSequence) {
+        long latestSequence = Math.max(0L,
+            preferences.getLong(SaveSchema.RUN_SEQUENCE_KEY, 0L));
+        long completedRun = Math.max(0L,
+            preferences.getLong(SaveSchema.LAST_REWARDED_RUN_KEY, 0L));
+        long lastClaimed = Math.max(0L,
+            preferences.getLong(SaveSchema.RESULTS_LAST_CLAIMED_RUN_KEY, 0L));
+        int ordinaryPearls = Math.max(0,
+            preferences.getInteger(SaveSchema.LAST_REWARDED_RUN_PEARLS_KEY, 0));
+        return runSequence > 0L && runSequence == latestSequence
+            && runSequence == completedRun && lastClaimed < runSequence
+            && calculateResultsBonus(ordinaryPearls) >= 1;
+    }
+
+    /** Atomically credits one bonus for the latest completed run and marks it claimed. */
+    public int claimResultsBonus(long runSequence) {
+        synchronized (preferences) {
+            if (!isResultsBonusEligible(runSequence)) {
+                return 0;
+            }
+            int bonus = calculateResultsBonus(preferences.getInteger(
+                SaveSchema.LAST_REWARDED_RUN_PEARLS_KEY, 0));
+            int balance = pearls();
+            int credited = Math.min(bonus, Integer.MAX_VALUE - balance);
+            preferences.putInteger(SaveSchema.PEARLS_KEY,
+                SaveSchema.saturatingAdd(balance, credited));
+            preferences.putLong(SaveSchema.RESULTS_LAST_CLAIMED_RUN_KEY, runSequence);
+            preferences.flush();
+            return credited;
+        }
+    }
+
+    public static int calculateResultsBonus(int actualOrdinaryRunPearls) {
+        if (actualOrdinaryRunPearls <= 0) {
+            return 0;
+        }
+        return (int) Math.min(Integer.MAX_VALUE,
+            Math.round(actualOrdinaryRunPearls * 0.20d));
     }
 
     public static int calculateDistanceReward(float meters, float runMultiplier,
@@ -210,6 +290,10 @@ public final class ProgressionStore {
 
     private long currentTimeMillis() {
         return Math.max(0L, timeSource.currentTimeMillis());
+    }
+
+    private long currentUtcEpochDay() {
+        return currentTimeMillis() / MILLIS_PER_DAY;
     }
 
     private static long safeDeadline(long now, long duration) {

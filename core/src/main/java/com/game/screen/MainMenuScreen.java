@@ -6,10 +6,13 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.math.Rectangle;
 import com.game.DeepDiveDrift;
 import com.game.GameConfig;
+import com.game.ads.AdvertisingService;
+import com.game.ads.RewardedRequestGate;
 import com.game.diver.Background;
 import com.game.manager.AudioManager;
 import com.game.manager.FontManager;
 import com.game.i18n.Localization;
+import com.game.model.ProgressionStore;
 
 public class MainMenuScreen extends BaseScreen {
     private static final MenuOption[] DESKTOP_MENU_OPTIONS = {
@@ -27,6 +30,8 @@ public class MainMenuScreen extends BaseScreen {
     private static final float SOUND_ROW_Y = FIRST_ROW_Y - 3f * ROW_SPACING;
     private static final Rectangle VOLUME_DOWN = new Rectangle(415f, SOUND_ROW_Y - 36f, 64f, 56f);
     private static final Rectangle VOLUME_UP = new Rectangle(801f, SOUND_ROW_Y - 36f, 64f, 56f);
+    private static final Rectangle DAILY_SALVAGE_BUTTON =
+        new Rectangle(365f, 54f, 550f, 54f);
 
     private final Background background;
     private final BitmapFont smallFont;
@@ -35,10 +40,14 @@ public class MainMenuScreen extends BaseScreen {
     private final GlyphLayout layout;
     private final Rectangle menuRow = new Rectangle();
     private final MenuOption[] menuOptions;
+    private final ProgressionStore progression;
+    private final RewardedRequestGate dailySalvageRequest = new RewardedRequestGate();
 
     private int selectedIndex;
     private boolean transitioning;
     private float transitionAlpha;
+    private String rewardedStatus = "";
+    private float rewardedStatusTimer;
 
     public MainMenuScreen(DeepDiveDrift game) {
         super(game);
@@ -48,6 +57,8 @@ public class MainMenuScreen extends BaseScreen {
         largeFont = FontManager.getLargeFont();
         layout = new GlyphLayout();
         menuOptions = game.input().isMobile() ? MOBILE_MENU_OPTIONS : DESKTOP_MENU_OPTIONS;
+        progression = new ProgressionStore(
+            com.badlogic.gdx.Gdx.app.getPreferences(GameConfig.PREFERENCES_NAME));
     }
 
     @Override
@@ -60,6 +71,7 @@ public class MainMenuScreen extends BaseScreen {
         float frameDelta = Math.min(delta, 0.1f);
         prepareFrame(0f, 0.05f, 0.12f);
         updateInput();
+        rewardedStatusTimer = Math.max(0f, rewardedStatusTimer - frameDelta);
 
         if (!transitioning && handleInput()) {
             return;
@@ -83,6 +95,9 @@ public class MainMenuScreen extends BaseScreen {
         }
         drawUiButton(VOLUME_DOWN, false);
         drawUiButton(VOLUME_UP, false);
+        if (showDailySalvage()) {
+            drawUiButton(DAILY_SALVAGE_BUTTON, false);
+        }
         endShapes();
 
         batch.begin();
@@ -104,6 +119,18 @@ public class MainMenuScreen extends BaseScreen {
         }
         drawUiButtonLabel(mediumFont, "-", VOLUME_DOWN, Color.WHITE);
         drawUiButtonLabel(mediumFont, "+", VOLUME_UP, Color.WHITE);
+        if (showDailySalvage()) {
+            boolean actionable = dailySalvageActionable();
+            String label = progression.isDailySalvageEligible()
+                ? Localization.text("rewarded.daily.cta")
+                : Localization.text("rewarded.daily.claimed");
+            drawUiButtonLabel(smallFont, label, DAILY_SALVAGE_BUTTON,
+                actionable ? Color.GOLD : Color.GRAY);
+            String status = rewardedStatusTimer > 0f ? rewardedStatus
+                : Localization.text("rewarded.wallet", progression.pearls());
+            drawCentered(smallFont, status, 34f,
+                rewardedStatusTimer > 0f ? Color.YELLOW : Color.LIGHT_GRAY);
+        }
 
         batch.end();
 
@@ -120,6 +147,14 @@ public class MainMenuScreen extends BaseScreen {
     }
 
     private boolean handleInput() {
+        if (dailySalvageRequest.isInFlight()) {
+            return false;
+        }
+        if (showDailySalvage() && progression.isDailySalvageEligible()
+            && game.input().buttonJustReleased(DAILY_SALVAGE_BUTTON)) {
+            requestDailySalvage();
+            return false;
+        }
         // Process sound controls before hover/confirmation sounds, so muting is silent.
         if (game.input().buttonJustReleased(VOLUME_DOWN)) {
             selectedIndex = 3;
@@ -164,6 +199,60 @@ public class MainMenuScreen extends BaseScreen {
             com.badlogic.gdx.Gdx.app.exit();
         }
         return false;
+    }
+
+    private boolean showDailySalvage() {
+        return game.input().isMobile();
+    }
+
+    private boolean dailySalvageActionable() {
+        return !dailySalvageRequest.isInFlight() && progression.isDailySalvageEligible()
+            && game.advertising().canRequestAds()
+            && game.advertising().isRewardedAvailable();
+    }
+
+    private void requestDailySalvage() {
+        if (!progression.isDailySalvageEligible()
+            || !game.advertising().canRequestAds()
+            || !game.advertising().isRewardedAvailable()) {
+            showRewardedStatus(Localization.text("rewarded.ad_unavailable"));
+            return;
+        }
+        if (!dailySalvageRequest.tryBegin()) {
+            return;
+        }
+        boolean accepted = game.showRewarded(new AdvertisingService.RewardedCallback() {
+            @Override public void onOpened() {
+            }
+
+            @Override
+            public void onRewardEarned() {
+                if (progression.claimDailySalvage()) {
+                    showRewardedStatus(Localization.text("rewarded.daily.granted"));
+                    AudioManager.playConfirm();
+                }
+            }
+
+            @Override
+            public void onClosed() {
+                dailySalvageRequest.finish();
+            }
+
+            @Override
+            public void onFailedToShow() {
+                dailySalvageRequest.finish();
+                showRewardedStatus(Localization.text("rewarded.ad_unavailable"));
+            }
+        });
+        if (!accepted) {
+            dailySalvageRequest.finish();
+            showRewardedStatus(Localization.text("rewarded.ad_unavailable"));
+        }
+    }
+
+    private void showRewardedStatus(String message) {
+        rewardedStatus = message;
+        rewardedStatusTimer = 4f;
     }
 
     private boolean activateSelected() {

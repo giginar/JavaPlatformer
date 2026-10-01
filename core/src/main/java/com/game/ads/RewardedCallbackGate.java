@@ -22,7 +22,7 @@ public final class RewardedCallbackGate {
     }
 
     public synchronized void rewardEarned() {
-        if (!rewardDelivered && !failed) {
+        if (!rewardDelivered && !failed && !closed) {
             rewardDelivered = true;
             callback.onRewardEarned();
         }
@@ -33,7 +33,10 @@ public final class RewardedCallbackGate {
     }
 
     public synchronized void failed() {
-        failed = true;
+        if (!failed && !closed) {
+            failed = true;
+            callback.onFailedToShow();
+        }
         closeOnce();
     }
 
