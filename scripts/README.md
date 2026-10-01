@@ -82,9 +82,20 @@ Steam kimlikleri ve yükleme adımları [Steam rehberinde](../steam/README.md) b
 `DEEPDRIFT_ADS_MODE` accepts `DISABLED`, `TEST`, or `PRODUCTION` and defaults to
 `DISABLED`. `TEST` always generates Google's official demo App ID and ad-unit IDs.
 `PRODUCTION` requires `DEEPDRIFT_ADMOB_APP_ID`, `DEEPDRIFT_REWARDED_AD_UNIT_ID`, and
-`DEEPDRIFT_INTERSTITIAL_AD_UNIT_ID`; missing, malformed, or demo values fail the build.
-Production identifiers remain outside tracked source. The Android dependency graph is
-versioned and checksum-locked in `android/ads-dependencies.lock`.
+`DEEPDRIFT_INTERSTITIAL_AD_UNIT_ID`; missing, malformed, demo, unapproved, or duplicate
+ad-unit values fail the build. It also requires the explicit optimized-wrapper switch:
+
+```powershell
+$env:DEEPDRIFT_ADS_MODE = 'PRODUCTION'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  .\scripts\verify-android-optimized-release.ps1 -ProductionAds -RequireSignedBundle
+```
+
+Supplying only the environment mode or only the switch fails. Routine test wrappers force
+`TEST` and restore the caller's previous `DEEPDRIFT_ADS_MODE` afterward.
+Production build inputs remain process environment variables; they are not written to Java
+source or tracked property files. The Android dependency graph is versioned and
+checksum-locked in `android/ads-dependencies.lock`.
 
 ## Secure Google Play upload signing
 

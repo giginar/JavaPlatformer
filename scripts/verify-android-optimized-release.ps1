@@ -1,6 +1,7 @@
 param(
     [switch]$SkipBuild,
-    [switch]$RequireSignedBundle
+    [switch]$RequireSignedBundle,
+    [switch]$ProductionAds
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,14 +11,26 @@ $pomPath = Join-Path $projectRootPath 'pom.xml'
 $mavenWrapper = Join-Path $projectRootPath 'mvnw.cmd'
 $androidVerifier = Join-Path $PSScriptRoot 'verify-android-release.ps1'
 $savedAdsMode = [Environment]::GetEnvironmentVariable('DEEPDRIFT_ADS_MODE', 'Process')
+$requestedMode = if ($ProductionAds) { 'PRODUCTION' } else { 'TEST' }
+
+if ($ProductionAds -and $savedAdsMode -ne 'PRODUCTION') {
+    throw 'The -ProductionAds switch requires DEEPDRIFT_ADS_MODE=PRODUCTION.'
+}
+if (-not $ProductionAds -and $savedAdsMode -eq 'PRODUCTION') {
+    throw 'DEEPDRIFT_ADS_MODE=PRODUCTION requires the explicit -ProductionAds switch.'
+}
 
 if (-not $SkipBuild) {
     try {
-        [Environment]::SetEnvironmentVariable('DEEPDRIFT_ADS_MODE', 'TEST', 'Process')
+        if (-not $ProductionAds) {
+            [Environment]::SetEnvironmentVariable('DEEPDRIFT_ADS_MODE', 'TEST', 'Process')
+        }
+        $productionProperty = if ($ProductionAds) { 'true' } else { 'false' }
         & $mavenWrapper -f $pomPath -B -ntp `
+            "-Dandroid.production-ads=$productionProperty" `
             '-Pandroid-release,android-optimized-release' -pl android -am package
         if ($LASTEXITCODE -ne 0) {
-            throw "Optimized Android TEST build failed with exit code $LASTEXITCODE"
+            throw "Optimized Android $requestedMode build failed with exit code $LASTEXITCODE"
         }
     } finally {
         [Environment]::SetEnvironmentVariable('DEEPDRIFT_ADS_MODE', $savedAdsMode, 'Process')
@@ -27,7 +40,7 @@ if (-not $SkipBuild) {
 $verifyArguments = @{
     SkipBuild = $true
     OptimizationMode = 'Optimized'
-    ExpectedAdsMode = 'TEST'
+    ExpectedAdsMode = $requestedMode
 }
 if ($RequireSignedBundle) {
     $verifyArguments.RequireSignedBundle = $true
@@ -123,4 +136,4 @@ $r8ReportPath = Join-Path $releasePath "DeepDiveDrift-$version-r8"
     (($sizeReportLines -join "`n") + "`n"),
     [System.Text.UTF8Encoding]::new($false))
 
-Write-Host 'Optimized Android TEST artifact verification: PASS'
+Write-Host "Optimized Android $requestedMode artifact verification: PASS"

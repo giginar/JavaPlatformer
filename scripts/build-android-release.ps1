@@ -15,7 +15,10 @@ param(
     [string]$ManifestMergerVersion,
 
     [ValidateSet('Unoptimized', 'Optimized')]
-    [string]$OptimizationMode = 'Unoptimized'
+    [string]$OptimizationMode = 'Unoptimized',
+
+    [ValidateSet('false', 'true')]
+    [string]$ProductionAds = 'false'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,6 +28,9 @@ $androidPath = Join-Path $projectRootPath 'android'
 $targetPath = Join-Path $androidPath 'target'
 $mavenDependencyPath = Join-Path $targetPath 'android-base-dependencies'
 $isOptimized = $OptimizationMode -eq 'Optimized'
+if ($ProductionAds -eq 'true' -and -not $isOptimized) {
+    throw 'PRODUCTION ads are supported only by the optimized Android release entry point.'
+}
 $artifactQualifier = if ($isOptimized) { '-optimized' } else { '' }
 $workPath = Join-Path $targetPath $(if ($isOptimized) { 'android-optimized-work' } else { 'android-work' })
 $outputPath = Join-Path $targetPath 'store\google-play'
@@ -267,54 +273,6 @@ function Stage-LockedAndroidDependencies {
     }
 }
 
-function Resolve-AdConfiguration {
-    $testAppId = 'ca-app-pub-3940256099942544~3347511713'
-    $testRewardedId = 'ca-app-pub-3940256099942544/5224354917'
-    $testInterstitialId = 'ca-app-pub-3940256099942544/1033173712'
-    $mode = if ($env:DEEPDRIFT_ADS_MODE) {
-        $env:DEEPDRIFT_ADS_MODE.Trim().ToUpperInvariant()
-    } else {
-        'DISABLED'
-    }
-    if ($mode -notin @('DISABLED', 'TEST', 'PRODUCTION')) {
-        throw 'DEEPDRIFT_ADS_MODE must be DISABLED, TEST, or PRODUCTION.'
-    }
-
-    if ($mode -eq 'DISABLED') {
-        Write-Host 'Advertising configuration: DISABLED (no consent, initialization, or ad requests)'
-        return [pscustomobject]@{ Mode = $mode; AppId = ''; RewardedId = ''; InterstitialId = '' }
-    }
-    if ($mode -eq 'TEST') {
-        Write-Host 'Advertising configuration: TEST (official Google demo IDs only)'
-        return [pscustomobject]@{
-            Mode = $mode
-            AppId = $testAppId
-            RewardedId = $testRewardedId
-            InterstitialId = $testInterstitialId
-        }
-    }
-
-    $appId = [string]$env:DEEPDRIFT_ADMOB_APP_ID
-    $rewardedId = [string]$env:DEEPDRIFT_REWARDED_AD_UNIT_ID
-    $interstitialId = [string]$env:DEEPDRIFT_INTERSTITIAL_AD_UNIT_ID
-    if ($appId -notmatch '^ca-app-pub-[0-9]+~[0-9]+$' -or
-        $rewardedId -notmatch '^ca-app-pub-[0-9]+/[0-9]+$' -or
-        $interstitialId -notmatch '^ca-app-pub-[0-9]+/[0-9]+$') {
-        throw 'PRODUCTION ads require valid external DEEPDRIFT_ADMOB_APP_ID, DEEPDRIFT_REWARDED_AD_UNIT_ID, and DEEPDRIFT_INTERSTITIAL_AD_UNIT_ID values.'
-    }
-    if ($appId -eq $testAppId -or $rewardedId -eq $testRewardedId -or
-        $interstitialId -eq $testInterstitialId) {
-        throw 'PRODUCTION ads must not use any official Google demo identifier.'
-    }
-    Write-Host 'Advertising configuration: PRODUCTION (external IDs validated)'
-    return [pscustomobject]@{
-        Mode = $mode
-        AppId = $appId
-        RewardedId = $rewardedId
-        InterstitialId = $interstitialId
-    }
-}
-
 function Read-PropertiesFile {
     param([Parameter(Mandatory = $true)][string]$Path)
 
@@ -504,7 +462,8 @@ Get-ChildItem -LiteralPath $mavenDependencyPath -File | ForEach-Object {
 }
 Stage-LockedAndroidDependencies -LockPath $adsDependencyLockPath `
     -CachePath $adsDependencyCachePath -Destination $dependencyPath
-$adConfiguration = Resolve-AdConfiguration
+$adConfiguration = & (Join-Path $PSScriptRoot 'resolve-android-ad-configuration.ps1') `
+    -ProductionAds $ProductionAds
 
 $resourceArchives = [System.Collections.Generic.List[string]]::new()
 $programArchives = [System.Collections.Generic.List[string]]::new()
@@ -578,7 +537,7 @@ $adFactoryExpression = switch ($adConfiguration.Mode) {
     'DISABLED' { 'AdConfiguration.disabled()' }
     'TEST' { 'AdConfiguration.test()' }
     'PRODUCTION' {
-        'AdConfiguration.production("{0}", "{1}", "{2}")' -f `
+        'AdConfiguration.productionFromValidatedBuild("{0}", "{1}", "{2}")' -f `
             $adConfiguration.AppId, $adConfiguration.RewardedId, $adConfiguration.InterstitialId
     }
 }

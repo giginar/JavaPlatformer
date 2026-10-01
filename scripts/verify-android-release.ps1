@@ -8,6 +8,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 $projectRootPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $androidTargetPath = Join-Path $projectRootPath 'android\target'
 $releasePath = Join-Path $androidTargetPath 'store\google-play'
@@ -32,6 +33,16 @@ if ($expectedCompileSdk -ne $expectedTargetSdk) {
 [xml]$sourceManifest = Get-Content -LiteralPath `
     (Join-Path $projectRootPath 'android\src\main\AndroidManifest.xml') -Raw
 $expectedApplicationId = [string]$sourceManifest.manifest.package
+$testAdIdentifiers = @(
+    'ca-app-pub-3940256099942544~3347511713',
+    'ca-app-pub-3940256099942544/1033173712',
+    'ca-app-pub-3940256099942544/5224354917'
+)
+$productionAdIdentifiers = @(
+    'ca-app-pub-5376669360146484~9049306652',
+    'ca-app-pub-5376669360146484/6131409987',
+    'ca-app-pub-5376669360146484/1909183230'
+)
 
 if (-not $SkipBuild) {
     $mavenProfiles = if ($isOptimized) {
@@ -69,6 +80,65 @@ function Write-Utf8File {
     )
     [System.IO.File]::WriteAllText(
         $Path, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Get-ArchiveIdentifierPresence {
+    param(
+        [Parameter(Mandatory = $true)][string]$ArchivePath,
+        [Parameter(Mandatory = $true)][string[]]$Identifiers
+    )
+
+    $presence = @{}
+    foreach ($identifier in $Identifiers) { $presence[$identifier] = $false }
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($ArchivePath)
+    try {
+        foreach ($entry in $archive.Entries) {
+            if ($entry.Length -eq 0 -or
+                $entry.FullName -notmatch '(^|/)(AndroidManifest\.xml|classes[0-9]*\.dex)$') {
+                continue
+            }
+            $memory = [System.IO.MemoryStream]::new()
+            try {
+                $stream = $entry.Open()
+                try { $stream.CopyTo($memory) } finally { $stream.Dispose() }
+                $bytes = $memory.ToArray()
+                $asciiText = [System.Text.Encoding]::ASCII.GetString($bytes)
+                $unicodeText = [System.Text.Encoding]::Unicode.GetString($bytes)
+                foreach ($identifier in $Identifiers) {
+                    if (-not $presence[$identifier] -and
+                        ($asciiText.Contains($identifier) -or $unicodeText.Contains($identifier))) {
+                        $presence[$identifier] = $true
+                    }
+                }
+            } finally {
+                $memory.Dispose()
+            }
+            if (@($presence.Values | Where-Object { -not $_ }).Count -eq 0) { break }
+        }
+    } finally {
+        $archive.Dispose()
+    }
+    return $presence
+}
+
+function Assert-ArtifactAdIdentifiers {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Presence,
+        [Parameter(Mandatory = $true)][string]$AdsMode,
+        [Parameter(Mandatory = $true)][string]$ArtifactLabel
+    )
+
+    if ($AdsMode -notin @('TEST', 'PRODUCTION')) { return }
+    $expected = if ($AdsMode -eq 'TEST') { $testAdIdentifiers } else { $productionAdIdentifiers }
+    $forbidden = if ($AdsMode -eq 'TEST') { $productionAdIdentifiers } else { $testAdIdentifiers }
+    $missing = @($expected | Where-Object { -not $Presence[$_] })
+    $unexpected = @($forbidden | Where-Object { $Presence[$_] })
+    if ($missing.Count -gt 0) {
+        throw "$ArtifactLabel $AdsMode artifact is missing expected ad identifiers: $($missing -join ', ')"
+    }
+    if ($unexpected.Count -gt 0) {
+        throw "$ArtifactLabel $AdsMode artifact contains forbidden reciprocal ad identifiers: $($unexpected -join ', ')"
+    }
 }
 
 $localPropertiesPath = Join-Path $projectRootPath 'local.properties'
@@ -175,7 +245,8 @@ if ($apkManifestText -match 'android:value="(DISABLED|TEST|PRODUCTION)"') {
 } else {
     throw 'Merged APK manifest does not declare a valid advertising mode.'
 }
-$testAppId = 'ca-app-pub-3940256099942544~3347511713'
+$testAppId = $testAdIdentifiers[0]
+$productionAppId = $productionAdIdentifiers[0]
 $hasAdMobApplicationId = $apkManifestText.Contains('com.google.android.gms.ads.APPLICATION_ID')
 if ($adsMode -eq 'DISABLED' -and $hasAdMobApplicationId) {
     throw 'DISABLED package must not contain AdMob application metadata.'
@@ -185,12 +256,18 @@ if ($adsMode -eq 'TEST' -and
     throw 'TEST package must contain the official Google demo App ID.'
 }
 if ($adsMode -eq 'PRODUCTION' -and
-    (-not $hasAdMobApplicationId -or $apkManifestText.Contains($testAppId))) {
-    throw 'PRODUCTION package is missing external AdMob metadata or contains the demo App ID.'
+    (-not $hasAdMobApplicationId -or -not $apkManifestText.Contains($productionAppId) -or
+        $apkManifestText.Contains($testAppId))) {
+    throw 'PRODUCTION package is missing the approved AdMob metadata or contains the demo App ID.'
 }
 if ($ExpectedAdsMode -and $adsMode -ne $ExpectedAdsMode) {
     throw "Expected advertising mode $ExpectedAdsMode, but the package contains $adsMode."
 }
+$allAdIdentifiers = @($testAdIdentifiers + $productionAdIdentifiers)
+$apkIdentifierPresence = Get-ArchiveIdentifierPresence `
+    -ArchivePath $releaseApk.FullName -Identifiers $allAdIdentifiers
+Assert-ArtifactAdIdentifiers -Presence $apkIdentifierPresence `
+    -AdsMode $adsMode -ArtifactLabel 'APK'
 
 $dexPackages = (& $apkAnalyzerPath dex packages $releaseApk.FullName | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect APK DEX classes' }
@@ -450,6 +527,15 @@ if ($bundleUsesSdk.GetAttribute('minSdkVersion', $androidNamespace) -ne $expecte
     [string]$bundleManifest.manifest.package -ne $expectedApplicationId) {
     throw 'AAB identity or min/target SDK metadata is incorrect.'
 }
+$bundleAdsModeMatch = [regex]::Match(
+    $bundleManifestText, 'android:value="(DISABLED|TEST|PRODUCTION)"')
+if (-not $bundleAdsModeMatch.Success -or $bundleAdsModeMatch.Groups[1].Value -ne $adsMode) {
+    throw 'AAB advertising mode does not match the APK.'
+}
+$bundleIdentifierPresence = Get-ArchiveIdentifierPresence `
+    -ArchivePath $releaseBundle.FullName -Identifiers $allAdIdentifiers
+Assert-ArtifactAdIdentifiers -Presence $bundleIdentifierPresence `
+    -AdsMode $adsMode -ArtifactLabel 'AAB'
 
 function Get-ElfLoadAlignments([string]$Path) {
     [byte[]]$elfBytes = [System.IO.File]::ReadAllBytes($Path)

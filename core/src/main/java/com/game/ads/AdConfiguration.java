@@ -50,6 +50,15 @@ public final class AdConfiguration {
             validatedRewarded, validatedInterstitial);
     }
 
+    /** Used only by the generated Android factory after the build has validated approved IDs. */
+    public static AdConfiguration productionFromValidatedBuild(
+        String appId, String rewardedAdUnitId, String interstitialAdUnitId) {
+        return new AdConfiguration(AdMode.PRODUCTION,
+            requireFormat("production App ID", appId, APP_ID),
+            requireFormat("production rewarded ad unit ID", rewardedAdUnitId, AD_UNIT_ID),
+            requireFormat("production interstitial ad unit ID", interstitialAdUnitId, AD_UNIT_ID));
+    }
+
     public AdMode mode() {
         return mode;
     }

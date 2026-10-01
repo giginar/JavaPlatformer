@@ -11,19 +11,26 @@ $pomPath = Join-Path $projectRootPath 'pom.xml'
 $androidVersion = & (Join-Path $PSScriptRoot 'get-project-version.ps1') -ProjectRootPath $projectRootPath -Android
 $version = $androidVersion.Version
 $apkPath = Join-Path $projectRootPath "android\target\store\google-play\DeepDiveDrift-$version-universal.apk"
+$savedAdsMode = [Environment]::GetEnvironmentVariable('DEEPDRIFT_ADS_MODE', 'Process')
 
 if ($DeviceId -and -not $Install) {
     throw 'Use -DeviceId together with -Install.'
 }
 
 if (-not $SkipBuild) {
-    & (Join-Path $projectRootPath 'mvnw.cmd') -f $pomPath -B -ntp -Pandroid-release -pl android -am clean package
-    if ($LASTEXITCODE -ne 0) {
-        throw "Android build failed with exit code $LASTEXITCODE"
+    try {
+        [Environment]::SetEnvironmentVariable('DEEPDRIFT_ADS_MODE', 'TEST', 'Process')
+        & (Join-Path $projectRootPath 'mvnw.cmd') -f $pomPath -B -ntp `
+            '-Dandroid.production-ads=false' -Pandroid-release -pl android -am clean package
+        if ($LASTEXITCODE -ne 0) {
+            throw "Android TEST build failed with exit code $LASTEXITCODE"
+        }
+    } finally {
+        [Environment]::SetEnvironmentVariable('DEEPDRIFT_ADS_MODE', $savedAdsMode, 'Process')
     }
 }
 
-& (Join-Path $PSScriptRoot 'verify-android-release.ps1') -SkipBuild
+& (Join-Path $PSScriptRoot 'verify-android-release.ps1') -SkipBuild -ExpectedAdsMode TEST
 if (-not (Test-Path -LiteralPath $apkPath -PathType Leaf)) {
     throw "Test APK is missing: $apkPath"
 }

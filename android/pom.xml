@@ -162,6 +162,8 @@
                                         <argument>${android.manifest-merger.version}</argument>
                                         <argument>-OptimizationMode</argument>
                                         <argument>${android.optimization-mode}</argument>
+                                        <argument>-ProductionAds</argument>
+                                        <argument>${android.production-ads}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
